@@ -48,6 +48,16 @@ const stats = [
     { value: '24/7', label: 'Support' },
 ];
 
+// ── Cara Kerja steps
+const steps = [
+    { title: 'Pilih Template', desc: 'Browse katalog, filter berdasarkan kategori, dan pilih template yang paling cocok untuk bisnis Anda.', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+    { title: 'Preview Demo', desc: 'Lihat live preview di device mobile maupun desktop sebelum membeli. Tidak ada kejutan.', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' },
+    { title: 'Checkout', desc: 'Pembayaran aman via Midtrans, DANA, OVO, GoPay, dan transfer bank.', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+    { title: 'Download File ZIP', desc: 'Setelah pembayaran dikonfirmasi, file template langsung tersedia untuk didownload.', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
+    { title: 'Upload ke MikroTik', desc: 'Extract file, upload ke MikroTik via Winbox atau Files menu. Selesai dalam 5 menit.', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+    { title: 'Template Siap Digunakan', desc: 'Login hotspot Anda langsung tampil premium dan profesional. Pelanggan terkesan!', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+];
+
 // ── Helpers
 function formatPrice(p) { return 'Rp ' + Number(p).toLocaleString('id-ID'); }
 function getBadgeClass(b) {
@@ -103,10 +113,9 @@ function getGradient(seed) {
 
                 <!-- Menu -->
                 <nav class="hidden lg:flex items-center gap-1">
-                    <Link href="/" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Beranda</Link>
+                    <Link href="/" class="px-3.5 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-lg">Beranda</Link>
                     <Link href="/katalog" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Template</Link>
-                    <a href="#kategori" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Kategori</a>
-                    <a href="#creator" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Jadi Creator</a>
+                    <a href="#cara-kerja" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Cara Kerja</a>
                     <a href="#bantuan" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Bantuan</a>
                 </nav>
 
@@ -398,59 +407,95 @@ function getGradient(seed) {
                     </div>
                 </div>
 
-                <!-- RIGHT: SIDEBAR CREATOR -->
-                <aside id="creator" class="space-y-5">
+                <!-- RIGHT: BANTUAN SIDEBAR -->
+                <aside id="bantuan-sidebar" class="space-y-5">
 
-                    <!-- CTA Card -->
+                    <!-- Help CTA -->
                     <div class="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200/50 relative overflow-hidden">
                         <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                         <div class="relative">
                             <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                             </div>
-                            <h3 class="font-bold text-lg mb-1">Jadi Pembuat Template</h3>
-                            <p class="text-sm text-white/80 mb-4">Upload template hotspot Anda dan dapatkan passive income dari ribuan pelanggan.</p>
-                            <Link :href="canRegister ? route('register') : route('login')" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors">
-                                Mulai sekarang
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                            </Link>
+                            <h3 class="font-bold text-lg mb-1">Butuh Bantuan?</h3>
+                            <p class="text-sm text-white/80 mb-4">Tim support kami siap membantu Anda 24/7 via WhatsApp.</p>
+                            <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                                Chat WhatsApp
+                            </a>
                         </div>
                     </div>
 
-                    <!-- Stats -->
+                    <!-- FAQ -->
                     <div class="bg-white border border-slate-200 rounded-2xl p-5">
-                        <h3 class="font-bold text-slate-900 text-sm mb-4">Statistik Creator</h3>
-                        <div class="space-y-3 text-sm">
-                            <div class="flex items-center justify-between">
-                                <span class="text-slate-500">Total Creator</span>
-                                <span class="font-bold text-slate-900">127</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-slate-500">Pendapatan bulan ini</span>
-                                <span class="font-bold text-emerald-600">Rp 84.5jt</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-slate-500">Rata-rata rating</span>
-                                <span class="font-bold text-amber-500">4.8 ★</span>
-                            </div>
-                        </div>
+                        <h3 class="font-bold text-slate-900 text-sm mb-4">FAQ Singkat</h3>
+                        <ul class="space-y-3 text-sm">
+                            <li>
+                                <p class="font-semibold text-slate-800">Cara install?</p>
+                                <p class="text-slate-500 text-xs mt-0.5">Upload file ke MikroTik via Winbox Files menu.</p>
+                            </li>
+                            <li>
+                                <p class="font-semibold text-slate-800">Support RouterOS v6/v7?</p>
+                                <p class="text-slate-500 text-xs mt-0.5">Ya, semua template support kedua versi.</p>
+                            </li>
+                            <li>
+                                <p class="font-semibold text-slate-800">Bisa request custom?</p>
+                                <p class="text-slate-500 text-xs mt-0.5">Bisa! Hubungi kami via WhatsApp untuk diskusi.</p>
+                            </li>
+                        </ul>
                     </div>
 
-                    <!-- Top Creators -->
+                    <!-- Trust -->
                     <div class="bg-white border border-slate-200 rounded-2xl p-5">
-                        <h3 class="font-bold text-slate-900 text-sm mb-4">Top Creator</h3>
-                        <div class="space-y-3">
-                            <div v-for="(c, i) in topCreators" :key="c.name" class="flex items-center gap-3">
-                                <div class="text-xs font-bold text-slate-400 w-4">{{ i + 1 }}</div>
-                                <div class="w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold" :class="c.color">{{ c.avatar }}</div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-slate-900 truncate">{{ c.name }}</p>
-                                    <p class="text-xs text-slate-500">{{ c.templates }} template · {{ c.sales }} terjual</p>
-                                </div>
-                            </div>
-                        </div>
+                        <h3 class="font-bold text-slate-900 text-sm mb-4">Lisensi &amp; Kebijakan</h3>
+                        <ul class="space-y-2.5 text-xs">
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Update gratis 1 tahun</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Lisensi untuk 1 bisnis</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Garansi uang kembali 7 hari</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Support instalasi via WhatsApp</span>
+                            </li>
+                        </ul>
                     </div>
                 </aside>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ CARA KERJA ═══════════════ -->
+    <section id="cara-kerja" class="py-16 sm:py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+                <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Cara Kerja</p>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Dari Pilih Template sampai Live, 6 Langkah Mudah</h2>
+                <p class="text-slate-500 text-lg">Tidak perlu coding. Tidak perlu pusing. Semua sudah kami siapkan.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+                <!-- Connector line (desktop only) -->
+                <div class="hidden lg:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-indigo-200 via-violet-200 to-pink-200 -z-0"></div>
+
+                <div v-for="(step, i) in steps" :key="step.title" class="relative bg-white border border-slate-200 rounded-2xl p-6 hover:border-indigo-200 hover:shadow-xl transition-all group">
+                    <!-- Step number -->
+                    <div class="absolute -top-4 -left-2 w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-extrabold text-sm shadow-lg shadow-indigo-200 ring-4 ring-white">
+                        {{ i + 1 }}
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition-colors">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="step.icon"/></svg>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-lg mb-1.5">{{ step.title }}</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">{{ step.desc }}</p>
+                </div>
             </div>
         </div>
     </section>
