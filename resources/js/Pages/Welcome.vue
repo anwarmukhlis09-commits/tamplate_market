@@ -156,60 +156,70 @@ function getGradient(seed) {
                         Siap pakai untuk ISP, hotel, kafe, sekolah, dan hotspot voucher. Tinggal upload ke MikroTik tanpa perlu coding.
                     </p>
 
-                    <div class="flex flex-col sm:flex-row items-center lg:items-start gap-3 mb-10">
-                        <Link href="/katalog" class="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl hover:from-indigo-700 hover:to-violet-700 shadow-xl shadow-indigo-200 transition-all hover:shadow-2xl hover:shadow-indigo-300 hover:-translate-y-0.5 gap-2">
+                    <div class="flex flex-col sm:flex-row items-center lg:items-start gap-3 mb-12">
+                        <Link href="/katalog" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl hover:from-indigo-700 hover:to-violet-700 shadow-xl shadow-indigo-200 transition-all hover:shadow-2xl hover:shadow-indigo-300 hover:-translate-y-0.5">
                             Lihat Template
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                         </Link>
-                        <a href="/template/1" class="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3.5 text-base font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <a href="/template/1" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Preview Demo
                         </a>
                     </div>
 
                     <!-- Trust indicators -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mb-10">
-                        <div class="flex items-center gap-2 text-sm text-slate-600">
-                            <svg class="w-4.5 h-4.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-12">
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
                             <span class="font-medium">Siap Upload ke MikroTik</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm text-slate-600">
-                            <svg class="w-4.5 h-4.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                            <span class="font-medium">Responsive Mobile &amp; Desktop</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm text-slate-600">
-                            <svg class="w-4.5 h-4.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span class="font-medium">Responsive di Mobile &amp; Desktop</span>
+                        </li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
                             <span class="font-medium">Mudah Dikustomisasi</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm text-slate-600">
-                            <svg class="w-4.5 h-4.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                            <span class="font-medium">Update Berkala</span>
-                        </div>
-                    </div>
+                        </li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span class="font-medium">Update &amp; Support Berkala</span>
+                        </li>
+                    </ul>
 
                     <!-- Stats -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-slate-100">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 border-t border-slate-200/80">
                         <div v-for="s in stats" :key="s.label" class="text-center lg:text-left">
                             <div class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ s.value }}</div>
-                            <div class="text-xs text-slate-500 mt-0.5">{{ s.label }}</div>
+                            <div class="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide">{{ s.label }}</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- RIGHT: PREMIUM TEMPLATE MOCKUPS (floating cards) -->
-                <div class="relative flex justify-center lg:justify-end min-h-[560px]">
+                <div class="relative h-[480px] sm:h-[540px]">
 
                     <!-- Background glow -->
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div class="w-[420px] h-[420px] bg-gradient-to-br from-indigo-400 to-violet-500 rounded-full opacity-20 blur-3xl"></div>
+                        <div class="w-[380px] h-[380px] bg-gradient-to-br from-indigo-400 to-violet-500 rounded-full opacity-20 blur-3xl"></div>
                     </div>
 
                     <!-- Center main mockup (largest, premium hotspot template) -->
-                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 sm:w-80 z-20">
-                        <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl ring-1 ring-slate-300/30">
-                            <div class="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-[2rem] aspect-[9/16] overflow-hidden">
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 sm:w-72 z-20">
+                        <div class="bg-slate-900 rounded-[2.2rem] p-2.5 shadow-2xl ring-1 ring-white/10">
+                            <div class="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-[1.8rem] aspect-[9/16] overflow-hidden flex flex-col">
+                                <!-- Best badge -->
+                                <div class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/95 backdrop-blur rounded-md text-[9px] font-bold uppercase tracking-wider text-white z-10">Best</div>
                                 <!-- Mini status bar -->
-                                <div class="flex items-center justify-between px-5 pt-4 text-white/80 text-[10px] font-semibold">
+                                <div class="flex items-center justify-between px-5 pt-3.5 text-white/80 text-[10px] font-semibold">
                                     <span>9:41</span>
                                     <div class="flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
@@ -217,70 +227,67 @@ function getGradient(seed) {
                                     </div>
                                 </div>
                                 <!-- Content -->
-                                <div class="px-6 pt-8 pb-6 text-white flex flex-col items-center text-center h-[calc(100%-2rem)]">
-                                    <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-4 ring-1 ring-white/20">
-                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>
+                                <div class="flex-1 px-5 pt-6 pb-5 text-white flex flex-col items-center text-center justify-center">
+                                    <div class="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-3 ring-1 ring-white/20">
+                                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>
                                     </div>
-                                    <p class="text-[10px] uppercase tracking-widest opacity-70 mb-1">Selamat Datang</p>
-                                    <h3 class="text-lg font-bold mb-1">Hotspot Login</h3>
-                                    <p class="text-[10px] opacity-80 mb-4">Premium Template</p>
-                                    <div class="w-full max-w-[180px] space-y-2">
-                                        <div class="h-8 bg-white/15 backdrop-blur rounded-lg border border-white/20"></div>
-                                        <div class="h-8 bg-white/15 backdrop-blur rounded-lg border border-white/20"></div>
-                                        <div class="h-9 bg-white text-indigo-600 rounded-lg font-bold text-[11px] flex items-center justify-center mt-3">Login</div>
+                                    <p class="text-[9px] uppercase tracking-widest opacity-70 mb-1">Selamat Datang</p>
+                                    <h3 class="text-base font-bold mb-0.5">Hotspot Login</h3>
+                                    <p class="text-[9px] opacity-80 mb-3">Premium Template</p>
+                                    <div class="w-full max-w-[160px] space-y-1.5">
+                                        <div class="h-7 bg-white/15 backdrop-blur rounded-md border border-white/20"></div>
+                                        <div class="h-7 bg-white/15 backdrop-blur rounded-md border border-white/20"></div>
+                                        <div class="h-8 bg-white text-indigo-600 rounded-md font-bold text-[10px] flex items-center justify-center mt-2">Login</div>
                                     </div>
                                 </div>
-                                <div class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/90 backdrop-blur rounded-md text-[9px] font-bold uppercase">Best</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Floating card: Hotel (top-left, behind) -->
-                    <div class="absolute top-0 left-0 w-40 sm:w-44 z-10 transform -rotate-6 hover:rotate-0 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.8rem] p-2.5 shadow-xl ring-1 ring-slate-300/30">
-                            <div class="bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-[1.4rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white relative">
-                                <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2 text-sm font-bold">H</div>
-                                <p class="text-xs font-bold">Hotel Premium</p>
-                                <p class="text-[9px] opacity-80 mt-0.5">Resort Style</p>
-                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/20 backdrop-blur rounded text-[8px] font-bold">PRO</div>
+                    <div class="absolute top-4 left-0 w-36 sm:w-40 z-10 transform -rotate-6 hover:rotate-0 transition-transform duration-500">
+                        <div class="bg-slate-900 rounded-[1.5rem] p-2 shadow-xl ring-1 ring-white/10">
+                            <div class="bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-[1.1rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white relative">
+                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">PRO</div>
+                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-1.5 text-xs font-bold">H</div>
+                                <p class="text-[11px] font-bold">Hotel</p>
+                                <p class="text-[8px] opacity-80">Premium</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Floating card: Cafe (top-right, behind) -->
-                    <div class="absolute top-8 right-0 w-40 sm:w-44 z-10 transform rotate-6 hover:rotate-0 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.8rem] p-2.5 shadow-xl ring-1 ring-slate-300/30">
-                            <div class="bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-600 rounded-[1.4rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white relative">
-                                <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2 text-sm font-bold">C</div>
-                                <p class="text-xs font-bold">Cafe Login</p>
-                                <p class="text-[9px] opacity-80 mt-0.5">Voucher Ready</p>
-                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/20 backdrop-blur rounded text-[8px] font-bold">NEW</div>
+                    <div class="absolute top-12 right-0 w-36 sm:w-40 z-10 transform rotate-6 hover:rotate-0 transition-transform duration-500">
+                        <div class="bg-slate-900 rounded-[1.5rem] p-2 shadow-xl ring-1 ring-white/10">
+                            <div class="bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-600 rounded-[1.1rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white relative">
+                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">NEW</div>
+                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-1.5 text-xs font-bold">C</div>
+                                <p class="text-[11px] font-bold">Cafe</p>
+                                <p class="text-[8px] opacity-80">Voucher</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Floating card: Gaming (bottom-left) -->
-                    <div class="absolute bottom-0 left-4 w-36 sm:w-40 z-10 transform rotate-3 hover:-rotate-2 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.7rem] p-2.5 shadow-xl ring-1 ring-slate-300/30">
-                            <div class="bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 rounded-[1.3rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white">
-                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-2">
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M11 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zM5 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zm5-15a7 7 0 00-7 7c0 2 .5 3.5 1.5 5L3 17h14l-1.5-3c1-1.5 1.5-3 1.5-5a7 7 0 00-7-7z"/></svg>
+                    <!-- Floating card: Voucher (bottom-left) -->
+                    <div class="absolute bottom-4 left-8 w-32 sm:w-36 z-10 transform rotate-3 hover:-rotate-2 transition-transform duration-500">
+                        <div class="bg-slate-900 rounded-[1.4rem] p-2 shadow-xl ring-1 ring-white/10">
+                            <div class="bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 rounded-[1rem] aspect-[9/16] flex flex-col items-center justify-center p-2 text-white">
+                                <div class="w-7 h-7 rounded-md bg-white/20 backdrop-blur flex items-center justify-center mb-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>
                                 </div>
-                                <p class="text-[11px] font-bold">Gaming</p>
-                                <p class="text-[8px] opacity-80">RGB Theme</p>
+                                <p class="text-[10px] font-bold">Voucher</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Floating card: Voucher (bottom-right) -->
-                    <div class="absolute bottom-4 right-4 w-36 sm:w-40 z-10 transform -rotate-3 hover:rotate-2 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.7rem] p-2.5 shadow-xl ring-1 ring-slate-300/30">
-                            <div class="bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 rounded-[1.3rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white">
-                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-2">
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>
+                    <!-- Floating card: Gaming (bottom-right) -->
+                    <div class="absolute bottom-8 right-8 w-32 sm:w-36 z-10 transform -rotate-3 hover:rotate-2 transition-transform duration-500">
+                        <div class="bg-slate-900 rounded-[1.4rem] p-2 shadow-xl ring-1 ring-white/10">
+                            <div class="bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 rounded-[1rem] aspect-[9/16] flex flex-col items-center justify-center p-2 text-white">
+                                <div class="w-7 h-7 rounded-md bg-white/20 backdrop-blur flex items-center justify-center mb-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zM5 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zm5-15a7 7 0 00-7 7c0 2 .5 3.5 1.5 5L3 17h14l-1.5-3c1-1.5 1.5-3 1.5-5a7 7 0 00-7-7z"/></svg>
                                 </div>
-                                <p class="text-[11px] font-bold">Voucher</p>
-                                <p class="text-[8px] opacity-80">Hotspot</p>
+                                <p class="text-[10px] font-bold">Gaming</p>
                             </div>
                         </div>
                     </div>
