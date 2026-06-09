@@ -185,20 +185,9 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
     document.addEventListener('submit', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        // Tampilkan overlay simulasi
-        var overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,sans-serif;';
-        overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:32px 40px;text-align:center;max-width:360px;box-shadow:0 25px 50px rgba(0,0,0,.4);"><div style="width:48px;height:48px;border:4px solid #e0e7ff;border-top-color:#4f46e5;border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite"></div><h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 8px">Menghubungkan ke Hotspot...</h3><p style="font-size:14px;color:#64748b;margin:0">Ini hanya simulasi demo. Tidak terkoneksi ke MikroTik.</p></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
-        document.body.appendChild(overlay);
-        setTimeout(function() {
-            // Tampilkan sebentar "Login Berhasil!" lalu redirect ke status.html
-            overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:32px 40px;text-align:center;max-width:360px;box-shadow:0 25px 50px rgba(0,0,0,.4);"><div style="width:56px;height:56px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div><h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 8px">Login Berhasil!</h3><p style="font-size:14px;color:#64748b;margin:0 0 8px">Selamat berselancar. Voucher: DEMO123</p><p style="font-size:12px;color:#94a3b8;margin:0">Mengalihkan ke status...</p></div>';
-            setTimeout(function() {
-                // Redirect ke status.html template yang sama
-                var statusUrl = window.location.pathname.replace(/[^\/]*$/, '') + 'status.html';
-                window.location.href = statusUrl;
-            }, 1200);
-        }, 1500);
+        // Langsung redirect ke status.html template yang sama (tanpa popup)
+        var statusUrl = window.location.pathname.replace(/[^\/]*$/, '') + 'status.html';
+        window.location.href = statusUrl;
     }, true);
 })();
 </script>
