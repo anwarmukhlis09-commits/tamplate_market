@@ -178,33 +178,47 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
         return '<a ' . $attrs . ' target="_top" rel="noopener">';
     }, $html);
 
-    // Form interceptor: cegah submit asli, redirect ke file yang sesuai
+    // Form & link interceptor: arahkan ke file yang sesuai
     $interceptor = <<<HTML
 <script>
 (function() {
     var basePath = window.location.pathname.replace(/[^\/]*$/, '');
 
-    // Intercept semua form submit — redirect ke status.html
+    // Intercept semua form submit → redirect ke status.html
     document.addEventListener('submit', function(e) {
         e.preventDefault();
         e.stopPropagation();
         window.location.href = basePath + 'status.html';
     }, true);
 
-    // Intercept tombol/link Logout & Log Off → redirect ke logout.html
-    function isLogoutClick(target) {
-        var text = (target.textContent || target.value || '').trim().toLowerCase();
-        return text === 'logout' || text === 'log out' || text === 'logoff' || text === 'log off';
+    // Helper: detect text dengan exact match
+    function textEq(target, ...needles) {
+        var t = (target.textContent || target.value || '').trim().toLowerCase();
+        return needles.indexOf(t) !== -1;
     }
 
-    // Capture phase: jalan SEBELUM default browser action
+    // Capture phase: handle SEMUA navigation buttons
     document.addEventListener('click', function(e) {
         var target = e.target.closest('a, button, input[type="submit"], input[type="button"]');
-        if (!target || !isLogoutClick(target)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        window.location.href = basePath + 'logout.html';
+        if (!target) return;
+
+        // Logout / Log Off → logout.html
+        if (textEq(target, 'logout', 'log out', 'logoff', 'log off')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            window.location.href = basePath + 'logout.html';
+            return;
+        }
+
+        // Login / Login Lagi → login.html (override href kalau perlu)
+        if (textEq(target, 'login', 'login lagi', 'masuk', 'login kembali')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            window.location.href = basePath + 'login.html';
+            return;
+        }
     }, true);
 })();
 </script>
