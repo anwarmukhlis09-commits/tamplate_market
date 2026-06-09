@@ -178,16 +178,29 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
         return '<a ' . $attrs . ' target="_top" rel="noopener">';
     }, $html);
 
-    // Form interceptor: cegah submit asli, tampilkan simulasi demo
+    // Form interceptor: cegah submit asli, redirect ke file yang sesuai
     $interceptor = <<<HTML
 <script>
 (function() {
+    var basePath = window.location.pathname.replace(/[^\/]*$/, '');
+
+    // Intercept semua form submit — redirect ke status.html
     document.addEventListener('submit', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        // Langsung redirect ke status.html template yang sama (tanpa popup)
-        var statusUrl = window.location.pathname.replace(/[^\/]*$/, '') + 'status.html';
-        window.location.href = statusUrl;
+        window.location.href = basePath + 'status.html';
+    }, true);
+
+    // Intercept tombol/link Logout & Log Off → redirect ke logout.html
+    document.addEventListener('click', function(e) {
+        var target = e.target.closest('a, button, input[type="submit"], input[type="button"]');
+        if (!target) return;
+        var text = (target.textContent || target.value || '').trim().toLowerCase();
+        if (text === 'logout' || text === 'log out' || text === 'logoff' || text === 'log off') {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = basePath + 'logout.html';
+        }
     }, true);
 })();
 </script>
