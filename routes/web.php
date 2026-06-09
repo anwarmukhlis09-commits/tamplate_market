@@ -170,7 +170,17 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
     $replacements = array_merge($demo, $custom);
     $html = str_replace(array_keys($replacements), array_values($replacements), $html);
 
-    // Add target="_top" ke semua <a> link supaya escape iframe (best practice)
+    // Rewrite href link "Logout" → langsung ke logout.html (absolute URL).
+    // Pakai str_replace sederhana supaya reliable (no closure scope issue).
+    // Pattern: <a ... href="$(link-logout)" ...>Logout</a>  →  <a ... href="/preview/{slug}/logout.html" ...>Logout</a>
+    $logoutUrl = url('/preview/' . $t->slug . '/logout.html');
+    $html = str_ireplace(
+        '$(link-logout)',
+        $logoutUrl,
+        $html
+    );
+
+    // Add target="_top" ke SEMUA <a> link supaya escape iframe
     $html = preg_replace_callback('/<a\s+([^>]*?)>/i', function ($m) {
         $attrs = $m[1];
         if (preg_match('/\btarget\s*=/i', $attrs)) return $m[0];
