@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="30" />
+  <title>{{BUSINESS_NAME}} | Status Koneksi</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<script>
+function openLogout(){
+  if(window.name !== 'hotspot_status') return true;
+  open('$(link-logout)', 'hotspot_logout', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=320,height=280');
+  window.close();
+  return false;
+}
+</script>
+<main class="page">
+  <div class="card center">
+    <div class="hotel-icon">✓</div>
+    <h2>Anda sudah terhubung</h2>
+    <p class="desc">Selamat menikmati akses internet Grand Semesta Hotel.</p>
+
+    <div class="stats">
+      <div class="stat"><span>Username</span><b>$(username)</b></div>
+      <div class="stat"><span>IP Address</span><b>$(ip)</b></div>
+      <div class="stat"><span>MAC Address</span><b>$(mac)</b></div>
+      <div class="stat"><span>Upload / Download</span><b>$(bytes-in-nice) / $(bytes-out-nice)</b></div>
+      <div class="stat"><span>Waktu Aktif</span><b>$(uptime)</b></div>
+      $(if session-time-left)<div class="stat"><span>Sisa Waktu</span><b>$(session-time-left)</b></div>$(endif)
+    </div>
+
+    <div class="row">
+      <a class="btn ghost" href="$(link-orig)">Lanjut Browsing</a>
+      <a class="btn secondary" href="$(link-logout)" onclick="return openLogout()">Logout</a>
+    </div>
+    <p class="footer-note">Halaman ini otomatis refresh setiap 30 detik.</p>
+  </div>
+</main>
+</body>
+</html>

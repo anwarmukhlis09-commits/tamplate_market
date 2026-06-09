@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{BUSINESS_NAME}} | Logout</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="page">
+  <div class="card center">
+    <div class="hotel-icon">↗</div>
+    <h2>Anda telah logout</h2>
+    <p class="desc">Terima kasih telah menggunakan layanan internet hotel kami.</p>
+    <div class="stats">
+      <div class="stat"><span>Username</span><b>$(username)</b></div>
+      <div class="stat"><span>IP Address</span><b>$(ip)</b></div>
+      <div class="stat"><span>Upload / Download</span><b>$(bytes-in-nice) / $(bytes-out-nice)</b></div>
+      <div class="stat"><span>Total Waktu</span><b>$(uptime)</b></div>
+    </div>
+    <a class="btn" href="$(link-login)">Login Kembali</a>
+    <p class="footer-note">Jika voucher masih aktif, Anda bisa login kembali.</p>
+  </div>
+</main>
+</body>
+</html>

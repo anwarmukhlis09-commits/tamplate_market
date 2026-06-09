@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Hotspot</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+$(if chap-id)
+<form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+  <input type="hidden" name="username" />
+  <input type="hidden" name="password" />
+  <input type="hidden" name="dst" value="$(link-orig)" />
+  <input type="hidden" name="popup" value="true" />
+</form>
+<script src="md5.js"></script>
+<script>
+  function doLogin() {
+    document.sendin.username.value = document.login.username.value;
+    document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+    document.sendin.submit();
+    return false;
+  }
+</script>
+$(endif)
+
+<main class="page">
+  <section class="phone-frame">
+    <div class="phone-speaker"></div>
+    <div class="phone-screen">
+      <div class="theme-bg"></div>
+      <header class="topbar">
+        <div class="status-pill"><span class="dot"></span> ONLINE</div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">☾</button>
+      </header>
+
+      <section class="brand">
+        <div class="logo-circle">
+          <img src="logo.png" onerror="this.style.display='none'; this.parentElement.innerHTML='HS';" alt="Logo" />
+        </div>
+        <h1>HOTSPOT AREA</h1>
+        <p>Internet cepat, aman, dan mudah digunakan</p>
+      </section>
+
+      <section class="login-card">
+        <h2>Selamat Datang!</h2>
+        <p class="subtitle">Masukkan voucher atau akun Anda</p>
+
+        $(if error)
+        <div class="alert">$(error)</div>
+        $(endif)
+
+        <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onsubmit="return doLogin()" $(endif)>
+          <input type="hidden" name="dst" value="$(link-orig)" />
+          <input type="hidden" name="popup" value="true" />
+
+          <label for="username">Voucher / Username</label>
+          <input id="username" name="username" type="text" value="$(username)" placeholder="Masukkan kode voucher" required autofocus />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Kosongkan jika voucher" />
+
+          <button class="login-btn" type="submit">Login</button>
+        </form>
+
+        <p class="help-text">Hubungi admin jika voucher tidak bisa digunakan.</p>
+
+        <div class="features">
+          <div><span>☀</span><small>Light/Dark</small></div>
+          <div><span>⚡</span><small>Ringan</small></div>
+          <div><span>☁</span><small>Status</small></div>
+          <div><span>▣</span><small>QR Ready</small></div>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
