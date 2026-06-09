@@ -116,7 +116,7 @@ function getGradient(seed) {
                     <Link href="/" class="px-3.5 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-lg">Beranda</Link>
                     <Link href="/katalog" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Template</Link>
                     <a href="#cara-kerja" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Cara Kerja</a>
-                    <a href="#bantuan" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Bantuan</a>
+                    <a href="#bantuan-sidebar" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Bantuan</a>
                 </nav>
 
                 <!-- Auth -->

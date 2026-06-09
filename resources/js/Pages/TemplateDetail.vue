@@ -93,7 +93,7 @@ const lockedFeatures = [
                     <Link href="/" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Beranda</Link>
                     <Link href="/katalog" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Template</Link>
                     <a href="/#cara-kerja" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Cara Kerja</a>
-                    <a href="/#bantuan" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Bantuan</a>
+                    <a href="/#bantuan-sidebar" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Bantuan</a>
                 </nav>
                 <div class="flex items-center gap-2.5 shrink-0">
                     <Link v-if="canLogin && !$page.props.auth.user" :href="route('login')" class="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all">Sign In</Link>
