@@ -192,15 +192,19 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
     }, true);
 
     // Intercept tombol/link Logout & Log Off → redirect ke logout.html
+    function isLogoutClick(target) {
+        var text = (target.textContent || target.value || '').trim().toLowerCase();
+        return text === 'logout' || text === 'log out' || text === 'logoff' || text === 'log off';
+    }
+
+    // Capture phase: jalan SEBELUM default browser action
     document.addEventListener('click', function(e) {
         var target = e.target.closest('a, button, input[type="submit"], input[type="button"]');
-        if (!target) return;
-        var text = (target.textContent || target.value || '').trim().toLowerCase();
-        if (text === 'logout' || text === 'log out' || text === 'logoff' || text === 'log off') {
-            e.preventDefault();
-            e.stopPropagation();
-            window.location.href = basePath + 'logout.html';
-        }
+        if (!target || !isLogoutClick(target)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        window.location.href = basePath + 'logout.html';
     }, true);
 })();
 </script>
