@@ -1,15 +1,10 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, reactive, computed, watch } from 'vue';
-import { getTemplate } from '@/data/templates.js';
-
 const props = defineProps({
-    id: { type: [String, Number], required: true },
+    template: { type: Object, default: null },
     canLogin: Boolean,
 });
-
-// ── Template data ────────────────────
-const template = computed(() => getTemplate(props.id));
 
 // ── Editor state ─────────────────────
 const config = reactive({
@@ -189,7 +184,7 @@ const sections = [
             <div class="max-w-full mx-auto px-4 sm:px-6">
                 <div class="flex items-center justify-between h-14">
                     <div class="flex items-center gap-3">
-                        <Link :href="'/template/' + id" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                        <Link :href="'/template/' + template?.id" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         </Link>
                         <div class="flex items-center gap-2.5">
