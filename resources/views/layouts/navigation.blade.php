@@ -16,8 +16,8 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
                     
-                    <x-nav-link :href="route('template.edit')" :active="request()->routeIs('template.*')">
-                        {{ __('Generator Template') }}
+                    <x-nav-link :href="route('dashboard.templates')" :active="request()->routeIs('dashboard.templates') || request()->routeIs('template.*')">
+                        {{ __('Template Saya') }}
                     </x-nav-link>
                 </div>
             </div>
