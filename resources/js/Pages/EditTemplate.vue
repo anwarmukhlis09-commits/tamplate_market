@@ -1,444 +1,418 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
-import { ref, reactive, computed, watch } from 'vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
+
 const props = defineProps({
     template: { type: Object, default: null },
     canLogin: Boolean,
 });
 
-// ── Editor state ─────────────────────
+// ── Editor state (real-time) ───────────
 const config = reactive({
-    businessName: 'WIFI HOTSPOT',
-    runningText: 'Selamat datang! Nikmati internet cepat dan stabil.',
-    primaryColor: '#4F46E5',
-    bgGradient: true,
-    bgColor1: '#4F46E5',
-    bgColor2: '#7C3AED',
+    // General
+    businessName: props.template?.name || 'WIFI HOTSPOT',
+    subtitle: 'Selamat datang! Silakan login untuk mulai menggunakan internet.',
+    footerText: 'Powered by Your ISP',
+    // Login button
     loginBtnText: 'Login Hotspot',
-    showVoucher: true,
-    vouchers: [
-        { name: '1 Jam', price: 'Rp 1K', duration: '1 JAM', highlight: false },
-        { name: '5 Jam', price: 'Rp 3K', duration: '5 JAM', highlight: false },
-        { name: '24 Jam', price: 'Rp 5K', duration: '1 HARI', highlight: true },
-    ],
-    whatsapp: '',
-    footerText: 'Powered by MarketTemplate',
+    // Colors
+    primaryColor: '#2563EB',
+    buttonColor: '#2563EB',
+    // Logo
+    logoUrl: '',
+    // Background
+    bgStyle: 'gradient', // 'gradient' | 'solid' | 'image'
+    bgColor1: '#2563EB',
+    bgColor2: '#7C3AED',
+    bgImageUrl: '',
+    // Social login
+    showSocial: true,
 });
 
-// ── Active section ───────────────────
-const activeSection = ref('nama');
-
-// ── Logo state ───────────────────────
-const logoFile = ref(null);
-const logoPreview = ref(null);       // Object URL for <img> preview
-const logoSrcOriginal = ref(null);   // Original image for crop
-const logoError = ref('');
-const showCrop = ref(false);
-
-// Crop state
-const cropZoom = ref(1);
-const cropX = ref(0);
-const cropY = ref(0);
-const cropDragging = ref(false);
-const cropStartX = ref(0);
-const cropStartY = ref(0);
-const cropOrigX = ref(0);
-const cropOrigY = ref(0);
-
-// ── File input ref ───────────────────
-const fileInput = ref(null);
-
-// ── Computed styles for preview ──────
-const previewBg = computed(() => {
-    if (config.bgGradient) return `linear-gradient(135deg, ${config.bgColor1}, ${config.bgColor2})`;
-    return config.bgColor1;
-});
-
-// ── Logo methods ─────────────────────
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
-const MAX_SIZE = 2 * 1024 * 1024; // 2MB
-
-function handleLogoUpload(e) {
-    const file = e.target.files?.[0];
-    logoError.value = '';
-
-    if (!file) return;
-    if (!ALLOWED_TYPES.includes(file.type)) {
-        logoError.value = 'Format tidak didukung. Gunakan PNG, JPG, JPEG, atau SVG.';
-        return;
-    }
-    if (file.size > MAX_SIZE) {
-        logoError.value = 'Ukuran file maksimal 2MB.';
-        return;
-    }
-
-    logoFile.value = file;
-
-    // For SVG, use as-is; for raster, create object URL for preview
-    if (file.type === 'image/svg+xml') {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            logoPreview.value = ev.target.result;
-            logoSrcOriginal.value = ev.target.result;
-            showCrop.value = false; // No crop for SVG
-        };
-        reader.readAsDataURL(file);
-    } else {
-        logoPreview.value = URL.createObjectURL(file);
-        logoSrcOriginal.value = logoPreview.value;
-        resetCrop();
-        showCrop.value = true;
-    }
-}
-
-function removeLogo() {
-    if (logoPreview.value && logoFile.value?.type !== 'image/svg+xml') {
-        URL.revokeObjectURL(logoPreview.value);
-    }
-    logoFile.value = null;
-    logoPreview.value = null;
-    logoSrcOriginal.value = null;
-    logoError.value = '';
-    showCrop.value = false;
-    resetCrop();
-    if (fileInput.value) fileInput.value.value = '';
-}
-
-function triggerUpload() {
-    fileInput.value?.click();
-}
-
-// ── Crop methods ─────────────────────
-function resetCrop() { cropZoom.value = 1; cropX.value = 0; cropY.value = 0; }
-
-function zoomIn() { cropZoom.value = Math.min(3, +(cropZoom.value + 0.2).toFixed(1)); }
-function zoomOut() { cropZoom.value = Math.max(0.5, +(cropZoom.value - 0.2).toFixed(1)); }
-
-function startCropDrag(e) {
-    if (!showCrop.value) return;
-    cropDragging.value = true;
-    const t = e.touches?.[0] || e;
-    cropStartX.value = t.clientX;
-    cropStartY.value = t.clientY;
-    cropOrigX.value = cropX.value;
-    cropOrigY.value = cropY.value;
-}
-function onCropDrag(e) {
-    if (!cropDragging.value) return;
-    e.preventDefault();
-    const t = e.touches?.[0] || e;
-    cropX.value = cropOrigX.value + (t.clientX - cropStartX.value);
-    cropY.value = cropOrigY.value + (t.clientY - cropStartY.value);
-}
-function stopCropDrag() { cropDragging.value = false; }
-
-// ── Utilities ─────────────────────────
-function darkenColor(hex, amount) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgb(${Math.max(0, r - amount)}, ${Math.max(0, g - amount)}, ${Math.max(0, b - amount)})`;
-}
-
-const presetColors = [
-    { name: 'Indigo', value: '#4F46E5' }, { name: 'Biru', value: '#2563EB' },
-    { name: 'Teal', value: '#0D9488' }, { name: 'Hijau', value: '#16A34A' },
-    { name: 'Orange', value: '#EA580C' }, { name: 'Merah', value: '#DC2626' },
-    { name: 'Ungu', value: '#7C3AED' }, { name: 'Pink', value: '#DB2777' },
-    { name: 'Slate', value: '#475569' }, { name: 'Coklat', value: '#78350F' },
-];
-
-function selectColor(hex) { config.primaryColor = hex; config.bgColor1 = hex; config.bgColor2 = darkenColor(hex, 30); }
-
-function resetConfig() {
-    config.businessName = 'WIFI HOTSPOT';
-    config.runningText = 'Selamat datang! Nikmati internet cepat dan stabil.';
-    config.primaryColor = '#4F46E5'; config.bgGradient = true;
-    config.bgColor1 = '#4F46E5'; config.bgColor2 = '#7C3AED';
-    config.loginBtnText = 'Login Hotspot'; config.showVoucher = true;
-    config.vouchers = [
-        { name: '1 Jam', price: 'Rp 1K', duration: '1 JAM', highlight: false },
-        { name: '5 Jam', price: 'Rp 3K', duration: '5 JAM', highlight: false },
-        { name: '24 Jam', price: 'Rp 5K', duration: '1 HARI', highlight: true },
-    ];
-    config.whatsapp = ''; config.footerText = 'Powered by MarketTemplate';
-    removeLogo();
-}
+// ── UI state ───────────────────────────
+const activeSection = ref('umum'); // umum, logo, background, warna, teks, tombol, sosial, css
+const previewMode = ref('desktop'); // 'desktop' | 'mobile'
+const saving = ref(false);
+const lastSaved = ref(null);
 
 const sections = [
-    { id: 'nama', label: 'Identitas' },
-    { id: 'warna', label: 'Warna' },
-    { id: 'tombol', label: 'Tombol' },
-    { id: 'voucher', label: 'Voucher' },
-    { id: 'kontak', label: 'Kontak' },
+    { id: 'umum',       label: 'Umum',        icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+    { id: 'logo',       label: 'Logo',        icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { id: 'background', label: 'Background',  icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { id: 'warna',      label: 'Warna',       icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-1.657 1.657m-4.99-1.243a2 2 0 01-1.414 0l-1.414-1.414a2 2 0 010-2.828l1.414-1.414a2 2 0 011.414 0l1.414 1.414a2 2 0 010 2.828l-1.414 1.414a2 2 0 01-1.414 0z' },
+    { id: 'teks',       label: 'Teks',        icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+    { id: 'tombol',     label: 'Tombol',      icon: 'M15 7h3a2 2 0 012 2v8a2 2 0 01-2 2h-3m-6-12h-3a2 2 0 00-2 2v8a2 2 0 002 2h3m6-12v12' },
+    { id: 'sosial',     label: 'Sosial Media', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
+    { id: 'css',        label: 'CSS',         icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
 ];
+
+// ── Computed: live preview style ────────
+const previewStyle = computed(() => {
+    if (config.bgStyle === 'image' && config.bgImageUrl) {
+        return { backgroundImage: `url(${config.bgImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+    }
+    if (config.bgStyle === 'solid') {
+        return { background: config.bgColor1 };
+    }
+    return { background: `linear-gradient(135deg, ${config.bgColor1}, ${config.bgColor2})` };
+});
+
+// ── Save (placeholder) ────────────────
+function save() {
+    saving.value = true;
+    // Real implementation: POST config to /template/{id}/editor
+    setTimeout(() => {
+        saving.value = false;
+        lastSaved.value = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }, 800);
+}
+
+// ── File upload handlers (placeholder) ──
+function onLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { config.logoUrl = ev.target.result; };
+    reader.readAsDataURL(file);
+}
+function onBgUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { config.bgImageUrl = ev.target.result; };
+    reader.readAsDataURL(file);
+}
+
+// ── Section icon helper ────────────────
+function sectionIcon(id) {
+    return sections.find(s => s.id === id)?.icon || '';
+}
+function sectionLabel(id) {
+    return sections.find(s => s.id === id)?.label || '';
+}
 </script>
 
 <template>
-    <Head :title="'Edit Template — ' + (template?.name || '')" />
+<Head :title="`Edit ${template?.name || 'Template'} — MarketTemplate`" />
 
-    <div class="min-h-screen bg-slate-100 antialiased">
+<div class="min-h-screen bg-slate-50 flex flex-col" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #0F172A;">
 
-        <!-- ═══ TOP BAR ═══ -->
-        <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
-            <div class="max-w-full mx-auto px-4 sm:px-6">
-                <div class="flex items-center justify-between h-14">
-                    <div class="flex items-center gap-3">
-                        <Link :href="'/template/' + template?.id" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        </Link>
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-7 h-7 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center shadow-sm"><span class="text-white font-bold text-xs">MT</span></div>
-                            <div><h1 class="text-sm font-bold text-slate-900">Edit Template</h1><p class="text-xs text-slate-400">{{ template?.name }}</p></div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button @click="resetConfig" class="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                            Reset
-                        </button>
-                        <Link href="/katalog" class="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl hover:from-indigo-700 hover:to-violet-700 shadow-md shadow-indigo-200 transition-all">Lanjut Checkout</Link>
-                    </div>
+    <!-- ════════════ TOP HEADER ════════════ -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <!-- Kiri: Back + nama template -->
+            <div class="flex items-center gap-3 min-w-0">
+                <Link :href="`/template/${template?.id || ''}`" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Kembali ke Template Saya">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </Link>
+                <div class="min-w-0">
+                    <p class="text-xs text-slate-500 font-medium">Sedang mengedit</p>
+                    <h1 class="text-sm sm:text-base font-bold text-slate-900 truncate">{{ template?.name || 'Template' }}</h1>
                 </div>
             </div>
-        </header>
 
-        <!-- ═══ EDITOR BODY ═══ -->
-        <div class="flex flex-col lg:flex-row h-[calc(100vh-56px)]">
+            <!-- Tengah: Toggle Desktop/Mobile -->
+            <div class="hidden md:flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+                <button @click="previewMode = 'desktop'" :class="previewMode === 'desktop' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Desktop
+                </button>
+                <button @click="previewMode = 'mobile'" :class="previewMode === 'mobile' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    Mobile
+                </button>
+            </div>
 
-            <!-- ═══ LEFT PANEL ═══ -->
-            <div class="lg:w-[420px] shrink-0 bg-white border-r border-slate-200 overflow-y-auto">
-                <!-- Tabs -->
-                <div class="flex border-b border-slate-200 overflow-x-auto sticky top-0 bg-white z-10">
-                    <button v-for="sec in sections" :key="sec.id" @click="activeSection = sec.id"
-                        class="flex-1 min-w-[60px] py-3 px-2 text-xs font-medium transition-colors border-b-2 text-center"
-                        :class="activeSection === sec.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'">
-                        {{ sec.label }}
-                    </button>
+            <!-- Kanan: Action buttons -->
+            <div class="flex items-center gap-2 shrink-0">
+                <a :href="`/preview/${template?.slug || template?.id || ''}/login.html`" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    Live Preview
+                </a>
+                <button @click="save" :disabled="saving" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">
+                    <svg v-if="!saving" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                    {{ saving ? 'Menyimpan...' : 'Simpan' }}
+                </button>
+            </div>
+        </div>
+        <!-- Saved indicator -->
+        <div v-if="lastSaved" class="px-4 sm:px-6 py-1.5 bg-emerald-50 border-t border-emerald-100 text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+            Tersimpan pukul {{ lastSaved }}
+        </div>
+    </header>
+
+    <!-- ════════════ MAIN CONTENT (2 kolom) ════════════ -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- ════ KIRI: SETTINGS PANEL (28%) ════ -->
+        <aside class="w-[280px] sm:w-[320px] shrink-0 bg-white border-r border-slate-200 flex flex-col">
+            <!-- Section menu (icon-based) -->
+            <nav class="p-3 border-b border-slate-100">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">Pengaturan</p>
+                <ul class="space-y-0.5">
+                    <li v-for="s in sections" :key="s.id">
+                        <button @click="activeSection = s.id"
+                            :class="activeSection === s.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                            class="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left">
+                            <svg class="w-4 h-4 shrink-0" :class="activeSection === s.id ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="s.icon"/></svg>
+                            {{ s.label }}
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Section content (scrollable) -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-4">
+
+                <!-- UMUM -->
+                <div v-if="activeSection === 'umum'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Judul Halaman</label>
+                        <input v-model="config.businessName" type="text" placeholder="WIFI HOTSPOT" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Subtitle</label>
+                        <textarea v-model="config.subtitle" rows="3" placeholder="Selamat datang! Silakan login..." class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Footer Text</label>
+                        <input v-model="config.footerText" type="text" placeholder="Powered by Your ISP" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                    </div>
                 </div>
 
-                <div class="p-5">
-
-                    <!-- ── IDENTITAS ── -->
-                    <div v-show="activeSection === 'nama'" class="space-y-5">
-
-                        <!-- Upload Logo -->
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Logo</label>
-
-                            <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml" class="hidden" @change="handleLogoUpload">
-
-                            <!-- No logo: upload area -->
-                            <div v-if="!logoPreview" @click="triggerUpload" class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group">
-                                <svg class="w-10 h-10 text-slate-300 group-hover:text-indigo-400 mx-auto mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <p class="text-sm font-medium text-slate-400 group-hover:text-indigo-600 transition-colors">Klik untuk upload logo</p>
-                                <p class="text-xs text-slate-300 mt-1">PNG, JPG, JPEG, SVG — max 2MB</p>
+                <!-- LOGO -->
+                <div v-if="activeSection === 'logo'" class="space-y-4">
+                    <div class="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-blue-400 transition-colors">
+                        <input type="file" accept="image/*" @change="onLogoUpload" class="hidden" id="logo-upload">
+                        <label for="logo-upload" class="cursor-pointer flex flex-col items-center gap-2">
+                            <div v-if="!config.logoUrl" class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             </div>
-
-                            <!-- Has logo: preview + actions -->
-                            <div v-else class="space-y-3">
-                                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                                    <img :src="logoPreview" alt="Logo preview" class="w-14 h-14 object-contain rounded-xl border border-slate-200 bg-white">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-slate-700 truncate">{{ logoFile?.name }}</p>
-                                        <p class="text-xs text-slate-400">{{ (logoFile?.size / 1024).toFixed(1) }} KB</p>
-                                    </div>
-                                    <button @click="removeLogo" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus logo">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
-                                </div>
-                                <button @click="triggerUpload" class="w-full py-2 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">Ganti Logo</button>
-                            </div>
-
-                            <p v-if="logoError" class="text-xs text-red-500 mt-1.5">{{ logoError }}</p>
-                        </div>
-
-                        <!-- Crop UI -->
-                        <div v-if="showCrop" class="bg-slate-50 rounded-xl p-4 space-y-3">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Sesuaikan Logo</p>
-                            <!-- Crop viewport -->
-                            <div class="w-full aspect-square bg-slate-200 rounded-xl overflow-hidden relative cursor-grab active:cursor-grabbing select-none"
-                                @mousedown="startCropDrag" @mousemove="onCropDrag" @mouseup="stopCropDrag" @mouseleave="stopCropDrag"
-                                @touchstart.prevent="startCropDrag" @touchmove.prevent="onCropDrag" @touchend="stopCropDrag">
-                                <img :src="logoSrcOriginal"
-                                    class="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                                    :style="{ transform: `scale(${cropZoom}) translate(${cropX / cropZoom}px, ${cropY / cropZoom}px)` }">
-                                <!-- Crosshair -->
-                                <div class="absolute inset-4 border-2 border-dashed border-white/50 rounded-lg pointer-events-none"></div>
-                            </div>
-                            <!-- Crop controls -->
-                            <div class="flex items-center justify-between">
-                                <button @click="zoomOut" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-600 font-bold text-sm">−</button>
-                                <span class="text-xs font-medium text-slate-400">{{ Math.round(cropZoom * 100) }}%</span>
-                                <button @click="zoomIn" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-600 font-bold text-sm">+</button>
-                                <button @click="resetCrop" class="px-3 py-1.5 text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">Reset</button>
-                            </div>
-                        </div>
-
-                        <!-- Brand name -->
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nama WiFi / Brand</label>
-                            <input v-model="config.businessName" type="text" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Teks Berjalan / Tagline</label>
-                            <textarea v-model="config.runningText" rows="3" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow resize-none"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Teks Footer</label>
-                            <input v-model="config.footerText" type="text" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow">
-                        </div>
+                            <img v-else :src="config.logoUrl" class="w-20 h-20 object-contain rounded-lg" alt="Logo">
+                            <p class="text-xs font-semibold text-slate-700">Upload Logo</p>
+                            <p class="text-[10px] text-slate-500">PNG, JPG, SVG · max 2MB</p>
+                        </label>
                     </div>
-
-                    <!-- ── WARNA ── -->
-                    <div v-show="activeSection === 'warna'" class="space-y-5">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Warna Utama</label>
-                            <div class="grid grid-cols-5 gap-2">
-                                <button v-for="c in presetColors" :key="c.value" @click="selectColor(c.value)" class="h-10 rounded-xl border-2 transition-all relative" :style="{ backgroundColor: c.value }"
-                                    :class="config.primaryColor === c.value ? 'border-slate-900 ring-2 ring-offset-2 ring-slate-900/20 scale-110 shadow-lg' : 'border-transparent hover:scale-105'" :title="c.name">
-                                    <span v-if="config.primaryColor === c.value" class="absolute inset-0 flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Custom Warna</label>
-                            <div class="flex items-center gap-3">
-                                <input v-model="config.bgColor1" type="color" class="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5">
-                                <input v-model="config.bgColor1" type="text" class="flex-1 px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                            <input v-model="config.bgGradient" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" id="useGradient">
-                            <label for="useGradient" class="text-sm font-medium text-slate-700 cursor-pointer select-none">Gunakan gradient background</label>
-                        </div>
-                        <div v-if="config.bgGradient">
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Warna Gradient ke-2</label>
-                            <div class="flex items-center gap-3">
-                                <input v-model="config.bgColor2" type="color" class="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5">
-                                <input v-model="config.bgColor2" type="text" class="flex-1 px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
-                            </div>
-                        </div>
+                    <div v-if="config.logoUrl" class="flex gap-2">
+                        <button @click="config.logoUrl = ''" class="flex-1 py-1.5 text-xs font-medium text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100">Hapus Logo</button>
                     </div>
+                </div>
 
-                    <!-- ── TOMBOL ── -->
-                    <div v-show="activeSection === 'tombol'" class="space-y-5">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Teks Tombol Login</label>
-                            <input v-model="config.loginBtnText" type="text" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow">
-                        </div>
-                        <div class="p-4 bg-slate-50 rounded-xl">
-                            <p class="text-xs text-slate-500 mb-3">Preview tombol:</p>
-                            <button class="w-full py-3 rounded-xl text-sm font-bold text-white shadow-lg transition-all" :style="{ backgroundColor: config.primaryColor }">
-                                {{ config.loginBtnText }}
+                <!-- BACKGROUND -->
+                <div v-if="activeSection === 'background'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-2">Tipe Background</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button v-for="t in ['gradient', 'solid', 'image']" :key="t" @click="config.bgStyle = t"
+                                :class="config.bgStyle === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                                class="px-3 py-2.5 text-xs font-semibold border-2 rounded-lg capitalize transition-colors">
+                                {{ t === 'gradient' ? 'Gradient' : t === 'solid' ? 'Solid' : 'Gambar' }}
                             </button>
                         </div>
                     </div>
-
-                    <!-- ── VOUCHER ── -->
-                    <div v-show="activeSection === 'voucher'" class="space-y-5">
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Paket Voucher</label>
-                            <label class="flex items-center gap-2 text-xs cursor-pointer select-none">
-                                <input v-model="config.showVoucher" type="checkbox" class="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                <span class="text-slate-500">Tampilkan</span>
+                    <div v-if="config.bgStyle === 'gradient'" class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Warna 1</label>
+                            <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
+                                <input v-model="config.bgColor1" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
+                                <input v-model="config.bgColor1" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Warna 2</label>
+                            <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
+                                <input v-model="config.bgColor2" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
+                                <input v-model="config.bgColor2" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="config.bgStyle === 'solid'">
+                        <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Warna Solid</label>
+                        <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
+                            <input v-model="config.bgColor1" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
+                            <input v-model="config.bgColor1" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
+                        </div>
+                    </div>
+                    <div v-if="config.bgStyle === 'image'">
+                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-blue-400 transition-colors">
+                            <input type="file" accept="image/*" @change="onBgUpload" class="hidden" id="bg-upload">
+                            <label for="bg-upload" class="cursor-pointer flex flex-col items-center gap-2">
+                                <div v-if="!config.bgImageUrl" class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                </div>
+                                <img v-else :src="config.bgImageUrl" class="w-full h-24 object-cover rounded-lg" alt="Background">
+                                <p class="text-xs font-semibold text-slate-700">Upload Gambar Background</p>
                             </label>
                         </div>
-                        <div v-if="config.showVoucher" class="space-y-3">
-                            <div v-for="(v, i) in config.vouchers" :key="i" class="p-4 bg-slate-50 rounded-xl space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-semibold text-slate-500">Paket {{ i + 1 }}</span>
-                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none">
-                                        <input v-model="v.highlight" type="checkbox" class="w-3 h-3 rounded border-slate-300 text-amber-500 focus:ring-amber-500">
-                                        <span class="text-slate-400">Highlight</span>
-                                    </label>
-                                </div>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <input v-model="v.name" type="text" class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="Nama">
-                                    <input v-model="v.price" type="text" class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="Harga">
-                                    <input v-model="v.duration" type="text" class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="Durasi">
-                                </div>
-                            </div>
+                    </div>
+                </div>
+
+                <!-- WARNA -->
+                <div v-if="activeSection === 'warna'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Warna Utama (Primary)</label>
+                        <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
+                            <input v-model="config.primaryColor" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
+                            <input v-model="config.primaryColor" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-1">Dipakai untuk icon, link, dan elemen brand</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Warna Tombol Login</label>
+                        <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
+                            <input v-model="config.buttonColor" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
+                            <input v-model="config.buttonColor" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-1">Pakai warna brand bisnis Anda</p>
+                    </div>
+                </div>
+
+                <!-- TEKS -->
+                <div v-if="activeSection === 'teks'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Teks Tombol Login</label>
+                        <input v-model="config.loginBtnText" type="text" placeholder="Login Hotspot" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                        <p class="text-[10px] text-slate-500 mt-1">Maks 24 karakter agar pas di tombol</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Placeholder Username</label>
+                        <input type="text" value="Masukkan username" disabled class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Placeholder Password</label>
+                        <input type="text" value="Masukkan password" disabled class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-400">
+                    </div>
+                </div>
+
+                <!-- TOMBOL -->
+                <div v-if="activeSection === 'tombol'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Bentuk Tombol</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="px-3 py-2.5 text-xs font-semibold border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg">Rounded (default)</button>
+                            <button class="px-3 py-2.5 text-xs font-semibold border-2 border-slate-200 text-slate-700 rounded-none">Square</button>
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Ukuran Tombol</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="py-1.5 text-xs font-semibold border-2 border-slate-200 text-slate-700 rounded-lg">Kecil</button>
+                            <button class="py-2.5 text-xs font-semibold border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg">Sedang</button>
+                            <button class="py-3.5 text-xs font-semibold border-2 border-slate-200 text-slate-700 rounded-lg">Besar</button>
+                        </div>
+                    </div>
+                </div>
 
-                    <!-- ── KONTAK ── -->
-                    <div v-show="activeSection === 'kontak'" class="space-y-5">
+                <!-- SOSIAL -->
+                <div v-if="activeSection === 'sosial'" class="space-y-4">
+                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-lg cursor-pointer">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nomor WhatsApp</label>
-                            <input v-model="config.whatsapp" type="text" placeholder="0812-3456-7890" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow">
+                            <p class="text-sm font-semibold text-slate-800">Tampilkan Login Sosial</p>
+                            <p class="text-xs text-slate-500">Google, Facebook, Apple</p>
                         </div>
-                    </div>
+                        <input v-model="config.showSocial" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                    </label>
+                </div>
 
+                <!-- CSS -->
+                <div v-if="activeSection === 'css'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Custom CSS</label>
+                        <textarea rows="8" placeholder="/* CSS tambahan untuk kustomisasi lanjutan */" class="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none"></textarea>
+                        <p class="text-[10px] text-slate-500 mt-1">⚠️ Untuk pengguna advanced. CSS akan di-inject ke template.</p>
+                    </div>
                 </div>
             </div>
+        </aside>
 
-            <!-- ═══ RIGHT: LIVE PREVIEW ═══ -->
-            <div class="flex-1 flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-slate-200/50"
-                :style="{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }">
+        <!-- ════ KANAN: LIVE PREVIEW (72%) ════ -->
+        <main class="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6 lg:p-10">
+            <div class="max-w-5xl mx-auto">
 
-                <div class="w-[340px] shrink-0 sticky top-20">
-                    <p class="text-center text-xs font-medium text-slate-400 mb-3">Live Preview</p>
-
-                    <div class="bg-slate-900 rounded-[2.5rem] p-2.5 shadow-2xl shadow-slate-400/40 ring-1 ring-slate-300/20">
-                        <div class="flex justify-center mb-2.5"><div class="w-16 h-4 bg-slate-800 rounded-full"></div></div>
-
-                        <div class="rounded-[2rem] overflow-hidden aspect-[9/16] relative" :style="{ background: previewBg }">
-                            <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
-
-                            <div class="absolute inset-0 flex flex-col items-center justify-center px-6 py-8 text-center">
-
-                                <!-- Logo in preview -->
-                                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-white/30 shadow-lg overflow-hidden"
-                                    :class="logoPreview ? 'bg-transparent' : 'bg-white/20 backdrop-blur'">
-                                    <img v-if="logoPreview" :src="logoPreview" alt="Logo"
-                                        class="w-full h-full object-contain"
-                                        :style="{ transform: showCrop ? `scale(${cropZoom}) translate(${cropX / cropZoom}px, ${cropY / cropZoom}px)` : 'none' }">
-                                    <svg v-else class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.07c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.858 15.355-5.858 21.213 0"/></svg>
-                                </div>
-
-                                <h2 class="text-2xl font-extrabold text-white mb-1 tracking-tight drop-shadow-lg">{{ config.businessName }}</h2>
-                                <p class="text-xs text-white/80 mb-5 leading-relaxed drop-shadow">{{ config.runningText }}</p>
-
-                                <div class="w-full space-y-2.5 mb-5">
-                                    <input type="text" placeholder="Username" disabled class="w-full px-4 py-2.5 text-sm bg-white/15 backdrop-blur border border-white/20 rounded-xl text-white placeholder:text-white/50 outline-none">
-                                    <input type="password" placeholder="Password" disabled class="w-full px-4 py-2.5 text-sm bg-white/15 backdrop-blur border border-white/20 rounded-xl text-white placeholder:text-white/50 outline-none">
-                                    <button class="w-full py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-all" :style="{ backgroundColor: config.primaryColor }">
-                                        {{ config.loginBtnText }}
-                                    </button>
-                                </div>
-
-                                <p class="text-[10px] text-white/60 mb-5">Internet cepat untuk menemanimu.</p>
-
-                                <div v-if="config.showVoucher" class="w-full">
-                                    <p class="text-[10px] font-semibold text-white/70 mb-2 uppercase tracking-wide">Paket Voucher WiFi</p>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <div v-for="(v, i) in config.vouchers" :key="i" class="rounded-xl py-3 px-1.5 text-center transition-all relative"
-                                            :class="v.highlight ? 'bg-white text-slate-900 shadow-lg scale-105' : 'bg-white/15 text-white backdrop-blur'">
-                                            <div v-if="v.highlight" class="absolute -top-1.5 right-1 text-[7px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded-full">TOP</div>
-                                            <div class="text-xs font-bold" :class="v.highlight ? 'text-slate-900' : 'text-white'">{{ v.price }}</div>
-                                            <div class="text-[9px] mt-0.5 opacity-75">{{ v.duration }}</div>
-                                            <div class="text-[8px] mt-0.5 opacity-60">{{ v.name }}</div>
+                <!-- Preview device frame -->
+                <div class="flex items-center justify-center">
+                    <!-- DESKTOP preview -->
+                    <div v-if="previewMode === 'desktop'" class="w-full max-w-4xl">
+                        <div class="bg-slate-200 rounded-t-xl px-4 py-2.5 flex items-center gap-1.5 border border-slate-200 border-b-0">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                            <div class="flex-1 mx-3 bg-white rounded-md px-3 py-1 text-[10px] text-slate-400 font-mono truncate">
+                                hotspot.{{ config.businessName.toLowerCase().replace(/\s+/g, '-') }}.test/login
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200 border-t-0 rounded-b-xl overflow-hidden shadow-xl" style="min-height: 500px;">
+                            <!-- Login page mockup -->
+                            <div class="flex items-center justify-center p-10" :style="previewStyle" style="min-height: 500px;">
+                                <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-7 text-center">
+                                    <!-- Logo -->
+                                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center overflow-hidden"
+                                        :style="config.logoUrl ? '' : `background: ${config.primaryColor}`"
+                                        :class="config.logoUrl ? '' : ''">
+                                        <img v-if="config.logoUrl" :src="config.logoUrl" class="w-full h-full object-contain">
+                                        <span v-else class="text-white font-extrabold text-2xl">{{ config.businessName.charAt(0) }}</span>
+                                    </div>
+                                    <h2 class="text-2xl font-extrabold text-slate-900 mb-1">{{ config.businessName }}</h2>
+                                    <p class="text-sm text-slate-500 mb-5 leading-relaxed">{{ config.subtitle }}</p>
+                                    <div class="space-y-2.5 mb-4">
+                                        <input type="text" placeholder="Username" disabled class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-700">
+                                        <input type="password" placeholder="Password" disabled class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-700">
+                                    </div>
+                                    <button class="w-full py-3 text-sm font-bold text-white rounded-xl shadow-md transition-colors" :style="`background: ${config.buttonColor}`">{{ config.loginBtnText }}</button>
+                                    <!-- Social login -->
+                                    <div v-if="config.showSocial" class="mt-4 flex items-center justify-center gap-2">
+                                        <span class="text-[10px] text-slate-400">atau login dengan</span>
+                                        <div class="flex gap-1.5">
+                                            <span class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs">G</span>
+                                            <span class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs">F</span>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div class="mt-auto pt-4 w-full border-t border-white/20">
-                                    <div class="flex items-center justify-center gap-1.5 text-[10px] text-white/70">
-                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                                        WA {{ config.whatsapp }}
-                                    </div>
-                                    <p class="text-[9px] text-white/50 mt-1.5">{{ config.footerText }}</p>
+                                    <p class="mt-5 text-[10px] text-slate-400">{{ config.footerText }}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex justify-center mt-2.5"><div class="w-20 h-1 bg-slate-700 rounded-full"></div></div>
                     </div>
-                    <p class="text-center text-xs text-slate-400 mt-4">Edit panel kiri — preview update otomatis</p>
+
+                    <!-- MOBILE preview -->
+                    <div v-else class="w-full max-w-[360px]">
+                        <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl">
+                            <div class="flex justify-center mb-2"><div class="w-24 h-5 bg-slate-800 rounded-full"></div></div>
+                            <div class="bg-slate-900 rounded-[2rem] overflow-hidden ring-4 ring-slate-800 relative" style="aspect-ratio: 9/16;">
+                                <div class="w-full h-full flex items-center justify-center p-5" :style="previewStyle">
+                                    <div class="w-full bg-white rounded-2xl shadow-2xl p-5 text-center">
+                                        <div class="w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center overflow-hidden"
+                                            :style="config.logoUrl ? '' : `background: ${config.primaryColor}`">
+                                            <img v-if="config.logoUrl" :src="config.logoUrl" class="w-full h-full object-contain">
+                                            <span v-else class="text-white font-extrabold text-lg">{{ config.businessName.charAt(0) }}</span>
+                                        </div>
+                                        <h2 class="text-lg font-extrabold text-slate-900 mb-1">{{ config.businessName }}</h2>
+                                        <p class="text-[11px] text-slate-500 mb-4 leading-snug">{{ config.subtitle }}</p>
+                                        <div class="space-y-2 mb-3">
+                                            <input type="text" placeholder="Username" disabled class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg">
+                                            <input type="password" placeholder="Password" disabled class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg">
+                                        </div>
+                                        <button class="w-full py-2.5 text-xs font-bold text-white rounded-lg shadow-md" :style="`background: ${config.buttonColor}`">{{ config.loginBtnText }}</button>
+                                        <div v-if="config.showSocial" class="mt-3 flex items-center justify-center gap-1.5">
+                                            <span class="text-[9px] text-slate-400">atau</span>
+                                            <span class="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[8px]">G</span>
+                                            <span class="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[8px]">F</span>
+                                        </div>
+                                        <p class="mt-3 text-[9px] text-slate-400">{{ config.footerText }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Tip bawah -->
+                <p class="text-center text-xs text-slate-400 mt-6">
+                    💡 Perubahan pada panel kiri langsung terlihat di preview ini. Klik <strong>Simpan</strong> untuk apply ke template.
+                </p>
             </div>
-        </div>
+        </main>
     </div>
+</div>
 </template>
