@@ -34,15 +34,23 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Destroy an authenticated session.
+     *
+     * Bersihkan session + CSRF token + remember-me cookie supaya bersih total
+     * dan user bisa login kembali tanpa 419 Page Expired.
      */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
 
+        // Invalidate session total + regenerate CSRF token (Laravel default)
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Hapus XSRF-TOKEN & remember-me cookie untuk pastikan bersih
+        $response = redirect('/');
+        $response->withCookie(cookie()->forget('XSRF-TOKEN'));
+        $response->withCookie(cookie()->forget(Auth::guard('web')->getRecallerName()));
+
+        return $response;
     }
 }
