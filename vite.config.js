@@ -17,7 +17,7 @@ export default defineConfig({
     },
     plugins: [
         laravel({
-            input: ['resources/js/app.js', 'resources/js/blade.js'],
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/blade.js'],
             refresh: true,
         }),
         vue({
