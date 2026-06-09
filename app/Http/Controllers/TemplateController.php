@@ -3,96 +3,79 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\HotspotConfig;
+use App\Models\Template;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
-use ZipArchive;
 
 class TemplateController extends Controller
 {
-    public function edit(Request $request)
+    /**
+     * Tampilkan editor untuk template {id}.
+     * Route: GET /template/{id}/editor
+     */
+    public function edit(Request $request, int $id)
     {
-        $config = HotspotConfig::firstOrCreate(
-            ['user_id' => $request->user()->id],
-            ['business_name' => 'WIFI HOTSPOT']
-        );
-        return view('template.edit', compact('config'));
+        $template = Template::findOrFail($id);
+        return \Inertia\Inertia::render('EditTemplate', [
+            'template' => $template,
+        ]);
     }
 
-    public function update(Request $request)
+    /**
+     * Update konfigurasi template {id} (placeholder).
+     * Route: POST /template/{id}/editor
+     */
+    public function update(Request $request, int $id)
     {
+        $template = Template::findOrFail($id);
         $request->validate([
             'business_name' => 'required|string|max:255',
-            'running_text' => 'nullable|string',
-            'logo' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
         ]);
-
-        $config = HotspotConfig::where('user_id', $request->user()->id)->firstOrFail();
-        $config->business_name = $request->business_name;
-        $config->running_text = $request->running_text;
-
-        if ($request->hasFile('logo')) {
-            if ($config->logo_path) {
-                Storage::delete('public/' . $config->logo_path);
-            }
-            $path = $request->file('logo')->store('logos', 'public');
-            $config->logo_path = $path;
-        }
-
-        $config->save();
-
-        return redirect()->route('template.edit')->with('success', 'Konfigurasi berhasil disimpan!');
+        // Placeholder: integrasikan dengan tabel konfigurasi user nanti
+        return redirect()->back()->with('success', 'Template ' . $template->name . ' berhasil diupdate.');
     }
 
-    public function download(Request $request)
+    /**
+     * Download template {id} sebagai ZIP.
+     * Route: GET /template/{id}/download
+     */
+    public function download(Request $request, int $id)
     {
-        $config = HotspotConfig::where('user_id', $request->user()->id)->firstOrFail();
+        $template = Template::findOrFail($id);
 
-        $masterPath = storage_path('app/master_template');
-        if (!File::exists($masterPath)) {
-            return back()->with('error', 'Master template belum tersedia di server.');
+        // Resolve path folder template (dari zip_file)
+        $folder = $template->zip_file;
+        $srcPath = $folder && Storage::disk('public')->exists($folder)
+            ? Storage::disk('public')->path($folder)
+            : storage_path('app/master_template');
+
+        if (!File::exists($srcPath)) {
+            return back()->with('error', 'File template tidak ditemukan.');
         }
 
-        $tempPath = storage_path('app/temp_custom_' . $request->user()->id);
-        
-        if (File::exists($tempPath)) {
-            File::deleteDirectory($tempPath);
-        }
-        File::copyDirectory($masterPath, $tempPath);
+        $zipFileName = 'Template_' . preg_replace('/[^A-Za-z0-9\-]/', '_', $template->name) . '.zip';
 
-        $files = File::allFiles($tempPath);
-        foreach ($files as $file) {
-            if ($file->getExtension() == 'html' || $file->getExtension() == 'txt') {
-                $content = File::get($file->getPathname());
-                $content = str_replace('{{BUSINESS_NAME}}', $config->business_name, $content);
-                $content = str_replace('{{RUNNING_TEXT}}', $config->running_text ?? 'Selamat Datang di Hotspot Kami', $content);
-                File::put($file->getPathname(), $content);
-            }
+        // Stream ZIP pakai ZipArchive (extension zip harus enabled)
+        if (!class_exists('ZipArchive')) {
+            return back()->with('error', 'PHP zip extension belum aktif. Hubungi admin.');
         }
 
-        if ($config->logo_path) {
-            $userLogoPath = storage_path('app/public/' . $config->logo_path);
-            if (File::exists($userLogoPath)) {
-                // Asumsi file asli bernama logo.png di dalam folder root template
-                File::copy($userLogoPath, $tempPath . '/logo.png');
-            }
+        $zipPath = storage_path('app/' . $zipFileName);
+        if (file_exists($zipPath)) {
+            @unlink($zipPath);
         }
 
-        $zipPath = storage_path('app/Template_Hotspot_' . preg_replace('/[^A-Za-z0-9\-]/', '', $config->business_name) . '.zip');
-        $zip = new ZipArchive;
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-            $files = File::allFiles($tempPath);
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+            $files = File::allFiles($srcPath);
             foreach ($files as $file) {
-                $relativePath = str_replace($tempPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
-                $zip->addFile($file->getPathname(), $relativePath);
+                $relative = str_replace($srcPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                $zip->addFile($file->getPathname(), $relative);
             }
             $zip->close();
-        } else {
-            return back()->with('error', 'Gagal membuat file ZIP.');
+            return response()->download($zipPath)->deleteFileAfterSend(true);
         }
 
-        File::deleteDirectory($tempPath);
-
-        return response()->download($zipPath)->deleteFileAfterSend(true);
+        return back()->with('error', 'Gagal membuat file ZIP.');
     }
 }

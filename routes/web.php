@@ -494,10 +494,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Template Generator Routes
-    Route::get('/template', [TemplateController::class, 'edit'])->name('template.edit');
-    Route::post('/template', [TemplateController::class, 'update'])->name('template.update');
-    Route::get('/template/download', [TemplateController::class, 'download'])->name('template.download');
+    // Template Generator Routes (scoped by {id} — WAJIB untuk hindari
+    // data bentrok antar template, setiap proses mengacu ke ID spesifik)
+    Route::get('/template/{id}/editor', [TemplateController::class, 'edit'])->name('template.edit');
+    Route::post('/template/{id}/editor', [TemplateController::class, 'update'])->name('template.update');
+    Route::get('/template/{id}/download', [TemplateController::class, 'download'])->name('template.download');
 });
 
 // ── Admin Routes ───────────────────────
@@ -516,6 +517,33 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', fn() => Inertia::render('Admin/Users'))->name('users');
     Route::get('/categories', fn() => Inertia::render('Admin/Categories'))->name('categories');
     Route::get('/settings', fn() => Inertia::render('Admin/Settings'))->name('settings');
+});
+
+// ── Buyer Actions (scoped by {id} — setiap proses mengacu ke ID spesifik) ──
+Route::middleware(['auth'])->group(function () {
+    // Cart: add/remove template by id
+    Route::post('/cart/{id}', [\App\Http\Controllers\CartController::class, 'add'])
+        ->name('cart.add');
+    Route::delete('/cart/{id}', [\App\Http\Controllers\CartController::class, 'remove'])
+        ->name('cart.remove');
+
+    // Checkout: GET menampilkan halaman, POST buat order
+    Route::get('/checkout/{id}', [\App\Http\Controllers\CheckoutController::class, 'show'])
+        ->name('checkout.show');
+    Route::post('/checkout/{id}', [\App\Http\Controllers\CheckoutController::class, 'process'])
+        ->name('checkout.process');
+
+    // Payment: lanjut ke payment gateway untuk order tertentu
+    Route::get('/payment/{order}', [\App\Http\Controllers\PaymentController::class, 'show'])
+        ->name('payment.show');
+    Route::post('/payment/{order}/process', [\App\Http\Controllers\PaymentController::class, 'process'])
+        ->name('payment.process');
+    Route::get('/payment/{order}/success', [\App\Http\Controllers\PaymentController::class, 'success'])
+        ->name('payment.success');
+
+    // Purchase history per-template
+    Route::get('/purchases/{id}', [\App\Http\Controllers\PurchaseController::class, 'show'])
+        ->name('purchase.show');
 });
 
 require __DIR__.'/auth.php';
