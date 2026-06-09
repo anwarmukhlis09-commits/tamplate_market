@@ -21,7 +21,7 @@ const config = reactive({
         { name: '5 Jam', price: 'Rp 3K', duration: '5 JAM', highlight: false },
         { name: '24 Jam', price: 'Rp 5K', duration: '1 HARI', highlight: true },
     ],
-    whatsapp: '0812-XXXX-XXXX',
+    whatsapp: '',
     footerText: 'Powered by MarketTemplate',
 });
 
@@ -161,7 +161,7 @@ function resetConfig() {
         { name: '5 Jam', price: 'Rp 3K', duration: '5 JAM', highlight: false },
         { name: '24 Jam', price: 'Rp 5K', duration: '1 HARI', highlight: true },
     ];
-    config.whatsapp = '0812-XXXX-XXXX'; config.footerText = 'Powered by MarketTemplate';
+    config.whatsapp = ''; config.footerText = 'Powered by MarketTemplate';
     removeLogo();
 }
 
@@ -368,7 +368,7 @@ const sections = [
                     <div v-show="activeSection === 'kontak'" class="space-y-5">
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nomor WhatsApp</label>
-                            <input v-model="config.whatsapp" type="text" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow">
+                            <input v-model="config.whatsapp" type="text" placeholder="0812-3456-7890" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-shadow">
                         </div>
                     </div>
 
