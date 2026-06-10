@@ -132,8 +132,9 @@ const lockedFeatures = [
             <!-- ════ LEFT: PREVIEW GALLERY ════ -->
             <div class="lg:col-span-3 space-y-4">
                 <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                    <!-- Main preview -->
-                    <div class="relative aspect-[4/3] overflow-hidden" :class="getTemplateGradient(template.name)" @click="isZoomed = true">
+                    <!-- Main preview: pakai template.previewImageUrl (auto-generated thumbnail) kalau ada, fallback ke gradient mockup -->
+                    <div class="relative aspect-[4/3] overflow-hidden bg-slate-100" :class="template.previewImageUrl ? '' : getTemplateGradient(template.name)" @click="isZoomed = true">
+                        <img v-if="template.previewImageUrl" :src="template.previewImageUrl" :alt="template.name" class="absolute inset-0 w-full h-full object-cover" />
                         <div class="absolute inset-6 sm:inset-10 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center justify-center p-6 text-white">
                             <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-3 ring-1 ring-white/20">
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>

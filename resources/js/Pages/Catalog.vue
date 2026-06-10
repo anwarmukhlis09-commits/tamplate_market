@@ -358,9 +358,10 @@ function updatePriceRange() {
                     <!-- Grid -->
                     <div v-if="paginatedTemplates.length > 0" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                         <div v-for="tpl in paginatedTemplates" :key="tpl.id" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-2xl hover:shadow-slate-300/60 hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300">
-                            <!-- Thumbnail (realistic hotspot mockup) -->
+                            <!-- Thumbnail: pakai imageUrl (auto-generated thumbnail) kalau ada, fallback ke gradient mockup -->
                             <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
-                                <div class="absolute inset-0 bg-gradient-to-br" :class="getTemplateGradient(tpl.name)">
+                                <img v-if="tpl.imageUrl" :src="tpl.imageUrl" :alt="tpl.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                <div v-else class="absolute inset-0 bg-gradient-to-br" :class="getTemplateGradient(tpl.name)">
                                     <!-- Mockup hotspot login -->
                                     <div class="absolute inset-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center justify-center p-4 text-white">
                                         <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2">

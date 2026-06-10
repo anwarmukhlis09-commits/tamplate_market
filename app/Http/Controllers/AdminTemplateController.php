@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Template;
+use App\Support\TemplateThumbnailGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -101,16 +102,24 @@ class AdminTemplateController extends Controller
             ])->withInput();
         }
 
-        $data['zip_file'] = $basePath; // Store folder path instead of single ZIP
+        $data['zip_file'] = $basePath; // Folder path ID-based (e.g. templates/19/original)
 
-        // Handle preview image
-        if ($request->hasFile('preview_image')) {
-            $data['preview_image'] = $request->file('preview_image')->store('templates/previews', 'public');
+        // Auto-generate thumbnail dari login.html template (no manual upload needed)
+        $fullPath = Storage::disk('public')->path($basePath);
+        $thumbnailRel = TemplateThumbnailGenerator::generate(
+            $template->id,
+            $data['name'],
+            $fullPath
+        );
+        if ($thumbnailRel) {
+            $data['preview_image'] = $thumbnailRel;
         }
+
+        // (No longer support manual preview_image upload — auto-generated only)
 
         Template::create($data);
 
-        return redirect()->route('admin.templates.index')->with('success', 'Template berhasil ditambahkan! ' . count($files) . ' file diupload.');
+        return redirect()->route('admin.templates.index')->with('success', 'Template berhasil ditambahkan! ' . count($files) . ' file diupload, thumbnail auto-generated.');
     }
 
     // ── Edit ──────────────────────────
@@ -183,8 +192,17 @@ class AdminTemplateController extends Controller
     // ── Delete ────────────────────────
     public function destroy(Template $template)
     {
+        // Hapus folder template (original files) + thumbnail sebelum delete DB record
+        // supaya tidak ada orphaned files di storage
+        if ($template->zip_file) {
+            $folderPath = dirname($template->zip_file); // templates/{id}
+            if (Storage::disk('public')->exists($folderPath)) {
+                Storage::disk('public')->deleteDirectory($folderPath);
+            }
+        }
+
         $template->delete();
-        return back()->with('success', 'Template berhasil dihapus!');
+        return back()->with('success', 'Template berhasil dihapus (folder + thumbnail ikut terhapus)!');
     }
 
     // ── Toggle publish ────────────────
