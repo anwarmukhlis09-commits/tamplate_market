@@ -64,9 +64,13 @@ class AdminTemplateController extends Controller
         $data['slug'] = Str::slug($data['name']);
         $data['allow_edit_before_checkout'] = $request->boolean('allow_edit_before_checkout');
 
-        // ── Store folder structure ────────
-        $slug = $data['slug'];
-        $basePath = "templates/{$slug}";
+        // ── Create template dulu untuk dapat ID unik (auto-increment) ──
+        $data['zip_file'] = null; // akan di-set setelah dapat ID
+        $template = Template::create($data);
+
+        // ── Store folder structure pakai ID template (unique per-template) ──
+        // Path: storage/app/public/templates/{id}/original/{file}
+        $basePath = "templates/{$template->id}/original";
         $hasLoginHtml = false;
 
         $files = $request->file('template_files');

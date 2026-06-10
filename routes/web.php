@@ -68,6 +68,12 @@ Route::get('/katalog', function () {
     ]);
 });
 
+// Download template sebagai ZIP (scope ke {id}) — HARUS dideklarasikan
+// SEBELUM /template/{id} supaya route match spesifik duluan.
+Route::get('/template/{id}/download', [\App\Http\Controllers\TemplateController::class, 'download'])
+    ->middleware('auth')
+    ->name('template.download');
+
 Route::get('/template/{id}', function ($id) {
     $t = \App\Models\Template::findOrFail($id);
     return Inertia::render('TemplateDetail', [
@@ -241,6 +247,119 @@ HTML;
         ->header('X-Frame-Options', 'SAMEORIGIN')
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 })->where('file', '.*\.html$')->name('preview.direct');
+
+// ── ID-based Preview (pakai {id} template, scope ke ID card itu) ───────
+// Contoh: /templates/15/preview         (default login.html)
+//         /templates/15/preview/status   (status.html)
+//         /templates/15/preview/logout   (logout.html)
+// Folder pattern: storage/app/public/templates/{id}/original/{file}
+Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html') {
+    $t = \App\Models\Template::findOrFail($id);
+
+    // Whitelist file (security: cegah path traversal)
+    $allowed = ['login.html', 'status.html', 'logout.html', 'error.html',
+                'alogin.html', 'rlogin.html', 'redirect.html', 'radvert.html'];
+    if (!in_array($file, $allowed)) {
+        abort(404, 'File not found');
+    }
+
+    // Resolve path ID-based: templates/{id}/original/{file}
+    $basePath = "templates/{$t->id}/original";
+    $filePath = null;
+
+    if (\Storage::disk('public')->exists($basePath . '/' . $file)) {
+        // Priority 1: User-uploaded template (ID-based)
+        $filePath = \Storage::disk('public')->path($basePath . '/' . $file);
+        $baseHref = asset('storage/' . $basePath);
+    } elseif (file_exists(storage_path('app/master_template/' . $file))) {
+        // Priority 2: Master template fallback
+        $filePath = storage_path('app/master_template/' . $file);
+        $baseHref = asset('storage/master_template');
+    }
+
+    if (!$filePath) abort(404, 'Page not found: ' . $file);
+
+    $html = file_get_contents($filePath);
+
+    // Inject base tag untuk asset relatif
+    $baseTag = '<base href="' . $baseHref . '/">';
+    $html = str_replace('<head>', "<head>\n" . $baseTag, $html);
+
+    // Demo MikroTik variables (replace placeholder)
+    $demo = [
+        '$(username)' => 'demo',
+        '$(ip)' => '192.168.88.10',
+        '$(mac)' => 'AA:BB:CC:DD:EE:FF',
+        '$(uptime)' => '00:15:23',
+        '$(bytes-in-nice)' => '12 MB',
+        '$(bytes-out-nice)' => '30 MB',
+        '$(session-time-left)' => '00:44:37',
+        // Link ke preview lain pakai ID yang sama (tidak ada bentrok)
+        '$(link-login-only)' => url('/templates/' . $t->id . '/preview/alogin'),
+        '$(link-login)' => url('/templates/' . $t->id . '/preview/login'),
+        '$(link-logout)' => url('/templates/' . $t->id . '/preview/logout'),
+        '$(link-status)' => url('/templates/' . $t->id . '/preview/status'),
+        '$(link-redirect)' => url('/templates/' . $t->id . '/preview/status'),
+        '$(link-redirect-esc)' => url('/templates/' . $t->id . '/preview/status'),
+        '$(link-orig)' => 'http://192.168.88.1/',
+        '$(location-id)' => 'demo-location',
+        '$(location-name)' => 'Demo Hotspot',
+        '$(error)' => 'Simulasi: username atau password salah',
+        '$(hostname)' => '192.168.88.1',
+        '$(popup)' => 'true',
+        '$(if session-time-left)' => '', '$(endif)' => '',
+        '$(if advert-pending' => '', '$(if login-by-mac' => '',
+        '$(if http-status' => '', '$(if http-header' => '',
+        '$(refresh-timeout-secs)' => '30',
+    ];
+    $custom = [
+        '{{BUSINESS_NAME}}' => $t->name,
+        '{{RUNNING_TEXT}}' => 'Selamat datang di ' . $t->name . '! Demo preview.',
+        '{{PRIMARY_COLOR}}' => '#4F46E5',
+        '{{PRIMARY_COLOR_RGB}}' => '79, 70, 229',
+        '{{BG_GRADIENT}}' => 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+        '{{BG_COLOR1}}' => '#4F46E5',
+        '{{BG_COLOR2}}' => '#7C3AED',
+        '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
+        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{WHATSAPP}}' => '0812-3456-7890',
+        '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
+        '{{SHOW_VOUCHER}}' => 'block',
+        '{{VOUCHER_1_NAME}}' => '1 Jam', '{{VOUCHER_1_PRICE}}' => 'Rp 1K', '{{VOUCHER_1_DURATION}}' => '1 JAM',
+        '{{VOUCHER_2_NAME}}' => '5 Jam', '{{VOUCHER_2_PRICE}}' => 'Rp 3K', '{{VOUCHER_2_DURATION}}' => '5 JAM',
+        '{{VOUCHER_3_NAME}}' => '24 Jam', '{{VOUCHER_3_PRICE}}' => 'Rp 5K', '{{VOUCHER_3_DURATION}}' => '1 HARI',
+    ];
+    $replacements = array_merge($demo, $custom);
+    $html = str_replace(array_keys($replacements), array_values($replacements), $html);
+
+    // Add target="_top" ke semua <a> link (escape iframe)
+    $html = preg_replace_callback('/<a\s+([^>]*?)>/i', function ($m) {
+        $attrs = $m[1];
+        if (preg_match('/\btarget\s*=/i', $attrs)) return $m[0];
+        if (preg_match('/href\s*=\s*["\']#/', $attrs)) return $m[0];
+        return '<a ' . $attrs . ' target="_top" rel="noopener">';
+    }, $html);
+
+    // Form interceptor: redirect submit ke status.html
+    $interceptor = <<<JS
+<script>
+(function() {
+    var basePath = '/templates/' + {$t->id} + '/preview/';
+    document.addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.top.location.href = basePath + 'status.html';
+    }, true);
+})();
+</script>
+JS;
+    $html = str_replace('</body>', $interceptor . "\n</body>", $html);
+
+    return response($html, 200)
+        ->header('Content-Type', 'text/html; charset=utf-8')
+        ->header('X-Frame-Options', 'SAMEORIGIN')
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+})->where('file', '.*\.html$')->name('templates.preview');
 
 // ── Interactive Preview (Inertia — tetap untuk compatibility) ─────────
 Route::get('/template/{id}/preview', function ($id) {
@@ -498,7 +617,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // data bentrok antar template, setiap proses mengacu ke ID spesifik)
     Route::get('/template/{id}/editor', [TemplateController::class, 'edit'])->name('template.edit');
     Route::post('/template/{id}/editor', [TemplateController::class, 'update'])->name('template.update');
-    Route::get('/template/{id}/download', [TemplateController::class, 'download'])->name('template.download');
 });
 
 // ── Admin Routes ───────────────────────

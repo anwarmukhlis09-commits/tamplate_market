@@ -217,7 +217,7 @@ const lockedFeatures = [
                         Beli Sekarang
                     </Link>
                     <!-- Live Preview → tab baru dengan file HTML asli -->
-                    <a :href="`/preview/${template.slug || template.id}/login.html`" target="_blank" rel="noopener" class="mt-2.5 w-full py-3.5 text-sm font-semibold text-indigo-600 bg-white border-2 border-indigo-200 rounded-2xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+                    <a :href="`/templates/${template.id}/preview/login.html`" target="_blank" rel="noopener" class="mt-2.5 w-full py-3.5 text-sm font-semibold text-indigo-600 bg-white border-2 border-indigo-200 rounded-2xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         Live Preview
                     </a>
