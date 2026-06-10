@@ -64,8 +64,12 @@ class TemplateThumbnailGenerator
         $thumbPath = $thumbDir . '/thumbnail.png';
 
         if ($img !== null) {
-            imagepng($img, $thumbPath, 6);
+            $saved = @imagepng($img, $thumbPath, 6);
             imagedestroy($img);
+            if (!$saved || !file_exists($thumbPath)) {
+                \Log::error('Thumbnail save failed', ['path' => $thumbPath, 'gd_ok' => function_exists('imagecreatetruecolor'), 'imgpng_return' => $saved]);
+                return null;
+            }
             return 'templates/' . $templateId . '/thumbnail.png';
         }
 
