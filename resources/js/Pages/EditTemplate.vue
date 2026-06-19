@@ -68,15 +68,9 @@ function getCsrfToken() {
 
 // ── Live preview: update DOM di dalam iframe TANPA reload ──────
 //
-// Strategi: iframe di-load SEKALI dari /templates/{id}/preview/login.html.
-// Saat user mengetik di panel kiri → update DOM element di dalam iframe via
-// contentDocument.querySelector(...), BUKAN re-parse srcdoc.
-//
-// Keuntungan:
-//   - Tidak ada flicker putih (iframe stabil, hanya update textContent/src/href)
-//   - Tidak ada network request per keystroke
-//   - Tidak ada browser HTML re-parse (untuk HTML 200KB sangat mahal)
-//   - Real-time feedback instan
+// Strategi FINAL: postMessage dari parent ke iframe. Iframe punya listener
+// yang update DOM berdasarkan data yang dikirim. Reliable across sandbox
+// (postMessage works even with sandbox).
 //
 // Element types yang di-handle:
 //   - data-edit="name"          → update textContent
@@ -85,12 +79,72 @@ function getCsrfToken() {
 //   - data-edit-link="name"     → update href (untuk <a>)
 
 /**
+ * Kirim values ke iframe via postMessage. Iframe punya listener
+ * (di-inject oleh route handler, lihat fallback di onIframeLoad) yang
+ * apply values ke DOM.
+ */
+function postValuesToIframe() {
+    const iframes = document.querySelectorAll('iframe.preview-iframe');
+    for (const el of iframes) {
+        if (el.offsetParent === null && getComputedStyle(el).display !== 'none') continue;
+        try {
+            el.contentWindow.postMessage({
+                type: 'edit-template-values',
+                values: { ...values },
+            }, '*');
+        } catch (e) {
+            // Sandbox block postMessage — fallback ke direct DOM update
+            applyAllToIframeDirect(el);
+        }
+    }
+}
+
+/**
+ * Fallback: update DOM langsung via contentDocument. Dipakai kalau
+ * postMessage gagal (sandbox tanpa allow-scripts di iframe content,
+ * atau browser block). Lebih reliable tapi lebih lambat.
+ */
+function applyAllToIframeDirect(iframeEl) {
+    try {
+        const doc = iframeEl.contentDocument;
+        if (!doc) return;
+        for (const name in values) {
+            applyFieldToDoc(doc, name, values[name]);
+        }
+    } catch (e) { /* security exception */ }
+}
+
+function applyFieldToDoc(doc, name, value) {
+    doc.querySelectorAll(`[data-edit="${cssEscape(name)}"]`).forEach((el) => {
+        el.textContent = value != null ? String(value) : '';
+    });
+    doc.querySelectorAll(`[data-edit-image="${cssEscape(name)}"]`).forEach((el) => {
+        if (el.tagName === 'IMG') {
+            el.setAttribute('src', value != null ? String(value) : '');
+        } else {
+            el.style.backgroundImage = value ? `url("${cssAttr(String(value))}")` : '';
+        }
+    });
+    doc.querySelectorAll(`[data-edit-bg="${cssEscape(name)}"]`).forEach((el) => {
+        el.style.backgroundImage = value ? `url("${cssAttr(String(value))}")` : '';
+    });
+    doc.querySelectorAll(`[data-edit-link="${cssEscape(name)}"]`).forEach((el) => {
+        el.setAttribute('href', value != null ? String(value) : '#');
+    });
+}
+
+/**
  * Update satu field di DOM iframe.
  * Return true kalau ada element yang di-update, false kalau tidak ketemu.
  */
 function applyFieldToIframe(name, value) {
     const doc = getIframeDoc();
-    if (!doc) return false;
+    if (!doc) {
+        if (window.console && console.debug) {
+            console.debug('[EditTemplate] applyFieldToIframe: no doc', { name, value });
+        }
+        return false;
+    }
 
     let updated = false;
 
@@ -151,6 +205,7 @@ function applyAllToIframe() {
 function getIframeDoc() {
     // Cari iframe yang sedang visible (display !== 'none') dan di-load.
     const iframes = document.querySelectorAll('iframe.preview-iframe');
+    let lastErr = null;
     for (const el of iframes) {
         // Skip iframe yang hidden (display: none) atau offsetParent null
         if (el.offsetParent === null && getComputedStyle(el).display !== 'none') continue;
@@ -159,7 +214,19 @@ function getIframeDoc() {
             if (doc && doc.readyState === 'complete') {
                 return doc;
             }
-        } catch (_) { /* security exception */ }
+        } catch (e) {
+            lastErr = e;
+            /* security exception */
+        }
+    }
+    // Debug: log kalau gagal resolve — supaya kita tahu root cause-nya
+    if (window.console && console.debug && iframes.length > 0) {
+        console.debug('[EditTemplate] getIframeDoc() returned null.', {
+            iframeCount: iframes.length,
+            firstSrc: iframes[0]?.src,
+            firstReadyState: iframes[0]?.contentDocument?.readyState,
+            lastError: lastErr?.message,
+        });
     }
     return null;
 }
@@ -216,22 +283,36 @@ onMounted(async () => {
  */
 function onIframeLoad() {
     iframeReady.value = true;
-    // Tunggu 1 frame supaya DOM siap (beberapa browser butuh ini)
-    requestAnimationFrame(() => {
-        const ok = applyAllToIframe();
-        // Apply field yang antri dari watch (kalau user sudah ketik sebelum iframe load)
-        if (pendingFields.size > 0) {
-            for (const name of pendingFields) {
-                applyFieldToIframe(name, values[name]);
+    // Inject postMessage listener ke dalam iframe. Listener ini apply values
+    // ke DOM saat parent kirim message. Reliable across sandbox karena
+    // postMessage works even with sandbox='allow-scripts' (no allow-same-origin).
+    const iframes = document.querySelectorAll('iframe.preview-iframe');
+    for (const el of iframes) {
+        try {
+            const win = el.contentWindow;
+            if (!win) continue;
+            // Idempotent: hapus listener lama sebelum pasang baru (kalau iframe reload)
+            if (win.__editTemplateListenerInstalled) continue;
+            win.__editTemplateListenerInstalled = true;
+            win.addEventListener('message', (ev) => {
+                if (!ev.data || ev.data.type !== 'edit-template-values') return;
+                const doc = el.contentDocument;
+                if (!doc) return;
+                for (const name in ev.data.values) {
+                    applyFieldToDoc(doc, name, ev.data.values[name]);
+                }
+            });
+            // Kirim values saat ini supaya preview langsung sync
+            win.postMessage({
+                type: 'edit-template-values',
+                values: { ...values },
+            }, '*');
+        } catch (e) {
+            if (window.console && console.warn) {
+                console.warn('[EditTemplate] Gagal inject postMessage listener:', e.message);
             }
-            pendingFields.clear();
         }
-        // Debug: kalau tidak ada element yang ke-update, kemungkinan
-        // data-edit attribute tidak ada di HTML, atau sandbox block akses.
-        if (!ok && window.console && console.warn) {
-            console.warn('[EditTemplate] iframe loaded but no data-edit* elements found. Cek apakah HTML master template punya atribut data-edit / data-edit-image / data-edit-link / data-edit-bg.');
-        }
-    });
+    }
 }
 
 // ── Reset perubahan ke nilai default ──────────
@@ -253,58 +334,20 @@ async function resetChanges() {
     }
 }
 
-// ── Real-time preview: update DOM di dalam iframe saat user mengetik ──────
+// ── Real-time preview: kirim values ke iframe via postMessage ──────
 //
-// Strategi FINAL: iframe di-load sekali, watch(values) → apply field langsung
-// ke DOM (textContent/src/href/backgroundImage). TIDAK ada re-parse HTML,
-// TIDAK ada srcdoc update, TIDAK ada flicker putih.
+// Strategi: watch(values) → debounce 50ms → postMessage ke iframe. Iframe
+// punya listener (di-inject oleh backend route handler, atau fallback via
+// onIframeLoad yang inject inline) yang apply ke DOM.
 //
-// Debounce 50ms — coalesce multiple keystrokes per frame. Cukup cepat untuk
-// terasa instant (well under 100ms perceived threshold), cukup lambat untuk
-// tidak hit DOM API tiap karakter.
+// Debounce 50ms — coalesce multiple keystrokes per frame.
 let previewUpdateTimer = null;
-let pendingFields = new Set();
-watch(values, (newVals, oldVals) => {
+watch(values, () => {
     if (!hasDataEdit.value) return;
-    if (!iframeReady.value) {
-        // Iframe belum siap — antre field yang berubah, apply saat load
-        for (const name in newVals) {
-            const oldVal = oldVals ? oldVals[name] : undefined;
-            if (newVals[name] !== oldVal) pendingFields.add(name);
-        }
-        return;
-    }
-
-    // Deteksi field yang berubah (deep watch → diff old vs new)
-    for (const name in newVals) {
-        const oldVal = oldVals ? oldVals[name] : undefined;
-        if (newVals[name] !== oldVal) {
-            pendingFields.add(name);
-        }
-    }
-    // Field yang dihapus dari newVals
-    if (oldVals) {
-        for (const name in oldVals) {
-            if (!(name in newVals)) pendingFields.add(name);
-        }
-    }
-
+    if (!iframeReady.value) return; // iframe belum load, skip
     if (previewUpdateTimer) clearTimeout(previewUpdateTimer);
     previewUpdateTimer = setTimeout(() => {
-        const doc = getIframeDoc();
-        if (!doc) {
-            // Sandbox block / cross-origin. Fallback: reload iframe dengan src baru
-            // agar render fresh dari server (master + injected values via save).
-            console.warn('[EditTemplate] contentDocument null saat apply values. Iframe akan di-reload dari server.');
-            pendingFields.clear();
-            previewUpdateTimer = null;
-            return;
-        }
-        // Update hanya field yang berubah, bukan semua (efisien)
-        for (const name of pendingFields) {
-            applyFieldToIframe(name, values[name]);
-        }
-        pendingFields.clear();
+        postValuesToIframe();
         previewUpdateTimer = null;
     }, 50);
 }, { deep: true });
