@@ -22,6 +22,17 @@ class CheckoutController extends Controller
     {
         $template = Template::where('status', 'published')->findOrFail($id);
 
+        // Auto-add template ke cart. Alur normal: user dari editor/download
+        // di-redirect ke /checkout/{id} — di titik ini user BELUM add-to-cart
+        // via endpoint /cart/{id}. Tanpa auto-add, PaymentController::process
+        // akan reject dengan 403 "template tidak ada di keranjang" karena
+        // validasi cart membership (lihat fix A6 security).
+        $cart = (array) $request->session()->get('cart', []);
+        if (! in_array($template->id, $cart, true)) {
+            $cart[] = $template->id;
+            $request->session()->put('cart', $cart);
+        }
+
         return Inertia::render('Checkout/Show', [
             'template' => $this->transformTemplate($template),
             'auth' => ['user' => $request->user()],
@@ -36,6 +47,13 @@ class CheckoutController extends Controller
     {
         $template = Template::where('status', 'published')->findOrFail($id);
         $user = $request->user();
+
+        // Safety: kalau show() di-skip (mis. POST langsung), tetap add ke cart
+        $cart = (array) $request->session()->get('cart', []);
+        if (! in_array($template->id, $cart, true)) {
+            $cart[] = $template->id;
+            $request->session()->put('cart', $cart);
+        }
 
         // Placeholder: kalau ada model Order, simpan di sini
         // Order::create([...])
