@@ -38,6 +38,9 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
+            // Daftar ID template yang sudah dibeli user (session).
+            // Frontend pakai ini untuk ganti tombol "Beli" → "Sudah Dibeli" / "Edit".
+            'paidTemplates' => (array) $request->session()->get('paid_templates', []),
         ];
     }
 }

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
+import MarketplaceLayout from '@/Layouts/MarketplaceLayout.vue';
 
 defineProps({
     canLogin: Boolean,
@@ -91,47 +92,8 @@ function getGradient(seed) {
 
 <Head title="MarketTemplate — Marketplace Template Hotspot MikroTik #1 di Indonesia" />
 
-<div class="min-h-screen bg-white text-slate-900 antialiased" style="font-family: 'Inter', 'Poppins', ui-sans-serif, system-ui, sans-serif;">
-
-    <!-- ═══════════════ NAVBAR ═══════════════ -->
-    <header class="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between gap-6 h-16">
-
-                <!-- Logo -->
-                <Link href="/" class="flex items-center gap-2.5 shrink-0 group">
-                    <img src="/images/logo.png" alt="MarketTemplate" class="h-10 w-auto group-hover:scale-105 transition-transform" />
-                </Link>
-
-                <!-- Search bar (center) -->
-                <div class="hidden md:flex flex-1 max-w-xl">
-                    <div class="relative w-full">
-                        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <input type="search" placeholder="Cari template berdasarkan nama, kategori, atau kata kunci..." class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400" />
-                    </div>
-                </div>
-
-                <!-- Menu -->
-                <nav class="hidden lg:flex items-center gap-1">
-                    <Link href="/" class="px-3.5 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-lg">Beranda</Link>
-                    <Link href="/katalog" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Template</Link>
-                    <a href="#cara-kerja" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Cara Kerja</a>
-                    <a href="#bantuan-sidebar" class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">Bantuan</a>
-                </nav>
-
-                <!-- Auth -->
-                <div v-if="canLogin" class="flex items-center gap-2.5 shrink-0">
-                    <template v-if="$page.props.auth.user">
-                        <Link :href="route('dashboard')" class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-all">Dashboard</Link>
-                    </template>
-                    <template v-else>
-                        <Link :href="route('login')" class="hidden sm:inline-flex px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Login</Link>
-                        <Link v-if="canRegister" :href="route('register')" class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-all">Daftar</Link>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </header>
+<MarketplaceLayout>
+    <div class="min-h-screen bg-white text-slate-900 antialiased" style="font-family: 'Inter', 'Poppins', ui-sans-serif, system-ui, sans-serif;">
 
     <!-- ═══════════════ HERO SECTION ═══════════════ -->
     <section class="relative pt-32 pb-20 sm:pt-40 sm:pb-28 overflow-hidden">
@@ -571,5 +533,6 @@ function getGradient(seed) {
             </div>
         </div>
     </footer>
-</div>
+    </div>
+</MarketplaceLayout>
 </template>

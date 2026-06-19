@@ -46,6 +46,7 @@ const menuItems = [
 
                     <!-- Right: User -->
                     <div class="flex items-center gap-4">
+                        <Link href="/" class="text-sm text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block">Beranda</Link>
                         <Link href="/katalog" class="text-sm text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block">← Katalog</Link>
                         <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
                             <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-full flex items-center justify-center text-white text-xs font-bold">

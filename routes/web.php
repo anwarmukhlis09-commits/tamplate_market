@@ -45,27 +45,41 @@ Route::get('/', function () {
 });
 
 Route::get('/katalog', function () {
-    return Inertia::render('Catalog', [
-        'templates' => \App\Models\Template::where('status', 'published')
-            ->orderBy('sold_count', 'desc')
-            ->get()
-            ->map(fn($t) => [
-                'id' => $t->id,
-                'name' => $t->name,
-                'slug' => $t->slug,
-                'category' => $t->category,
-                'price' => $t->price,
-                'discountPrice' => $t->discount_price,
-                'badge' => $t->badge,
-                'features' => $t->features ?? [],
-                'shortDesc' => $t->short_desc,
-                'longDesc' => $t->long_desc,
-                'image' => $t->preview_gradients[0] ?? 'bg-gradient-to-br from-indigo-500 to-purple-500',
-                'imageUrl' => $t->preview_image ? asset('storage/' . $t->preview_image) : null,
-                'rating' => (float) $t->rating,
-                'sold' => $t->sold_count,
-            ]),
+    $templates = \App\Models\Template::where('status', 'published')
+        ->orderBy('sold_count', 'desc')
+        ->get()
+        ->map(fn($t) => [
+            'id' => $t->id,
+            'name' => $t->name,
+            'slug' => $t->slug,
+            'category' => $t->category,
+            'price' => $t->price,
+            'discountPrice' => $t->discount_price,
+            'badge' => $t->badge,
+            'features' => $t->features ?? [],
+            'shortDesc' => $t->short_desc,
+            'longDesc' => $t->long_desc,
+            'image' => $t->preview_gradients[0] ?? 'bg-gradient-to-br from-indigo-500 to-purple-500',
+            'imageUrl' => $t->preview_image ? asset('storage/' . $t->preview_image) : null,
+            'rating' => (float) $t->rating,
+            'sold' => $t->sold_count,
+        ])
+        // ID-based: hanya data dari DB, no local cache, no fallback
+        ->values()
+        ->all();
+
+    // Render Inertia + set Cache-Control via response
+    $inertiaResponse = \Inertia\Inertia::render('Catalog', [
+        'templates' => $templates,
+        'fetchedAt' => now()->timestamp,
     ]);
+
+    // Convert ke HTTP response dan tambahkan Cache-Control
+    $httpResponse = $inertiaResponse->toResponse(request());
+    $httpResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    $httpResponse->headers->set('Pragma', 'no-cache');
+    $httpResponse->headers->set('Expires', '0');
+    return $httpResponse;
 });
 
 // Download template sebagai ZIP (scope ke {id}) — HARUS dideklarasikan
@@ -76,6 +90,29 @@ Route::get('/template/{id}/download', [\App\Http\Controllers\TemplateController:
 
 Route::get('/template/{id}', function ($id) {
     $t = \App\Models\Template::findOrFail($id);
+
+    // Template serupa: 3 published templates dari category sama (exclude current)
+    $related = \App\Models\Template::where('category', $t->category)
+        ->where('id', '!=', $t->id)
+        ->where('status', 'published')
+        ->take(3)
+        ->get();
+    // Fallback: kalau tidak ada di category sama, ambil 3 published random
+    if ($related->isEmpty()) {
+        $related = \App\Models\Template::where('id', '!=', $t->id)
+            ->where('status', 'published')
+            ->inRandomOrder()
+            ->take(3)
+            ->get();
+    }
+    $relatedMapped = $related->map(fn($rt) => [
+        'id' => $rt->id,
+        'name' => $rt->name,
+        'category' => $rt->category,
+        'price' => $rt->price,
+        'imageUrl' => $rt->preview_image ? asset('storage/' . $rt->preview_image) : null,
+    ])->all();
+
     return Inertia::render('TemplateDetail', [
         'template' => [
             'id' => $t->id,
@@ -96,9 +133,22 @@ Route::get('/template/{id}', function ($id) {
             'updatedAt' => $t->updated_at->format('Y-m-d'),
             'allowEdit' => $t->allow_edit_before_checkout,
         ],
+        'relatedTemplates' => $relatedMapped,
         'canLogin' => Route::has('login'),
     ]);
 });
+
+// ── Fullscreen Preview (no iframe chrome, ESC to exit) ─────
+Route::get('/template/{id}/fullscreen', function ($id) {
+    $t = \App\Models\Template::findOrFail($id);
+    return Inertia::render('Template/Fullscreen', [
+        'template' => [
+            'id' => $t->id,
+            'name' => $t->name,
+            'slug' => $t->slug,
+        ],
+    ]);
+})->name('template.fullscreen');
 
 // ── Direct Preview (buka file HTML asli, no iframe, no Inertia) ─────────
 // Contoh: /preview/game-zone/login.html
@@ -248,6 +298,109 @@ HTML;
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 })->where('file', '.*\.html$')->name('preview.direct');
 
+// ── ID-based Preview Asset (CSS/JS/SVG/PNG/JPG) — non-HTML files ──────
+// Contoh: /templates/4/preview/style.css
+//         /templates/4/preview/images/logo.svg
+//         /templates/4/preview/assets/script.js
+//
+// HTML (login.html, status.html, dll) di-handle route di bawah dengan logic
+// <base> + demo MikroTik variables. Asset path relatif di HTML resolve ke
+// URL yang sama (/templates/4/preview/...), jadi route ini WAJIB serve
+// asset dari folder master template (bukan folder preview/ yang tidak ada).
+//
+// Keamanan: path dicek manual untuk cegah path traversal (../, /, dst).
+// Hanya serve dari folder `templates/{id}/original/{subfolder}/*` dan
+// `templates/orders/{user_id}/{id}/{subfolder}/*` (draft).
+//
+// PENTING: route ini harus didefinisikan SEBELUM route HTML agar tidak
+// ter-match ke regex `.*\.html$` yang longgar.
+Route::get('/templates/{id}/preview/{path}', function ($id, $path) {
+    // Tolak path traversal
+    if (strpos($path, '..') !== false || strpos($path, '\\') !== false) {
+        abort(403, 'Invalid path');
+    }
+    // Tolak path absolut atau leading slash
+    if (strpos($path, '/') === 0) {
+        abort(403, 'Invalid path');
+    }
+    // Hanya file dengan extension yang diizinkan (whitelist)
+    $allowedExt = ['css', 'js', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico',
+                   'woff', 'woff2', 'ttf', 'otf', 'eot', 'map', 'json', 'txt', 'md'];
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExt, true)) {
+        abort(404, 'Asset type not allowed: ' . $ext);
+    }
+
+    $t = \App\Models\Template::findOrFail($id);
+
+    // Resolve file: cek folder master DAN folder draft user (kalau ada).
+    // 1) Master: templates/{id}/original/<subfolder>/{path}
+    // 2) Draft user: templates/orders/{user_id}/{id}/<subfolder>/{path}
+    // 3) Fallback: scan rekursif di templates/{id}/original/ untuk path apapun
+    //
+    // Strategi: scan folder master templates/{id}/original/, cari file yang
+    // path-nya diakhiri dengan $path. Ini handle semua struktur folder
+    // (mikrotik-standard-template/style.css, images/logo.svg, dst).
+    $candidates = [];
+    $masterBase = "templates/{$t->id}/original";
+    if (\Storage::disk('public')->exists($masterBase)) {
+        foreach (\Storage::disk('public')->allFiles($masterBase) as $f) {
+            // Match suffix: 'style.css' cocok dengan
+            // 'templates/4/original/mikrotik-standard-template/style.css'
+            // dan 'images/logo.svg' cocok dengan
+            // 'templates/4/original/mikrotik-standard-template/images/logo.svg'
+            if (substr($f, -strlen('/' . $path)) === '/' . $path) {
+                $candidates[] = $f;
+            }
+        }
+    }
+    // Draft user (kalau editor sudah save)
+    $draftBase = "templates/orders/" . (auth()->id() ?? 'guest') . "/{$t->id}";
+    if (\Storage::disk('public')->exists($draftBase)) {
+        foreach (\Storage::disk('public')->allFiles($draftBase) as $f) {
+            if (substr($f, -strlen('/' . $path)) === '/' . $path) {
+                $candidates[] = $f;
+            }
+        }
+    }
+
+    if (!$candidates) {
+        abort(404, "Asset '{$path}' not found in template #{$t->id}");
+    }
+
+    // Pakai candidate pertama (master lebih diutamakan karena suffix-match
+    // memastikan exact filename match)
+    $resolved = $candidates[0];
+    $absolutePath = \Storage::disk('public')->path($resolved);
+
+    // MIME type dari extension
+    $mime = match ($ext) {
+        'css'  => 'text/css; charset=utf-8',
+        'js'   => 'application/javascript; charset=utf-8',
+        'map'  => 'application/json; charset=utf-8',
+        'json' => 'application/json; charset=utf-8',
+        'svg'  => 'image/svg+xml',
+        'png'  => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        'gif'  => 'image/gif',
+        'webp' => 'image/webp',
+        'ico'  => 'image/x-icon',
+        'woff' => 'font/woff',
+        'woff2' => 'font/woff2',
+        'ttf'  => 'font/ttf',
+        'otf'  => 'font/otf',
+        'eot'  => 'application/vnd.ms-fontobject',
+        'txt'  => 'text/plain; charset=utf-8',
+        'md'   => 'text/markdown; charset=utf-8',
+        default => 'application/octet-stream',
+    };
+
+    return response()->file($absolutePath, [
+        'Content-Type' => $mime,
+        'Cache-Control' => 'public, max-age=3600', // asset bisa di-cache 1 jam
+    ]);
+})->where('path', '^(?!.*\.html$).+')->name('templates.preview.asset');
+
 // ── ID-based Preview (pakai {id} template, scope ke ID card itu) ───────
 // Contoh: /templates/15/preview         (default login.html)
 //         /templates/15/preview/status   (status.html)
@@ -263,27 +416,49 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         abort(404, 'File not found');
     }
 
-    // Resolve path ID-based: templates/{id}/original/{file}
+    // Resolve HANYA dari folder template #{$id} (ID-based, no cross-template).
+    // Scan rekursif semua file di basePath, pilih file dengan nama $file.
+    // Kalau ada beberapa (root + subfolder), pilih yang path-nya PALING PANJANG
+    // (= paling dalam = file user upload asli, bukan orphan di root).
     $basePath = "templates/{$t->id}/original";
-    $filePath = null;
-
-    if (\Storage::disk('public')->exists($basePath . '/' . $file)) {
-        // Priority 1: User-uploaded template (ID-based)
-        $filePath = \Storage::disk('public')->path($basePath . '/' . $file);
-        $baseHref = asset('storage/' . $basePath);
-    } elseif (file_exists(storage_path('app/master_template/' . $file))) {
-        // Priority 2: Master template fallback
-        $filePath = storage_path('app/master_template/' . $file);
-        $baseHref = asset('storage/master_template');
+    $allFiles = \Storage::disk('public')->allFiles($basePath);
+    $matches = [];
+    foreach ($allFiles as $candidate) {
+        if (basename($candidate) === $file) {
+            $matches[] = $candidate;
+        }
     }
-
-    if (!$filePath) abort(404, 'Page not found: ' . $file);
-
+    if (!$matches) {
+        abort(404, "File '{$file}' tidak ada di template #{$id} (root atau subfolder). Upload folder template yang berisi login.html.");
+    }
+    // Pilih path terpanjang (= paling dalam di tree)
+    usort($matches, function ($a, $b) { return strlen($b) - strlen($a); });
+    $filePath = \Storage::disk('public')->path($matches[0]);
+    // FIX: <base> menunjuk ke ROUTE HANDLER /templates/{id}/preview/, BUKAN storage symlink.
+    // Alasan: storage symlink bisa tidak ada di production; route handler konsisten
+    // baca dari folder master, dan <base> akan resolve relative path (style.css,
+    // images/logo.svg) ke route templates.preview.asset yang baru.
+    $baseHref = url('/templates/' . $t->id . '/preview/');
     $html = file_get_contents($filePath);
 
     // Inject base tag untuk asset relatif
     $baseTag = '<base href="' . $baseHref . '/">';
     $html = str_replace('<head>', "<head>\n" . $baseTag, $html);
+
+    // Mode editor: disable interaksi form di dalam iframe supaya user tidak
+    // bisa salah ketik di input username/password MikroTik. Cegah focus stealing
+    // ke iframe (kombinasi dengan `inert` + `pointer-events: none` di frontend).
+    if (request('editor') === '1') {
+        $disableCss = '<style id="editor-mode-disable">'
+            . 'input, textarea, select, button, a, form, [tabindex] {'
+            . '  pointer-events: none !important;'
+            . '  user-select: none !important;'
+            . '  -webkit-user-select: none !important;'
+            . '}'
+            . 'body { cursor: default !important; }'
+            . '</style>';
+        $html = str_replace('</head>', $disableCss . '</head>', $html);
+    }
 
     // Demo MikroTik variables (replace placeholder)
     $demo = [
@@ -294,13 +469,14 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         '$(bytes-in-nice)' => '12 MB',
         '$(bytes-out-nice)' => '30 MB',
         '$(session-time-left)' => '00:44:37',
-        // Link ke preview lain pakai ID yang sama (tidak ada bentrok)
-        '$(link-login-only)' => url('/templates/' . $t->id . '/preview/alogin'),
-        '$(link-login)' => url('/templates/' . $t->id . '/preview/login'),
-        '$(link-logout)' => url('/templates/' . $t->id . '/preview/logout'),
-        '$(link-status)' => url('/templates/' . $t->id . '/preview/status'),
-        '$(link-redirect)' => url('/templates/' . $t->id . '/preview/status'),
-        '$(link-redirect-esc)' => url('/templates/' . $t->id . '/preview/status'),
+        // Link ke preview lain pakai ID yang sama (dengan .html di akhir karena
+        // route punya constraint where('file', '.*\.html$'))
+        '$(link-login-only)' => url('/templates/' . $t->id . '/preview/alogin.html'),
+        '$(link-login)' => url('/templates/' . $t->id . '/preview/login.html'),
+        '$(link-logout)' => url('/templates/' . $t->id . '/preview/logout.html'),
+        '$(link-status)' => url('/templates/' . $t->id . '/preview/status.html'),
+        '$(link-redirect)' => url('/templates/' . $t->id . '/preview/status.html'),
+        '$(link-redirect-esc)' => url('/templates/' . $t->id . '/preview/status.html'),
         '$(link-orig)' => 'http://192.168.88.1/',
         '$(location-id)' => 'demo-location',
         '$(location-name)' => 'Demo Hotspot',
@@ -384,28 +560,41 @@ Route::get('/template/{id}/preview-frame', function ($id) {
     ];
     $file = $pageFiles[$page] ?? 'login.html';
 
-    // Read from template's folder first, fallback to master template
-    $templateFolder = $t->zip_file; // e.g., "templates/hotspot-coffee"
-    $filePath = null;
-
-    if ($templateFolder && Storage::disk('public')->exists($templateFolder . '/' . $file)) {
-        // Priority 1: User-uploaded template folder
-        $filePath = Storage::disk('public')->path($templateFolder . '/' . $file);
-        $baseHref = asset('storage/' . $templateFolder);
-    } elseif (file_exists(public_path('storage/' . $templateFolder . '/' . $file))) {
-        // Priority 2: Default MikroTik (copied to public/storage)
-        $filePath = public_path('storage/' . $templateFolder . '/' . $file);
-        $baseHref = asset('storage/' . $templateFolder);
-    } elseif (file_exists(storage_path('app/master_template/' . $file))) {
-        // Priority 3: Master template
-        $filePath = storage_path('app/master_template/' . $file);
-        $baseHref = asset('storage/master_template');
+    // Resolve HANYA dari folder template #{$id} (ID-based, no cross-template).
+    // Scan rekursif semua file, pilih dengan nama $file. Kalau ada beberapa
+    // (root + subfolder), pilih yang path-nya PALING PANJANG (= paling dalam
+    // = file upload user asli, bukan orphan di root).
+    $templateFolder = $t->zip_file;
+    if (!$templateFolder) {
+        return response("Template #{$id} belum punya file upload.", 404);
     }
-
-    if (!$filePath) {
-        return response('Page not found: ' . $file, 404);
+    $allFiles = Storage::disk('public')->allFiles($templateFolder);
+    $matches = [];
+    foreach ($allFiles as $candidate) {
+        if (basename($candidate) === $file) {
+            $matches[] = $candidate;
+        }
     }
+    if (!$matches) {
+        return response("File '{$file}' tidak ada di folder template #{$id} (root atau subfolder).", 404);
+    }
+    usort($matches, function ($a, $b) { return strlen($b) - strlen($a); });
+    $filePath = Storage::disk('public')->path($matches[0]);
+    $baseHref = asset('storage/' . dirname($matches[0]));
     $html = file_get_contents($filePath);
+
+    // Mode editor: disable interaksi form di dalam iframe (anti focus stealing)
+    if (request('editor') === '1') {
+        $disableCss = '<style id="editor-mode-disable">'
+            . 'input, textarea, select, button, a, form, [tabindex] {'
+            . '  pointer-events: none !important;'
+            . '  user-select: none !important;'
+            . '  -webkit-user-select: none !important;'
+            . '}'
+            . 'body { cursor: default !important; }'
+            . '</style>';
+        $html = str_replace('</head>', $disableCss . '</head>', $html);
+    }
 
     // Demo data for MikroTik variables
     $demo = [
@@ -416,12 +605,12 @@ Route::get('/template/{id}/preview-frame', function ($id) {
         '$(bytes-in-nice)' => '12 MB',
         '$(bytes-out-nice)' => '30 MB',
         '$(session-time-left)' => '00:44:37',
-        '$(link-login-only)' => route('template.preview-frame', ['id' => $id, 'page' => 'alogin']),
-        '$(link-login)' => route('template.preview-frame', ['id' => $id, 'page' => 'login']),
-        '$(link-logout)' => route('template.preview-frame', ['id' => $id, 'page' => 'logout']),
-        '$(link-status)' => route('template.preview-frame', ['id' => $id, 'page' => 'status']),
-        '$(link-redirect)' => route('template.preview-frame', ['id' => $id, 'page' => 'status']),
-        '$(link-redirect-esc)' => route('template.preview-frame', ['id' => $id, 'page' => 'status']),
+        '$(link-login-only)' => url('/templates/' . $t->id . '/preview/alogin.html'),
+        '$(link-login)' => url('/templates/' . $t->id . '/preview/login.html'),
+        '$(link-logout)' => url('/templates/' . $t->id . '/preview/logout.html'),
+        '$(link-status)' => url('/templates/' . $t->id . '/preview/status.html'),
+        '$(link-redirect)' => url('/templates/' . $t->id . '/preview/status.html'),
+        '$(link-redirect-esc)' => url('/templates/' . $t->id . '/preview/status.html'),
         '$(link-orig)' => 'http://192.168.88.1/',
         '$(location-id)' => 'demo-location',
         '$(location-name)' => 'Demo Hotspot',
@@ -595,6 +784,330 @@ Route::get('/template/{id}/edit', function ($id) {
     ]);
 })->name('template.editor');
 
+// ── Editor: baca field editable dari login.html (data-edit attributes) ─────
+Route::get('/template/{id}/editor/fields', function ($id) {
+    $t = \App\Models\Template::findOrFail($id);
+    $folder = $t->zip_file;
+    if (!$folder) {
+        return response()->json(['fields' => [], 'html' => '', 'has_data_edit' => false]);
+    }
+
+    // PERSISTENSI EDIT PER USER:
+    // 1) Prioritas: draft edited user di `orders/{user_id}/{id}/login.html`
+    //    (hasil edit terakhir — user lanjut edit dari kondisi terakhir, bukan master default)
+    // 2) Fallback: master template (untuk user baru / template yang belum pernah di-edit)
+    //
+    // Source-of-truth: `data-edit` attributes di HTML (master sama edited punya
+    // atribut yang sama, hanya inner text yang berubah). Kalau edited draft ada,
+    // struktur field list identik dengan master — yang berubah hanya default value.
+    $loginPath = null;
+    $userId = auth()->id() ?? 'guest';
+    $editedLoginFile = "templates/orders/{$userId}/{$id}/login.html";
+
+    if (\Storage::disk('public')->exists($editedLoginFile)) {
+        // User pernah edit — pakai draft
+        $loginPath = $editedLoginFile;
+    } else {
+        // Belum pernah edit — load master untuk derive field schema
+        $masterLoginFile = $folder . '/login.html';
+        if (\Storage::disk('public')->exists($masterLoginFile)) {
+            $loginPath = $masterLoginFile;
+        } else {
+            // Scan subfolder master
+            foreach (\Storage::disk('public')->allFiles($folder) as $candidate) {
+                if (basename($candidate) === 'login.html') {
+                    $loginPath = $candidate;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!$loginPath) {
+        return response()->json(['fields' => [], 'html' => '', 'has_data_edit' => false]);
+    }
+
+    $html = \Storage::disk('public')->get($loginPath);
+    $fields = [];
+
+    // Helper inline: extract attribute value dari tag string
+    $extractAttr = function ($tag, $attr) {
+        if (preg_match('/\b' . $attr . '="([^"]*)"/i', $tag, $m)) {
+            return $m[1];
+        }
+        return '';
+    };
+
+    // Helper inline: extract label dari data-label attribute, fallback ke name
+    $extractLabel = function ($tag, $name) {
+        if (preg_match('/\bdata-label="([^"]*)"/i', $tag, $m) && $m[1] !== '') {
+            return $m[1];
+        }
+        // Capitalize & prettify name: "brand_name" → "Brand Name"
+        return ucwords(str_replace(['_', '-'], ' ', $name));
+    };
+
+    // Helper inline: extract inner text dari tag (non-greedy)
+    $extractInner = function ($html, $name) use ($extractAttr) {
+        $pattern = '/<(\w+)([^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*>(.*?)<\/\1>/is';
+        if (preg_match($pattern, $html, $m)) {
+            return trim($m[3]);
+        }
+        return '';
+    };
+
+    // Parse data-edit (text)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[3];
+            if (isset($seen[$name])) continue; // skip duplikat
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $fields[] = [
+                'name' => $name,
+                'type' => 'text',
+                'label' => $extractLabel($tag, $name),
+                'default' => $extractInner($html, $name),
+            ];
+        }
+    }
+
+    // Parse data-edit-image (image — bisa di tag apapun: <img>, <section>, <div>, dll)
+    // Untuk <img>: replace src. Untuk non-<img>: replace background-image di inline style
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-image="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $tagName = strtolower($m[1]);
+            $attrs = $m[2];
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $attrs . '>';
+
+            // Default value: src untuk <img>, background-image URL untuk non-<img>
+            $default = '';
+            if ($tagName === 'img') {
+                $default = $extractAttr($tag, 'src');
+            } else {
+                // Extract background-image URL dari style attribute
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
+                        $default = $bm[1];
+                    }
+                }
+            }
+
+            $fields[] = [
+                'name' => $name,
+                'type' => 'image',
+                'label' => $extractLabel($tag, $name),
+                'default' => $default,
+                'tag' => $tagName, // info tambahan untuk frontend (render img preview vs background)
+            ];
+        }
+    }
+
+    // Parse data-edit-link (link href)
+    if (preg_match_all('/<a([^>]*\bdata-edit-link="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[2];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<a' . $m[1] . '>';
+            $fields[] = [
+                'name' => $name,
+                'type' => 'link',
+                'label' => $extractLabel($tag, $name),
+                'default' => $extractAttr($tag, 'href'),
+            ];
+        }
+    }
+
+    return response()->json([
+        'fields' => $fields,
+        'html' => $html,
+        'has_data_edit' => count($fields) > 0,
+    ]);
+})->name('template.editor.fields');
+
+// ── Editor: save ke salinan orders/{user_id}/{template_id}/ (master TIDAK diubah) ─────
+Route::post('/template/{id}/editor/save', function (\Illuminate\Http\Request $request, $id) {
+    $t = \App\Models\Template::findOrFail($id);
+    $folder = $t->zip_file;
+    if (!$folder) {
+        return response()->json(['ok' => false, 'error' => 'Template belum punya file upload.'], 400);
+    }
+
+    // Cari login.html
+    $loginPath = null;
+    $loginFile = $folder . '/login.html';
+    if (\Storage::disk('public')->exists($loginFile)) {
+        $loginPath = $loginFile;
+    } else {
+        foreach (\Storage::disk('public')->allFiles($folder) as $candidate) {
+            if (basename($candidate) === 'login.html') {
+                $loginPath = $candidate;
+                break;
+            }
+        }
+    }
+
+    if (!$loginPath) {
+        return response()->json(['ok' => false, 'error' => 'login.html tidak ditemukan di template.'], 404);
+    }
+
+    $html = \Storage::disk('public')->get($loginPath);
+    $values = $request->input('values', []);
+
+    if (!is_array($values)) {
+        $values = [];
+    }
+
+    // Apply replacements — preserve MikroTik variables ($, $(if...), $(endif), etc.)
+    foreach ($values as $name => $value) {
+        $escaped = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+
+        // Text: replace inner content of tag with data-edit="name"
+        // FIX: capture group $m[2] diakhiri `>` (termasuk kurung tutup tag buka).
+        //      Rekonstruksi sebagai: '<' + tag + attrs (TANPA trailing `>`) + escaped + closing.
+        //      Regex lama: $m[2] . $escaped . $m[4] . '>' menghasilkan `>escaped</tag>>` (dobel `>`).
+        //      Regex baru: attrs (group 2) hanya sampai `>` pembuka, lalu di-trim.
+        $html = preg_replace_callback(
+            '/<(\w+)((?:[^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*)>(.*?)(<\/\1>)/is',
+            function ($m) use ($escaped) {
+                return '<' . $m[1] . $m[2] . '>' . $escaped . $m[4];
+            },
+            $html
+        );
+
+        // Image: replace asset sesuai tag type
+        // - <img>: replace src attribute
+        // - non-<img> (section, div, dll): replace background-image URL di inline style
+        $html = preg_replace_callback(
+            '/<(\w+)((?:[^>]*\bdata-edit-image="' . preg_quote($name, '/') . '")[^>]*)>/i',
+            function ($m) use ($escaped) {
+                $tagName = strtolower($m[1]);
+                $openTag = '<' . $m[1] . $m[2] . '>';
+                if ($tagName === 'img') {
+                    // Replace src attribute in opening tag
+                    $newOpen = preg_replace('/\bsrc="[^"]*"/', 'src="' . $escaped . '"', $openTag, 1);
+                    return $newOpen ?: $openTag;
+                }
+                // Non-img: replace background-image URL di style attribute
+                // Jika belum ada style, tambahkan; jika ada, replace
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                    $oldStyle = $sm[1];
+                    if (preg_match('/background-image\s*:\s*url\([^)]*\)/i', $oldStyle)) {
+                        $newStyle = preg_replace(
+                            '/background-image\s*:\s*url\([^)]*\)/i',
+                            'background-image: url("' . $escaped . '")',
+                            $oldStyle
+                        );
+                    } else {
+                        $newStyle = 'background-image: url("' . $escaped . '"); ' . $oldStyle;
+                    }
+                    $newOpen = preg_replace('/\bstyle\s*=\s*"[^"]*"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                    return $newOpen ?: $openTag;
+                }
+                // Tidak ada style attribute — tambahkan di posisi yang aman
+                // (sebelum `>` penutup opening tag)
+                return preg_replace(
+                    '/(<\w+(?:\s[^>]*)?)(\s*\/\s*)?>$/i',
+                    '$1 style="background-image: url(\'' . $escaped . '\')">',
+                    $openTag,
+                    1
+                );
+            },
+            $html
+        );
+
+        // Link: replace href attribute on tag with data-edit-link="name"
+        $html = preg_replace_callback(
+            '/<a((?:[^>]*\bdata-edit-link="' . preg_quote($name, '/') . '")[^>]*)>/i',
+            function ($m) use ($escaped) {
+                $openTag = '<a' . $m[1] . '>';
+                $newOpen = preg_replace('/\bhref="[^"]*"/', 'href="' . $escaped . '"', $openTag, 1);
+                return $newOpen ?: $openTag;
+            },
+            $html
+        );
+    }
+
+    // Simpan ke salinan: orders/{user_id}/{template_id}/
+    $userId = $request->user()?->id ?? 'guest';
+    $outDir = "templates/orders/{$userId}/{$id}";
+    \Storage::disk('public')->makeDirectory($outDir);
+
+    // ── Copy asset statis (style.css, images/, assets/, status.html, logout.html) ──
+    // PATCH KRITIS #1: save closure SEBELUMNYA hanya tulis login.html, sedangkan
+    // HTML-nya refer ke style.css / images/logo.svg / assets/script.js → 404.
+    // Fix: copy SEMUA file dari folder master (dirname login.html) ke folder
+    // draft, KECUALI login.html (akan ditulis ulang di bawah dengan replaced
+    // values). Recursive copy supaya sub-folder (images/, assets/) ikut.
+    //
+    // Idempotent: kalau file di draft sudah ada (save ulang), overwrite dengan
+    // versi master terbaru — supaya kalau admin update master, draft konsisten.
+    $assetSrcDir = dirname($loginPath);
+    if ($assetSrcDir && \Storage::disk('public')->exists($assetSrcDir)) {
+        foreach (\Storage::disk('public')->allFiles($assetSrcDir) as $srcFile) {
+            // Skip login.html — ditulis ulang dengan replaced values di bawah
+            if (basename($srcFile) === 'login.html') continue;
+            $rel = substr($srcFile, strlen($assetSrcDir) + 1);
+            $dstFile = $outDir . '/' . $rel;
+            // makeDirectory untuk sub-folder (images/, assets/) — no-op kalau sudah ada
+            \Storage::disk('public')->makeDirectory(dirname($dstFile));
+            // Copy file dari master ke draft (overwrite kalau ada)
+            \Storage::disk('public')->put(
+                $dstFile,
+                \Storage::disk('public')->get($srcFile)
+            );
+        }
+    }
+
+    // ── Inject <base href> menunjuk ke route handler /templates/{id}/preview/ ──────
+    // FIX FINAL: draft HTML (orders/{u}/{id}/login.html) akan di-load oleh iframe
+    // editor dari URL `/templates/{id}/preview/login.html`. Route handler
+    // `templates.preview` me-render HTML, dan route `templates.preview.asset`
+    // (yang baru) me-serve asset (style.css, images/, assets/) dari folder
+    // master. <base href> menunjuk ke route handler agar semua relative
+    // asset path (style.css, images/logo.svg, assets/script.js) resolve ke
+    // `/templates/{id}/preview/{asset}` dan dilayani oleh route asset.
+    //
+    // Alasan TIDAK pakai `asset('storage/...')` symlink path:
+    //   1) Symlink bisa tidak ada di production (beberapa shared hosting).
+    //   2) Browser bisa cache agresif (private, no-store, dll) sehingga edit
+    //      baru tidak kelihatan.
+    //   3) Single source of truth: route handler konsisten baca dari folder
+    //      master templates/{id}/original/.
+    //
+    // PATCH KRITIS: trailing slash WAJIB ada. Tanpa trailing slash, browser
+    // resolve `<base href="/foo">` + relative `style.css` jadi `/foostyle.css`
+    // (bukan `/foo/style.css`). Lihat HTML5 §4.2.3 — <base href> resolution
+    // algorithm: kalau base href tidak diakhiri `/`, treat as file, replace
+    // last segment. Solusi: paksa trailing `/` agar base jadi direktori.
+    $baseHref = rtrim(url('/templates/' . $id . '/preview'), '/') . '/';
+    $baseTag = '<base href="' . $baseHref . '">';
+
+    // Idempotent: kalau <base> sudah ada (save ulang), replace isinya.
+    if (preg_match('/<base\s+href="[^"]*"\s*\/?>/i', $html)) {
+        $html = preg_replace('/<base\s+href="[^"]*"\s*\/?>/i', $baseTag, $html, 1);
+    } elseif (preg_match('/<head[^>]*>/i', $html, $hm, PREG_OFFSET_CAPTURE)) {
+        $insertAt = $hm[0][1] + strlen($hm[0][0]);
+        $html = substr($html, 0, $insertAt) . "\n  " . $baseTag . substr($html, $insertAt);
+    }
+
+    $outPath = "{$outDir}/login.html";
+    \Storage::disk('public')->put($outPath, $html);
+
+    return response()->json([
+        'ok' => true,
+        'path' => $outPath,
+        'url' => asset('storage/' . $outPath),
+    ]);
+})->middleware('auth')->name('template.editor.save');
+
 // ── Client Routes ───────────────────────
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
@@ -635,6 +1148,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', fn() => Inertia::render('Admin/Users'))->name('users');
     Route::get('/categories', fn() => Inertia::render('Admin/Categories'))->name('categories');
     Route::get('/settings', fn() => Inertia::render('Admin/Settings'))->name('settings');
+
+    // Panduan Standar Template Editor (untuk creator)
+    Route::get('/standard', fn() => Inertia::render('Admin/TemplateStandard'))->name('standard');
 });
 
 // ── Buyer Actions (scoped by {id} — setiap proses mengacu ke ID spesifik) ──

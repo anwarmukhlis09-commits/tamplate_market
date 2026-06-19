@@ -34,6 +34,17 @@ class PaymentController extends Controller
         // Placeholder: integrasikan dengan Midtrans API
         // $response = Midtrans::charge([...]);
 
+        // Parse template_id dari order ID (format: ORD-YYYYMMDD-{template_id}-{user_id})
+        // lalu simpan di session paid_templates supaya download diizinkan.
+        if (preg_match('/^ORD-\d{8}-(\d+)-\d+$/', $order, $m)) {
+            $templateId = (int) $m[1];
+            $paid = (array) $request->session()->get('paid_templates', []);
+            if (! in_array($templateId, $paid, true)) {
+                $paid[] = $templateId;
+                $request->session()->put('paid_templates', $paid);
+            }
+        }
+
         return redirect()->route('payment.success', ['order' => $order])
             ->with('success', 'Pembayaran berhasil!');
     }
@@ -44,9 +55,23 @@ class PaymentController extends Controller
      */
     public function success(Request $request, string $order): Response
     {
+        // Parse template_id dari order ID (format: ORD-YYYYMMDD-{template_id}-{user_id})
+        $template = ['id' => null, 'name' => 'Template', 'slug' => null];
+        if (preg_match('/^ORD-\d{8}-(\d+)-\d+$/', $order, $m)) {
+            $t = \App\Models\Template::find((int) $m[1]);
+            if ($t) {
+                $template = [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'slug' => $t->slug,
+                ];
+            }
+        }
+
         return Inertia::render('Payment/Success', [
             'orderId' => $order,
-            'template' => ['id' => null, 'name' => 'Template Premium'], // Placeholder
+            'template' => $template,
+            'canEdit' => $request->user() && (int) ($request->user()->id ?? 0) > 0,
         ]);
     }
 }

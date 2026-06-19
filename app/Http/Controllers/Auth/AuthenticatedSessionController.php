@@ -8,27 +8,61 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(): Response
     {
-        return view('auth.login');
+        return Inertia::render('Auth/Login', [
+            'canResetPassword' => Route::has('password.request'),
+            'status' => session('status'),
+        ]);
     }
 
     /**
      * Handle an incoming authentication request.
+     *
+     * Urutan prioritas redirect setelah login:
+     *   1) `redirect()->intended()` — URL yang coba diakses sebelum auth
+     *      (kalau user ke middleware-protected page, Laravel simpan di session).
+     *      Kalau intended URL = HOME (/dashboard), TIDAK pakai — anggap
+     *      fallback default, lanjut ke #2.
+     *   2) Field `redirect` dari form (current page user buka via ?redirect=).
+     *      Validasi: hanya path internal, anti open redirect.
+     *   3) Fallback ke RouteServiceProvider::HOME = /dashboard.
+     *
+     * Tujuan: kalau user login dari beranda (tidak ada intended URL),
+     * gunakan field `redirect` dari form (= '/') supaya tetap di beranda.
+     * Kalau user login dari /dashboard (intended URL), tetap ke /dashboard.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 
+        // PENTING: baca intended URL DULU sebelum regenerate session —
+        // regenerate() menghapus semua data session termasuk url.intended.
+        $intended = $request->session()->get('url.intended');
+
         $request->session()->regenerate();
 
+        // #1: Cek intended URL (kalau ada DAN BUKAN fallback default /dashboard)
+        if ($intended && $intended !== route('dashboard') && $intended !== url('/dashboard')) {
+            return redirect()->to($intended);
+        }
+
+        // #2: Field redirect dari form (current page, ?redirect= atau window fallback)
+        $redirect = $request->input('redirect');
+        if (is_string($redirect) && str_starts_with($redirect, '/') && ! str_starts_with($redirect, '//')) {
+            return redirect()->to($redirect);
+        }
+
+        // #3: Fallback ke /dashboard
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

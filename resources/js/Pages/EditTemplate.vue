@@ -1,101 +1,413 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref, reactive, watch, onMounted, computed } from 'vue';
 
 const props = defineProps({
     template: { type: Object, default: null },
     canLogin: Boolean,
 });
 
-// ── Editor state (real-time) ───────────
-const config = reactive({
-    // General
-    businessName: props.template?.name || 'WIFI HOTSPOT',
-    subtitle: 'Selamat datang! Silakan login untuk mulai menggunakan internet.',
-    footerText: 'Powered by Your ISP',
-    // Login button
-    loginBtnText: 'Login Hotspot',
-    // Colors
-    primaryColor: '#2563EB',
-    buttonColor: '#2563EB',
-    // Logo
-    logoUrl: '',
-    // Background
-    bgStyle: 'gradient', // 'gradient' | 'solid' | 'image'
-    bgColor1: '#2563EB',
-    bgColor2: '#7C3AED',
-    bgImageUrl: '',
-    // Social login
-    showSocial: true,
-});
+// Computed template (reactive proxy untuk akses di script)
+const template = computed(() => props.template);
 
-// ── UI state ───────────────────────────
-const activeSection = ref('umum'); // umum, logo, background, warna, teks, tombol, sosial, css
-const previewMode = ref('desktop'); // 'desktop' | 'mobile'
+// ── State ────────────────────────────────
+const fields = ref([]);        // Array dari backend
+const defaultValues = ref({}); // snapshot untuk Reset
+const values = reactive({});   // {brand_name: 'Ipan Coffee', ...}
+const hasDataEdit = ref(false);
 const saving = ref(false);
+const resetting = ref(false);
+const downloading = ref(false);
 const lastSaved = ref(null);
+const lastSavedPath = ref(null);
+let lastSavedTimer = null;  // timer untuk auto-hide "Tersimpan pukul ..." indicator
+const errorMsg = ref(null);
+const previewKey = ref(0);     // increment untuk force re-render iframe saat initial load
+const previewSrc = ref('');    // URL iframe src (route handler) — untuk tab "Live Preview"
+const previewSrcdoc = ref(''); // HTML inline untuk srcdoc — REAL-TIME preview (no reload, no network)
+const previewMode = ref('desktop'); // 'desktop' | 'tablet' | 'mobile'
+const appliedValues = reactive({}); // snapshot values yang sudah di-save ke server
+const masterHtml = ref('');    // HTML mentah dari /editor/fields — source untuk client-side render
 
-const sections = [
-    { id: 'umum',       label: 'Umum',        icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-    { id: 'logo',       label: 'Logo',        icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { id: 'background', label: 'Background',  icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { id: 'warna',      label: 'Warna',       icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-1.657 1.657m-4.99-1.243a2 2 0 01-1.414 0l-1.414-1.414a2 2 0 010-2.828l1.414-1.414a2 2 0 011.414 0l1.414 1.414a2 2 0 010 2.828l-1.414 1.414a2 2 0 01-1.414 0z' },
-    { id: 'teks',       label: 'Teks',        icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
-    { id: 'tombol',     label: 'Tombol',      icon: 'M15 7h3a2 2 0 012 2v8a2 2 0 01-2 2h-3m-6-12h-3a2 2 0 00-2 2v8a2 2 0 002 2h3m6-12v12' },
-    { id: 'sosial',     label: 'Sosial Media', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
-    { id: 'css',        label: 'CSS',         icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
-];
-
-// ── Computed: live preview style ────────
-const previewStyle = computed(() => {
-    if (config.bgStyle === 'image' && config.bgImageUrl) {
-        return { backgroundImage: `url(${config.bgImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-    }
-    if (config.bgStyle === 'solid') {
-        return { background: config.bgColor1 };
-    }
-    return { background: `linear-gradient(135deg, ${config.bgColor1}, ${config.bgColor2})` };
+// Computed: ada perubahan yang belum di-save ke server
+// Reactive terhadap perubahan BOTH `values` (form state) DAN `appliedValues`
+// (last-saved snapshot). Vue recompute otomatis saat salah satu berubah —
+// tidak perlu manual set di watch.
+const hasPendingChanges = computed(() => {
+    if (!hasDataEdit.value) return false;
+    return Object.keys(values).some(k => values[k] !== appliedValues[k])
+        || Object.keys(appliedValues).some(k => !(k in values));
 });
 
-// ── Save (placeholder) ────────────────
-function save() {
+// ── CSRF token resolver: meta tag dulu, fallback ke cookie XSRF-TOKEN ──────────
+// fetch() bawaan tidak otomatis kirim header CSRF (axios yang di-setup di bootstrap.js
+// otomatis, tapi kita pakai fetch untuk kontrol penuh atas request). Helper ini
+// memastikan kita SELALU mengirim token valid, atau melempar error eksplisit
+// (bukan header kosong yang bikin Laravel kirim 419 Page Expired).
+function getCsrfToken() {
+    // 1) Meta tag — sumber utama, di-render oleh app.blade.php
+    const meta = document.head.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) return meta.content;
+
+    // 2) Cookie XSRF-TOKEN — Laravel auto-set, URL-safe Base64 encoded.
+    //    Decode di sini karena Laravel VerifyCsrfToken expect nilai decoded
+    //    di header X-XSRF-TOKEN (atau exact match di X-CSRF-TOKEN).
+    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+    if (match) {
+        try {
+            return decodeURIComponent(match[1]);
+        } catch (_) {
+            // ignore — lanjut ke fallback berikutnya
+        }
+    }
+
+    // 3) Tidak ada token di mana pun — sesi kemungkinan rusak.
+    throw new Error('CSRF token tidak ditemukan. Silakan refresh halaman.');
+}
+
+// ── Client-side HTML render: replace data-edit values in-memory ──────
+// Tujuan: render preview REAL-TIME (tiap keystroke) tanpa network roundtrip.
+// Strategi: pakai `masterHtml` (raw HTML dari /editor/fields) + `values`
+// (form state) → generate HTML baru dengan text/image/link replaced.
+// Hasil di-set ke `previewSrcdoc` (ref) → <iframe srcdoc> update otomatis
+// (Vue reactivity, TIDAK reload iframe, TIDAK request server).
+//
+// HTML escaping: pakai textContent + DOMParser untuk safety. InnerHTML raw
+// concat rentan XSS kalau value mengandung karakter spesial.
+function escapeHtml(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderClientHtml() {
+    if (!masterHtml.value) return '';
+    let html = masterHtml.value;
+
+    // Inject <base href> ke <head> supaya asset (style.css, images/, assets/)
+    // resolve ke route handler. Wajib TRAILING SLASH — lihat HTML5 spec §4.2.3.
+    // Pakai absolute URL dari window.location.origin agar match dengan host frontend.
+    const baseHref = window.location.origin + '/templates/' + props.template.id + '/preview/';
+    const baseTag = '<base href="' + baseHref + '">';
+    if (/<base\s+href="[^"]*"\s*\/?>/i.test(html)) {
+        html = html.replace(/<base\s+href="[^"]*"\s*\/?>/i, baseTag);
+    } else if (/<head[^>]*>/i.test(html)) {
+        html = html.replace(/<head[^>]*>/i, '$&' + '\n  ' + baseTag);
+    }
+
+    // Replace text content di tag dengan data-edit="name"
+    for (const name in values) {
+        const v = values[name] ?? '';
+        // Escape special regex chars di name
+        const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Tag dengan data-edit (text, image, link, bg): <tag data-edit="name" ...>inner</tag>
+        const re = new RegExp(
+            '<(\\w+)((?:[^>]*\\bdata-edit="' + n + '")[^>]*)>(.*?)<\\/\\1>',
+            'gis'
+        );
+        html = html.replace(re, (match, tag, attrs, inner) => {
+            const tagLower = tag.toLowerCase();
+            if (tagLower === 'img') {
+                // Image: replace src attribute
+                if (/\bsrc="[^"]*"/i.test(attrs)) {
+                    return '<' + tag + attrs + ' src="' + escapeHtml(v) + '">';
+                }
+                return match;
+            }
+            // Text: replace inner content
+            return '<' + tag + attrs + '>' + escapeHtml(v) + '</' + tag + '>';
+        });
+    }
+
+    // Replace image src/background untuk data-edit-image
+    for (const name in values) {
+        const v = values[name] ?? '';
+        const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(
+            '<(\\w+)((?:[^>]*\\bdata-edit-image="' + n + '")[^>]*)>',
+            'gi'
+        );
+        html = html.replace(re, (match, tag, attrs) => {
+            const tagLower = tag.toLowerCase();
+            if (tagLower === 'img') {
+                if (/\bsrc="[^"]*"/i.test(attrs)) {
+                    return '<' + tag + attrs.replace(/\bsrc="[^"]*"/i, 'src="' + escapeHtml(v) + '"') + '>';
+                }
+                return '<' + tag + attrs + ' src="' + escapeHtml(v) + '">';
+            }
+            // Non-img: replace background-image di inline style
+            if (/\bstyle\s*=\s*"([^"]*)"/i.test(attrs)) {
+                const oldStyle = attrs.match(/\bstyle\s*=\s*"([^"]*)"/i)[1];
+                let newStyle;
+                if (/background-image\s*:\s*url\([^)]*\)/i.test(oldStyle)) {
+                    newStyle = oldStyle.replace(
+                        /background-image\s*:\s*url\([^)]*\)/i,
+                        'background-image: url("' + escapeHtml(v) + '")'
+                    );
+                } else {
+                    newStyle = 'background-image: url("' + escapeHtml(v) + '"); ' + oldStyle;
+                }
+                return '<' + tag + attrs.replace(/\bstyle\s*=\s*"[^"]*"/i, 'style="' + newStyle + '"') + '>';
+            }
+            return '<' + tag + attrs + ' style="background-image: url(\'' + escapeHtml(v) + '\')">';
+        });
+    }
+
+    // Replace href untuk data-edit-link
+    for (const name in values) {
+        const v = values[name] ?? '';
+        const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(
+            '<a((?:[^>]*\\bdata-edit-link="' + n + '")[^>]*)>',
+            'gi'
+        );
+        html = html.replace(re, (match, attrs) => {
+            if (/\bhref="[^"]*"/i.test(attrs)) {
+                return '<a' + attrs.replace(/\bhref="[^"]*"/i, 'href="' + escapeHtml(v) + '"') + '>';
+            }
+            return '<a' + attrs + ' href="' + escapeHtml(v) + '">';
+        });
+    }
+
+    return html;
+}
+
+// ── Fetch editable fields dari backend ──────────
+onMounted(async () => {
+    try {
+        const r = await fetch(`/template/${props.template.id}/editor/fields`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        fields.value = data.fields || [];
+        hasDataEdit.value = !!data.has_data_edit;
+        // Simpan HTML mentah — source untuk client-side render real-time
+        masterHtml.value = data.html || '';
+        for (const f of fields.value) {
+            values[f.name] = f.default || '';
+            defaultValues.value[f.name] = f.default || '';
+        }
+        // Init appliedValues = values (preview sama dengan form awal)
+        for (const key in values) {
+            appliedValues[key] = values[key];
+        }
+        // Set initial preview src (untuk tab "Live Preview" — buka di new tab)
+        previewSrc.value = `/templates/${props.template.id}/preview/login.html?v=${Date.now()}`;
+        // Initial srcdoc render (supaya iframe tidak kosong saat onMounted)
+        previewSrcdoc.value = renderClientHtml();
+        previewKey.value++;
+    } catch (e) {
+        errorMsg.value = 'Gagal baca fields: ' + e.message;
+    }
+});
+
+// ── Reset perubahan ke nilai default ──────────
+async function resetChanges() {
+    if (resetting.value) return;
+    if (!confirm('Reset semua perubahan ke nilai default? Tindakan ini tidak dapat dibatalkan.')) return;
+    resetting.value = true;
+    try {
+        // Reset values → watch real-time akan auto-update previewSrcdoc
+        for (const key in values) {
+            values[key] = defaultValues.value[key] || '';
+        }
+        // Save ke server supaya draft konsisten dengan reset
+        await save({ silent: true });
+        lastSaved.value = null;
+        lastSavedPath.value = null;
+    } finally {
+        resetting.value = false;
+    }
+}
+
+// ── Real-time preview: render srcdoc INSTANT saat user mengetik ──────
+// Strategi FINAL: TIDAK ada network roundtrip untuk preview. Setiap keystroke
+// → watch values fire → renderClientHtml() → update previewSrcdoc ref → Vue
+// reaktif → <iframe srcdoc> update otomatis (instant, no reload, no flicker).
+//
+// Kelebihan vs server-roundtrip:
+//   - Instant feedback (sub-millisecond)
+//   - Zero network traffic untuk preview
+//   - Tidak ada 419 CSRF risk saat mengetik cepat
+//   - Tidak ada race condition
+//   - Bekerja offline (preview tetap update)
+//
+// Save ke server tetap dilakukan terpisah (auto-debounced 1.5s atau tombol
+// Simpan manual) supaya draft persisted di server.
+watch(values, () => {
+    if (!hasDataEdit.value) return;
+
+    // 1) Update srcdoc INSTANT (no debounce) — user lihat feedback tiap huruf
+    previewSrcdoc.value = renderClientHtml();
+
+    // 2) hasPendingChanges sekarang COMPUTED (lihat deklarasi di atas).
+    //    Vue recompute otomatis saat `values` atau `appliedValues` berubah.
+    //    Tidak perlu manual set di watch.
+}, { deep: true });
+
+// ── Auto-save ke server (debounced 1.5s) — supaya draft persisted ──────
+// Beda dengan real-time render di atas: ini PERSIST ke server, bukan update
+// UI. Trigger setelah user berhenti ngetik 1.5s. Cukup lama agar tidak spam
+// server saat user masih aktif, tapi cukup cepat agar draft tidak hilang
+// kalau browser tertutup. Tombol Simpan manual juga tersedia.
+let autoSaveTimer = null;
+watch(values, () => {
+    if (!hasDataEdit.value) return;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        save({ silent: true });
+    }, 1500);
+}, { deep: true });
+
+// (applyToPreview() dihapus — preview sekarang real-time via srcdoc,
+//  tidak perlu POST ke server untuk update UI. Auto-save dilakukan
+//  oleh watch debounced 1.5s yang memanggil save({silent:true}).)
+
+// ── Download template hasil edit sebagai ZIP ──────────
+// Strategi:
+//   1) Backend cek payment. Kalau belum bayar → return 402 + JSON {redirect:'/checkout/{id}'}.
+//   2) Kalau sudah bayar → return ZIP blob → trigger download via <a>.
+//   3) Kalau dapat signal redirect (402) → navigate ke /checkout via Inertia (SPA).
+//
+// TIDAK pakai window.location.href (= navigasi browser) karena reload halaman
+// dan reset semua state Vue (values, fields, appliedValues). Pakai Inertia
+// supaya navigasi SPA, state editor TETAP HIDUP.
+async function downloadZip() {
+    if (downloading.value) return;
+    downloading.value = true;
+    errorMsg.value = null;
+    try {
+        const r = await fetch(`/template/${props.template.id}/download`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/octet-stream, application/zip, application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        // Backend return 402 Payment Required → user belum bayar
+        if (r.status === 402) {
+            const data = await r.json().catch(() => ({}));
+            const redirectTo = data.redirect || route('checkout.show', { id: props.template.id });
+            // Inertia visit (SPA navigation) — state editor tetap utuh
+            router.visit(redirectTo);
+            return;
+        }
+
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+        // Ambil filename dari Content-Disposition header.
+        // Default: Template_ID{id}_{name}_edited.rar (include ID template yang sedang
+        // diedit, suffix .rar — file tetap ZIP, WinRAR/7-Zip bisa extract).
+        const disp = r.headers.get('Content-Disposition') || '';
+        const match = disp.match(/filename="?([^"]+)"?/i);
+        const fallbackName = `Template_ID${props.template.id}_${(props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_')}_edited.rar`;
+        const filename = match ? match[1] : fallbackName;
+
+        // Konversi response ke blob → klik <a> untuk download
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+        errorMsg.value = 'Gagal download: ' + e.message;
+    } finally {
+        setTimeout(() => { downloading.value = false; }, 500);
+    }
+}
+
+// ── Image upload → base64 (MVP, simple) ──────────
+function onImageUpload(e, name) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { values[name] = ev.target.result; };
+    reader.readAsDataURL(file);
+}
+
+// ── Live preview: TIDAK auto-refresh ──────────
+// Preview hanya re-render saat user klik "Terapkan ke Preview" atau "Simpan".
+// (Live watcher lama sudah dihapus untuk mencegah focus stealing & auto-refresh.)
+// (Watch di atas yang set hasPendingChanges sudah cukup — dia tidak trigger preview render.)
+
+// ── Save ────────────────────────────────
+// PATCH: support {silent:true} untuk auto-save dari watch debounced.
+// Kalau silent, error tidak munculkan toast merah — hanya console.warn.
+// Klik manual tombol Simpan → silent:false (default) → error tampil di UI.
+async function save(opts = {}) {
+    if (saving.value) return;
+    const silent = !!opts.silent;
     saving.value = true;
-    // Real implementation: POST config to /template/{id}/editor
-    setTimeout(() => {
+    if (!silent) errorMsg.value = null;
+    try {
+        let r;
+        try {
+            r = await fetch(`/template/${props.template.id}/editor/save`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ values }),
+            });
+        } catch (networkErr) {
+            if (silent) console.warn('Auto-save gagal (network):', networkErr.message);
+            else errorMsg.value = 'Tidak bisa terhubung ke server. Periksa koneksi Anda.';
+            return;
+        }
+
+        if (r.status === 419) {
+            if (!silent) errorMsg.value = 'Sesi telah berakhir. Menyegarkan halaman…';
+            setTimeout(() => window.location.reload(), 800);
+            return;
+        }
+
+        const data = await r.json();
+        if (r.ok && data.ok) {
+            lastSaved.value = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            lastSavedPath.value = data.path || null;
+            // Update appliedValues supaya hasPendingChanges akurat
+            for (const key in values) appliedValues[key] = values[key];
+
+            // Auto-hide indicator setelah 4 detik — supaya tidak menumpuk &
+            // ganggu UI kalau user auto-save berkali-kali (tiap 1.5s).
+            // Pakai clearTimeout kalau save lagi dalam window 4 detik.
+            if (lastSavedTimer) clearTimeout(lastSavedTimer);
+            lastSavedTimer = setTimeout(() => {
+                lastSaved.value = null;
+                lastSavedPath.value = null;
+            }, 4000);
+        } else {
+            if (silent) console.warn('Auto-save gagal:', data.error || `HTTP ${r.status}`);
+            else errorMsg.value = data.error || `HTTP ${r.status}`;
+        }
+    } catch (e) {
+        if (silent) console.warn('Auto-save exception:', e.message);
+        else errorMsg.value = 'Gagal save: ' + e.message;
+    } finally {
         saving.value = false;
-        lastSaved.value = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    }, 800);
-}
-
-// ── File upload handlers (placeholder) ──
-function onLogoUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => { config.logoUrl = ev.target.result; };
-    reader.readAsDataURL(file);
-}
-function onBgUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => { config.bgImageUrl = ev.target.result; };
-    reader.readAsDataURL(file);
-}
-
-// ── Section icon helper ────────────────
-function sectionIcon(id) {
-    return sections.find(s => s.id === id)?.icon || '';
-}
-function sectionLabel(id) {
-    return sections.find(s => s.id === id)?.label || '';
+    }
 }
 </script>
 
 <template>
 <Head :title="`Edit ${template?.name || 'Template'} — MarketTemplate`" />
 
-<div class="min-h-screen bg-slate-50 flex flex-col" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #0F172A;">
+<div class="h-screen bg-slate-50 flex flex-col overflow-hidden" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #0F172A;">
 
     <!-- ════════════ TOP HEADER ════════════ -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
@@ -111,24 +423,39 @@ function sectionLabel(id) {
                 </div>
             </div>
 
-            <!-- Tengah: Toggle Desktop/Mobile -->
-            <div class="hidden md:flex items-center gap-2 bg-slate-100 rounded-lg p-1">
-                <button @click="previewMode = 'desktop'" :class="previewMode === 'desktop' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all">
+            <!-- Tengah: Toggle Desktop / Tablet / Mobile -->
+            <div class="hidden md:flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                <button @click="previewMode = 'desktop'" :class="previewMode === 'desktop' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all" title="Preview Desktop">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    Desktop
+                    <span class="hidden lg:inline">Desktop</span>
                 </button>
-                <button @click="previewMode = 'mobile'" :class="previewMode === 'mobile' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all">
+                <button @click="previewMode = 'tablet'" :class="previewMode === 'tablet' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all" title="Preview Tablet">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    <span class="hidden lg:inline">Tablet</span>
+                </button>
+                <button @click="previewMode = 'mobile'" :class="previewMode === 'mobile' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all" title="Preview Mobile">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                    Mobile
+                    <span class="hidden lg:inline">Mobile</span>
                 </button>
             </div>
 
             <!-- Kanan: Action buttons -->
-            <div class="flex items-center gap-2 shrink-0">
-                <a :href="`/templates/${template?.id || ''}/preview/login.html`" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                    Live Preview
+            <div class="flex items-center gap-1.5 shrink-0">
+                <a :href="`/templates/${template?.id || ''}/preview/login.html`" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" title="Buka preview di tab baru">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    <span class="hidden md:inline">Live Preview</span>
                 </a>
+                <button @click="resetChanges" :disabled="resetting || !hasDataEdit" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reset semua perubahan ke nilai default">
+                    <svg v-if="!resetting" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                    <span class="hidden md:inline">Reset</span>
+                </button>
+                <button @click="downloadZip" :disabled="downloading" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50" title="Download template sebagai ZIP">
+                    <svg v-if="!downloading" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                    <span class="hidden md:inline">Download ZIP</span>
+                </button>
+                <!-- Tombol Terapkan dihapus: preview REAL-TIME via srcdoc, tidak perlu klik manual -->
                 <button @click="save" :disabled="saving" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">
                     <svg v-if="!saving" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
@@ -136,280 +463,120 @@ function sectionLabel(id) {
                 </button>
             </div>
         </div>
-        <!-- Saved indicator -->
-        <div v-if="lastSaved" class="px-4 sm:px-6 py-1.5 bg-emerald-50 border-t border-emerald-100 text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
+        <!-- Saved indicator — auto-hide setelah 4 detik (lihat save() di script) -->
+        <div v-if="lastSaved" class="px-4 sm:px-6 py-1.5 bg-emerald-50 border-t border-emerald-100 text-[11px] text-emerald-700 font-medium flex items-center gap-1.5 transition-all duration-300">
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-            Tersimpan pukul {{ lastSaved }}
+            <span>Tersimpan pukul {{ lastSaved }} di <code class="bg-emerald-100 px-1.5 py-0.5 rounded text-[10px]">{{ lastSavedPath }}</code></span>
+        </div>
+        <!-- Unsaved-changes indicator (preview belum di-update) -->
+        <div v-else-if="hasPendingChanges" class="px-4 sm:px-6 py-1.5 bg-amber-50 border-t border-amber-100 text-[11px] text-amber-700 font-medium flex items-center gap-1.5">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Ada perubahan belum diterapkan ke preview. Klik <strong>"Terapkan ke Preview"</strong> untuk melihat hasil, atau <strong>"Simpan"</strong> untuk menyimpan.</span>
         </div>
     </header>
 
     <!-- ════════════ MAIN CONTENT (2 kolom) ════════════ -->
-    <div class="flex-1 flex overflow-hidden">
+    <!-- min-h-0 → critical: izinkan flex item shrink ke 0 supaya child overflow-y-auto
+         bisa kerja. Tanpa min-h-0, child akan overflow ke body dan trigger page scroll. -->
+    <div class="flex-1 flex overflow-hidden min-h-0">
 
-        <!-- ════ KIRI: SETTINGS PANEL (28%) ════ -->
+        <!-- ════ KIRI: SETTINGS PANEL (auto-generate dari data-edit) ════ -->
         <aside class="w-[280px] sm:w-[320px] shrink-0 bg-white border-r border-slate-200 flex flex-col">
-            <!-- Section menu (icon-based) -->
-            <nav class="p-3 border-b border-slate-100">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">Pengaturan</p>
-                <ul class="space-y-0.5">
-                    <li v-for="s in sections" :key="s.id">
-                        <button @click="activeSection = s.id"
-                            :class="activeSection === s.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
-                            class="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors text-left">
-                            <svg class="w-4 h-4 shrink-0" :class="activeSection === s.id ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="s.icon"/></svg>
-                            {{ s.label }}
-                        </button>
-                    </li>
-                </ul>
-            </nav>
+            <div class="p-3 border-b border-slate-100">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Field Editable</p>
+                <p class="text-[10px] text-slate-400 px-2 mt-1">
+                    <span v-if="hasDataEdit">{{ fields.length }} field dari <code class="bg-slate-100 px-1 rounded">data-edit</code></span>
+                    <span v-else>Template belum punya atribut <code class="bg-slate-100 px-1 rounded">data-edit</code></span>
+                </p>
+            </div>
 
-            <!-- Section content (scrollable) -->
+            <!-- Dynamic form fields -->
             <div class="flex-1 overflow-y-auto p-5 space-y-4">
-
-                <!-- UMUM -->
-                <div v-if="activeSection === 'umum'" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Judul Halaman</label>
-                        <input v-model="config.businessName" type="text" placeholder="WIFI HOTSPOT" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                <div v-if="!hasDataEdit" class="text-center py-12 px-4">
+                    <div class="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-2xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Subtitle</label>
-                        <textarea v-model="config.subtitle" rows="3" placeholder="Selamat datang! Silakan login..." class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Footer Text</label>
-                        <input v-model="config.footerText" type="text" placeholder="Powered by Your ISP" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
-                    </div>
+                    <p class="text-sm font-semibold text-slate-700 mb-1">Tidak ada field editable</p>
+                    <p class="text-xs text-slate-500 leading-relaxed">Template ini belum menambahkan atribut <code class="bg-slate-100 px-1 py-0.5 rounded text-[10px]">data-edit</code> di HTML-nya. Tambahkan atribut <code class="bg-slate-100 px-1 py-0.5 rounded text-[10px]">data-edit</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-[10px]">data-edit-image</code>, atau <code class="bg-slate-100 px-1 py-0.5 rounded text-[10px]">data-edit-link</code> ke elemen HTML untuk mengaktifkannya.</p>
                 </div>
 
-                <!-- LOGO -->
-                <div v-if="activeSection === 'logo'" class="space-y-4">
-                    <div class="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-blue-400 transition-colors">
-                        <input type="file" accept="image/*" @change="onLogoUpload" class="hidden" id="logo-upload">
-                        <label for="logo-upload" class="cursor-pointer flex flex-col items-center gap-2">
-                            <div v-if="!config.logoUrl" class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            </div>
-                            <img v-else :src="config.logoUrl" class="w-20 h-20 object-contain rounded-lg" alt="Logo">
-                            <p class="text-xs font-semibold text-slate-700">Upload Logo</p>
-                            <p class="text-[10px] text-slate-500">PNG, JPG, SVG · max 2MB</p>
-                        </label>
-                    </div>
-                    <div v-if="config.logoUrl" class="flex gap-2">
-                        <button @click="config.logoUrl = ''" class="flex-1 py-1.5 text-xs font-medium text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100">Hapus Logo</button>
-                    </div>
-                </div>
-
-                <!-- BACKGROUND -->
-                <div v-if="activeSection === 'background'" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-2">Tipe Background</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button v-for="t in ['gradient', 'solid', 'image']" :key="t" @click="config.bgStyle = t"
-                                :class="config.bgStyle === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
-                                class="px-3 py-2.5 text-xs font-semibold border-2 rounded-lg capitalize transition-colors">
-                                {{ t === 'gradient' ? 'Gradient' : t === 'solid' ? 'Solid' : 'Gambar' }}
-                            </button>
-                        </div>
-                    </div>
-                    <div v-if="config.bgStyle === 'gradient'" class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Warna 1</label>
-                            <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
-                                <input v-model="config.bgColor1" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
-                                <input v-model="config.bgColor1" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Warna 2</label>
-                            <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
-                                <input v-model="config.bgColor2" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
-                                <input v-model="config.bgColor2" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="config.bgStyle === 'solid'">
-                        <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Warna Solid</label>
-                        <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
-                            <input v-model="config.bgColor1" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
-                            <input v-model="config.bgColor1" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
-                        </div>
-                    </div>
-                    <div v-if="config.bgStyle === 'image'">
-                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-blue-400 transition-colors">
-                            <input type="file" accept="image/*" @change="onBgUpload" class="hidden" id="bg-upload">
-                            <label for="bg-upload" class="cursor-pointer flex flex-col items-center gap-2">
-                                <div v-if="!config.bgImageUrl" class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                </div>
-                                <img v-else :src="config.bgImageUrl" class="w-full h-24 object-cover rounded-lg" alt="Background">
-                                <p class="text-xs font-semibold text-slate-700">Upload Gambar Background</p>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- WARNA -->
-                <div v-if="activeSection === 'warna'" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Warna Utama (Primary)</label>
-                        <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
-                            <input v-model="config.primaryColor" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
-                            <input v-model="config.primaryColor" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
-                        </div>
-                        <p class="text-[10px] text-slate-500 mt-1">Dipakai untuk icon, link, dan elemen brand</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Warna Tombol Login</label>
-                        <div class="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5">
-                            <input v-model="config.buttonColor" type="color" class="w-8 h-8 rounded border-0 cursor-pointer">
-                            <input v-model="config.buttonColor" type="text" class="flex-1 text-xs font-mono bg-transparent outline-none">
-                        </div>
-                        <p class="text-[10px] text-slate-500 mt-1">Pakai warna brand bisnis Anda</p>
-                    </div>
-                </div>
-
-                <!-- TEKS -->
-                <div v-if="activeSection === 'teks'" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Teks Tombol Login</label>
-                        <input v-model="config.loginBtnText" type="text" placeholder="Login Hotspot" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
-                        <p class="text-[10px] text-slate-500 mt-1">Maks 24 karakter agar pas di tombol</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Placeholder Username</label>
-                        <input type="text" value="Masukkan username" disabled class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Placeholder Password</label>
-                        <input type="text" value="Masukkan password" disabled class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-400">
-                    </div>
-                </div>
-
-                <!-- TOMBOL -->
-                <div v-if="activeSection === 'tombol'" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Bentuk Tombol</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button class="px-3 py-2.5 text-xs font-semibold border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg">Rounded (default)</button>
-                            <button class="px-3 py-2.5 text-xs font-semibold border-2 border-slate-200 text-slate-700 rounded-none">Square</button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Ukuran Tombol</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button class="py-1.5 text-xs font-semibold border-2 border-slate-200 text-slate-700 rounded-lg">Kecil</button>
-                            <button class="py-2.5 text-xs font-semibold border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg">Sedang</button>
-                            <button class="py-3.5 text-xs font-semibold border-2 border-slate-200 text-slate-700 rounded-lg">Besar</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SOSIAL -->
-                <div v-if="activeSection === 'sosial'" class="space-y-4">
-                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-lg cursor-pointer">
-                        <div>
-                            <p class="text-sm font-semibold text-slate-800">Tampilkan Login Sosial</p>
-                            <p class="text-xs text-slate-500">Google, Facebook, Apple</p>
-                        </div>
-                        <input v-model="config.showSocial" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                <div v-for="f in fields" :key="f.name" class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-700">
+                        {{ f.label }}
+                        <span class="text-[10px] font-mono text-slate-400 ml-1">{{ f.name }}</span>
                     </label>
-                </div>
 
-                <!-- CSS -->
-                <div v-if="activeSection === 'css'" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Custom CSS</label>
-                        <textarea rows="8" placeholder="/* CSS tambahan untuk kustomisasi lanjutan */" class="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none"></textarea>
-                        <p class="text-[10px] text-slate-500 mt-1">⚠️ Untuk pengguna advanced. CSS akan di-inject ke template.</p>
+                    <!-- Text -->
+                    <textarea v-if="f.type === 'text' && f.tag === 'p'" v-model="values[f.name]" rows="3" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none"></textarea>
+                    <input v-else-if="f.type === 'text'" v-model="values[f.name]" type="text" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" />
+
+                    <!-- Image -->
+                    <div v-else-if="f.type === 'image'" class="space-y-2">
+                        <div v-if="values[f.name]" class="border border-slate-200 rounded-lg p-2 bg-slate-50">
+                            <img :src="values[f.name]" :alt="f.label" class="w-full h-24 object-contain rounded" />
+                        </div>
+                        <input :id="`img-${f.name}`" type="file" accept="image/*" @change="onImageUpload($event, f.name)" class="hidden" />
+                        <label :for="`img-${f.name}`" class="block w-full text-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                            {{ values[f.name] ? 'Ganti Gambar' : 'Upload Gambar' }}
+                        </label>
+                        <button v-if="values[f.name]" type="button" @click="values[f.name] = ''" class="w-full py-1.5 text-xs font-medium text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100">Hapus</button>
                     </div>
+
+                    <!-- Link -->
+                    <input v-else-if="f.type === 'link'" v-model="values[f.name]" type="url" placeholder="https://..." class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono" />
                 </div>
             </div>
         </aside>
 
-        <!-- ════ KANAN: LIVE PREVIEW (72%) ════ -->
-        <main class="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6 lg:p-10">
+        <!-- ════ KANAN: LIVE PREVIEW (iframe ke template asli) ════ -->
+        <!-- min-h-0 → izinkan flex item shrink supaya overflow-y-auto bekerja dengan benar -->
+        <main class="flex-1 min-h-0 overflow-y-auto bg-slate-100 p-6 sm:p-8">
             <div class="max-w-5xl mx-auto">
+                <!-- Error message -->
+                <div v-if="errorMsg" class="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700 flex items-start gap-2.5">
+                    <svg class="w-5 h-5 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>{{ errorMsg }}</span>
+                </div>
 
-                <!-- Preview device frame -->
-                <div class="flex items-center justify-center">
-                    <!-- DESKTOP preview -->
-                    <div v-if="previewMode === 'desktop'" class="w-full max-w-4xl">
-                        <div class="bg-slate-200 rounded-t-xl px-4 py-2.5 flex items-center gap-1.5 border border-slate-200 border-b-0">
-                            <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                            <div class="flex-1 mx-3 bg-white rounded-md px-3 py-1 text-[10px] text-slate-400 font-mono truncate">
-                                hotspot.{{ config.businessName.toLowerCase().replace(/\s+/g, '-') }}.test/login
-                            </div>
-                        </div>
-                        <div class="bg-white border border-slate-200 border-t-0 rounded-b-xl overflow-hidden shadow-xl" style="min-height: 500px;">
-                            <!-- Login page mockup -->
-                            <div class="flex items-center justify-center p-10" :style="previewStyle" style="min-height: 500px;">
-                                <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-7 text-center">
-                                    <!-- Logo -->
-                                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center overflow-hidden"
-                                        :style="config.logoUrl ? '' : `background: ${config.primaryColor}`"
-                                        :class="config.logoUrl ? '' : ''">
-                                        <img v-if="config.logoUrl" :src="config.logoUrl" class="w-full h-full object-contain">
-                                        <span v-else class="text-white font-extrabold text-2xl">{{ config.businessName.charAt(0) }}</span>
-                                    </div>
-                                    <h2 class="text-2xl font-extrabold text-slate-900 mb-1">{{ config.businessName }}</h2>
-                                    <p class="text-sm text-slate-500 mb-5 leading-relaxed">{{ config.subtitle }}</p>
-                                    <div class="space-y-2.5 mb-4">
-                                        <input type="text" placeholder="Username" disabled class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-700">
-                                        <input type="password" placeholder="Password" disabled class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-700">
-                                    </div>
-                                    <button class="w-full py-3 text-sm font-bold text-white rounded-xl shadow-md transition-colors" :style="`background: ${config.buttonColor}`">{{ config.loginBtnText }}</button>
-                                    <!-- Social login -->
-                                    <div v-if="config.showSocial" class="mt-4 flex items-center justify-center gap-2">
-                                        <span class="text-[10px] text-slate-400">atau login dengan</span>
-                                        <div class="flex gap-1.5">
-                                            <span class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs">G</span>
-                                            <span class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs">F</span>
-                                        </div>
-                                    </div>
-                                    <p class="mt-5 text-[10px] text-slate-400">{{ config.footerText }}</p>
-                                </div>
-                            </div>
+                <!-- Loading state -->
+                <div v-if="!hasDataEdit && !errorMsg" class="text-center py-20">
+                    <div class="inline-block w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin"></div>
+                    <p class="mt-3 text-sm text-slate-500">Memuat field editable...</p>
+                </div>
+
+                <!-- DESKTOP preview -->
+                <div v-if="previewMode === 'desktop' && hasDataEdit" class="w-full">
+                    <div class="bg-slate-900 rounded-t-xl px-4 py-2.5 flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                        <div class="flex-1 mx-3 bg-slate-800 rounded-md px-3 py-1 text-[10px] text-slate-400 font-mono truncate flex items-center gap-2">
+                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2V5a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            hotspot.{{ template?.name?.toLowerCase().replace(/\s+/g, '-') }}/login
                         </div>
                     </div>
+                    <iframe :key="previewKey" :srcdoc="previewSrcdoc" class="w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                </div>
 
-                    <!-- MOBILE preview -->
-                    <div v-else class="w-full max-w-[360px]">
-                        <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl">
-                            <div class="flex justify-center mb-2"><div class="w-24 h-5 bg-slate-800 rounded-full"></div></div>
-                            <div class="bg-slate-900 rounded-[2rem] overflow-hidden ring-4 ring-slate-800 relative" style="aspect-ratio: 9/16;">
-                                <div class="w-full h-full flex items-center justify-center p-5" :style="previewStyle">
-                                    <div class="w-full bg-white rounded-2xl shadow-2xl p-5 text-center">
-                                        <div class="w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center overflow-hidden"
-                                            :style="config.logoUrl ? '' : `background: ${config.primaryColor}`">
-                                            <img v-if="config.logoUrl" :src="config.logoUrl" class="w-full h-full object-contain">
-                                            <span v-else class="text-white font-extrabold text-lg">{{ config.businessName.charAt(0) }}</span>
-                                        </div>
-                                        <h2 class="text-lg font-extrabold text-slate-900 mb-1">{{ config.businessName }}</h2>
-                                        <p class="text-[11px] text-slate-500 mb-4 leading-snug">{{ config.subtitle }}</p>
-                                        <div class="space-y-2 mb-3">
-                                            <input type="text" placeholder="Username" disabled class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg">
-                                            <input type="password" placeholder="Password" disabled class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg">
-                                        </div>
-                                        <button class="w-full py-2.5 text-xs font-bold text-white rounded-lg shadow-md" :style="`background: ${config.buttonColor}`">{{ config.loginBtnText }}</button>
-                                        <div v-if="config.showSocial" class="mt-3 flex items-center justify-center gap-1.5">
-                                            <span class="text-[9px] text-slate-400">atau</span>
-                                            <span class="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[8px]">G</span>
-                                            <span class="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[8px]">F</span>
-                                        </div>
-                                        <p class="mt-3 text-[9px] text-slate-400">{{ config.footerText }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <!-- MOBILE preview -->
+                <div v-if="previewMode === 'mobile' && hasDataEdit" class="w-full flex justify-center">
+                    <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl" style="width: 360px;">
+                        <div class="flex justify-center mb-2"><div class="w-24 h-5 bg-slate-800 rounded-full"></div></div>
+                        <iframe :key="previewKey" :srcdoc="previewSrcdoc" class="w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
                     </div>
                 </div>
 
-                <!-- Tip bawah -->
+                <!-- TABLET preview -->
+                <div v-if="previewMode === 'tablet' && hasDataEdit" class="w-full flex justify-center">
+                    <div class="bg-slate-900 rounded-[1.75rem] p-3 shadow-2xl" style="width: 768px; max-width: 100%;">
+                        <div class="flex justify-center mb-2"><div class="w-1.5 h-1.5 bg-slate-800 rounded-full"></div></div>
+                        <iframe :key="previewKey" :srcdoc="previewSrcdoc" class="w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                    </div>
+                </div>
+
+                <!-- Tip -->
                 <p class="text-center text-xs text-slate-400 mt-6">
-                    💡 Perubahan pada panel kiri langsung terlihat di preview ini. Klik <strong>Simpan</strong> untuk apply ke template.
+                    💡 Preview update real-time setiap ketukan tombol. Auto-save ke server setiap ~1.5 detik, atau klik <strong>Simpan</strong> untuk simpan manual.
                 </p>
             </div>
         </main>

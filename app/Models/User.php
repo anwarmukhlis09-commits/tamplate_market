@@ -33,4 +33,13 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    /**
+     * Cek apakah user adalah admin. Dipakai untuk bypass payment guard
+     * (admin boleh download semua template tanpa bayar).
+     */
+    public function isAdmin(): bool
+    {
+        return (bool) ($this->is_admin ?? false);
+    }
 }
