@@ -22,12 +22,13 @@ const lastSaved = ref(null);
 const lastSavedPath = ref(null);
 let lastSavedTimer = null;  // timer untuk auto-hide "Tersimpan pukul ..." indicator
 const errorMsg = ref(null);
-const previewKey = ref(0);     // increment untuk force re-render iframe saat initial load
-const previewSrc = ref('');    // URL iframe src (route handler) — untuk tab "Live Preview"
-const previewSrcdoc = ref(''); // HTML inline untuk srcdoc — REAL-TIME preview (no reload, no network)
+const previewKey = ref(0);     // increment untuk force re-render iframe (initial load, reset, manual refresh saja)
+const previewSrc = ref('');    // URL iframe src — di-set SEKALI saat load, TIDAK berubah tiap keystroke
 const previewMode = ref('desktop'); // 'desktop' | 'tablet' | 'mobile'
 const appliedValues = reactive({}); // snapshot values yang sudah di-save ke server
-const masterHtml = ref('');    // HTML mentah dari /editor/fields — source untuk client-side render
+const iframeRef = ref(null);   // ref ke <iframe> element — untuk contentDocument access
+const iframeReady = ref(false); // true setelah iframe load selesai (pakai @load)
+const defaults = ref({});      // default values dari master (untuk reset DOM)
 
 // Computed: ada perubahan yang belum di-save ke server
 // Reactive terhadap perubahan BOTH `values` (form state) DAN `appliedValues`
@@ -65,172 +66,92 @@ function getCsrfToken() {
     throw new Error('CSRF token tidak ditemukan. Silakan refresh halaman.');
 }
 
-// ── Client-side HTML render: replace data-edit values in-memory ──────
-// Tujuan: render preview REAL-TIME (tiap keystroke) tanpa network roundtrip.
-// Strategi: pakai `masterHtml` (raw HTML dari /editor/fields) + `values`
-// (form state) → generate HTML baru dengan text/image/link replaced.
-// Hasil di-set ke `previewSrcdoc` (ref) → <iframe srcdoc> update otomatis
-// (Vue reactivity, TIDAK reload iframe, TIDAK request server).
+// ── Live preview: update DOM di dalam iframe TANPA reload ──────
 //
-// PERF (fix flicker putih): render yang dulu scan masterHtml 3x (loop terpisah
-// untuk text/image/link) per keystroke. Untuk HTML 100KB+ dan 20+ field, ini
-// 10-30ms tiap render + iframe re-parse total → layar putih sesaat.
+// Strategi: iframe di-load SEKALI dari /templates/{id}/preview/login.html.
+// Saat user mengetik di panel kiri → update DOM element di dalam iframe via
+// contentDocument.querySelector(...), BUKAN re-parse srcdoc.
 //
-// Optimasi baru:
-//   1) Single-pass: gabung text/image/link ke 1 regex dengan dispatch by attr.
-//   2) Cache compiled regex & lookup map di setup (tidak rebuild tiap render).
-//   3) Pre-compute headPrefix/bodySuffix dari masterHtml SEKALI (di onMounted),
-//      render cuma concat (no per-keystroke split/str_replace).
-//   4) Debounce 60ms — coalesce multiple keystrokes per frame.
+// Keuntungan:
+//   - Tidak ada flicker putih (iframe stabil, hanya update textContent/src/href)
+//   - Tidak ada network request per keystroke
+//   - Tidak ada browser HTML re-parse (untuk HTML 200KB sangat mahal)
+//   - Real-time feedback instan
 //
-// HTML escaping: textContent + escape sequences untuk safety. InnerHTML raw
-// concat rentan XSS kalau value mengandung karakter spesial.
-function escapeHtml(s) {
-    return String(s ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+// Element types yang di-handle:
+//   - data-edit="name"          → update textContent
+//   - data-edit-image="name"    → update src (untuk <img>) atau style.backgroundImage
+//   - data-edit-bg="name"       → update style.backgroundImage (untuk non-img)
+//   - data-edit-link="name"     → update href (untuk <a>)
+
+/**
+ * Update satu field di DOM iframe.
+ * Return true kalau ada element yang di-update, false kalau tidak ketemu.
+ */
+function applyFieldToIframe(name, value) {
+    const doc = iframeRef.value?.contentDocument;
+    if (!doc) return false;
+
+    let updated = false;
+
+    // 1) data-edit="name" → textContent
+    doc.querySelectorAll(`[data-edit="${cssEscape(name)}"]`).forEach((el) => {
+        el.textContent = value != null ? String(value) : '';
+        updated = true;
+    });
+
+    // 2) data-edit-image="name" → <img> src, atau background-image kalau non-img
+    doc.querySelectorAll(`[data-edit-image="${cssEscape(name)}"]`).forEach((el) => {
+        if (el.tagName === 'IMG') {
+            el.setAttribute('src', value != null ? String(value) : '');
+        } else {
+            el.style.backgroundImage = value ? `url("${cssAttr(String(value))}")` : '';
+        }
+        updated = true;
+    });
+
+    // 3) data-edit-bg="name" → backgroundImage saja (selalu, regardless tag)
+    doc.querySelectorAll(`[data-edit-bg="${cssEscape(name)}"]`).forEach((el) => {
+        el.style.backgroundImage = value ? `url("${cssAttr(String(value))}")` : '';
+        updated = true;
+    });
+
+    // 4) data-edit-link="name" → href
+    doc.querySelectorAll(`[data-edit-link="${cssEscape(name)}"]`).forEach((el) => {
+        el.setAttribute('href', value != null ? String(value) : '#');
+        updated = true;
+    });
+
+    return updated;
 }
 
-// Pre-computed sekali di onMounted: potong masterHtml jadi [headPrefix, body, bodySuffix]
-// headPrefix berisi <head>...<base>...</head> (sudah dengan <base href>),
-// bodySuffix adalah setelah </body> atau akhir body.
-// render() = headPrefix + renderedBody + bodySuffix.
-const renderCtx = {
-    headPrefix: '',     // string sampai akhir </head>
-    bodyStart: 0,       // index di masterHtml setelah </head>
-    bodyEnd: 0,         // index di </body> atau akhir string
-    bodySuffix: '',     // dari </body> ke akhir (termasuk </body>...</html>)
-    ready: false,
-};
-
-function setupRenderContext() {
-    if (!masterHtml.value) return;
-    const html = masterHtml.value;
-
-    // Cari </head>
-    const headEndMatch = html.match(/<\/head\s*>/i);
-    if (!headEndMatch) {
-        // Tidak ada </head> — pakai seluruh string sebagai body, no head split
-        renderCtx.headPrefix = '';
-        renderCtx.bodyStart = 0;
-        renderCtx.bodyEnd = html.length;
-        renderCtx.bodySuffix = '';
-        renderCtx.ready = true;
-        return;
+/**
+ * Apply semua values ke DOM iframe (initial load, reset, manual refresh).
+ */
+function applyAllToIframe() {
+    const doc = iframeRef.value?.contentDocument;
+    if (!doc) return;
+    for (const name in values) {
+        applyFieldToIframe(name, values[name]);
     }
-    const headEndIdx = headEndMatch.index + headEndMatch[0].length;
-
-    // Cari </body>
-    const bodyEndMatch = html.slice(headEndIdx).match(/<\/body\s*>/i);
-    const bodyEndIdx = bodyEndMatch
-        ? headEndIdx + bodyEndMatch.index
-        : html.length;
-
-    // Build head prefix dengan <base href> sudah di-inject SEKALI
-    const baseHref = window.location.origin + '/templates/' + props.template.id + '/preview/';
-    const baseTag = '<base href="' + baseHref + '">';
-    let headPrefix = html.slice(0, headEndIdx);
-    // Hapus <base> lama kalau ada (idempotent), lalu inject yang baru
-    headPrefix = headPrefix.replace(/<base\s+href="[^"]*"\s*\/?>/i, '');
-    // Inject <base> tepat setelah tag <head> pembuka
-    headPrefix = headPrefix.replace(/<head([^>]*)>/i, '<head$1>\n  ' + baseTag);
-
-    renderCtx.headPrefix = headPrefix;
-    renderCtx.bodyStart = headEndIdx;
-    renderCtx.bodyEnd = bodyEndIdx;
-    renderCtx.bodySuffix = html.slice(bodyEndIdx);
-    renderCtx.ready = true;
 }
 
-// Single-pass replace: 1 regex scan body, dispatch by data-* attribute.
-// Lebih cepat 3x dari 3 loop terpisah untuk HTML besar.
-function renderClientHtml() {
-    if (!masterCtx.body) return '';
-    if (!renderCtx.ready) setupRenderContext();
-
-    // Fast-path: kalau body tidak punya satupun data-edit* attribute,
-    // langsung concat tanpa scan.
-    if (!hasAnyDataEdit) {
-        return renderCtx.headPrefix + masterCtx.body + renderCtx.bodySuffix;
-    }
-
-    // 2-pass: (1) tag dengan closing pair <tag ...>...</tag> (text content),
-    //         (2) void/self-closing tag <img ... /> atau <tag ...> (no inner).
-    // Dispatch by data-* attribute. Lebih reliable dari 1 regex gabungan.
-    let body = masterCtx.body;
-
-    // Pass 1: tag dengan closing pair — text content replace
-    body = body.replace(/<(\w+)((?:[^>]*\bdata-edit="([^"]*)")[^>]*)>(.*?)<\/\1>/gis,
-        (match, tag, attrs, name, _inner) => {
-            if (values[name] == null) return match;
-            const v = escapeHtml(values[name]);
-            return '<' + tag + attrs + '>' + v + '</' + tag + '>';
-        });
-
-    // Pass 2: void/self-closing tags — image src replace (img dengan data-edit-image)
-    //         dan link href replace (a dengan data-edit-link, bukan data-edit).
-    // PENTING: exclude 'data-edit' biasa (text content) — itu di-handle Pass 1.
-    // Kalau include 'data-edit' di sini, Pass 2 akan salah replace `href` di
-    // <a data-edit="..."> (text) yg sebenarnya tidak punya data-edit-link.
-    body = body.replace(/<(img|a|input)([^>]*\bdata-(?:edit-image|edit-link)="([^"]*)"[^>]*)\/?>/gis,
-        (match, tag, attrs, name) => {
-            if (values[name] == null) return match;
-            const v = escapeHtml(values[name]);
-            const tagLower = tag.toLowerCase();
-            if (tagLower === 'img') {
-                // data-edit-image: replace src
-                if (/\bsrc="[^"]*"/i.test(attrs)) {
-                    return '<img' + attrs.replace(/\bsrc="[^"]*"/i, 'src="' + v + '"') + (match.endsWith('/>') ? '/>' : '>');
-                }
-                return '<img' + attrs + ' src="' + v + '">';
-            }
-            if (tagLower === 'a') {
-                // data-edit-link: replace href
-                if (/\bhref="[^"]*"/i.test(attrs)) {
-                    return '<a' + attrs.replace(/\bhref="[^"]*"/i, 'href="' + v + '"') + (match.endsWith('/>') ? '/>' : '>');
-                }
-                return '<a' + attrs + ' href="' + v + '">';
-            }
-            // input: replace value
-            if (/\bvalue="[^"]*"/i.test(attrs)) {
-                return '<input' + attrs.replace(/\bvalue="[^"]*"/i, 'value="' + v + '"') + (match.endsWith('/>') ? '/>' : '>');
-            }
-            return match;
-        });
-
-    // Pass 3: non-img/image dengan data-edit-image — replace background-image di style attribute
-    body = body.replace(/<(\w+)([^>]*\bdata-edit-image="([^"]*)"[^>]*?)>/gis,
-        (match, tag, attrs, name) => {
-            if (values[name] == null) return match;
-            if (tag.toLowerCase() === 'img') return match; // handled in Pass 2
-            const v = escapeHtml(values[name]);
-            if (/\bstyle\s*=\s*"([^"]*)"/i.test(attrs)) {
-                const oldStyle = attrs.match(/\bstyle\s*=\s*"([^"]*)"/i)[1];
-                let newStyle;
-                if (/background-image\s*:\s*url\([^)]*\)/i.test(oldStyle)) {
-                    newStyle = oldStyle.replace(
-                        /background-image\s*:\s*url\([^)]*\)/i,
-                        'background-image: url("' + v + '")'
-                    );
-                } else {
-                    newStyle = 'background-image: url("' + v + '"); ' + oldStyle;
-                }
-                return '<' + tag + attrs.replace(/\bstyle\s*=\s*"[^"]*"/i, 'style="' + newStyle + '"') + '>';
-            }
-            return '<' + tag + attrs + ' style="background-image: url(\'' + v + '\')">';
-        });
-
-    return renderCtx.headPrefix + body + renderCtx.bodySuffix;
+/**
+ * Escape string untuk aman dipakai di CSS attribute selector [attr="..."].
+ * Pakai native CSS.escape() kalau ada, fallback ke simple escape.
+ */
+function cssEscape(s) {
+    if (typeof CSS !== 'undefined' && CSS.escape) return CSS.escape(s);
+    return String(s).replace(/["\\]/g, '\\$&');
 }
 
-// Master body disimpan terpisah. Di-setup setelah fetch fields.
-const masterCtx = {
-    body: '',
-};
-let hasAnyDataEdit = false;
+/**
+ * Escape string untuk aman di CSS url("...").
+ * Hilangkan " dan \ yang bisa break string syntax.
+ */
+function cssAttr(s) {
+    return String(s).replace(/["\\]/g, '\\$&');
+}
 
 // ── Fetch editable fields dari backend ──────────
 onMounted(async () => {
@@ -243,18 +164,6 @@ onMounted(async () => {
         const data = await r.json();
         fields.value = data.fields || [];
         hasDataEdit.value = !!data.has_data_edit;
-        // Simpan HTML mentah — source untuk client-side render real-time
-        masterHtml.value = data.html || '';
-        // Pre-compute head/body split SEKALI — render cuma concat di tiap keystroke
-        setupRenderContext();
-        // Extract body slice & detect data-edit* presence
-        hasAnyDataEdit = /\bdata-(?:edit|edit-image|edit-link)\s*=/i.test(masterHtml.value);
-        if (renderCtx.bodyEnd > renderCtx.bodyStart) {
-            masterCtx.body = masterHtml.value.slice(renderCtx.bodyStart, renderCtx.bodyEnd);
-        } else {
-            // No </head> — seluruh HTML adalah body
-            masterCtx.body = masterHtml.value;
-        }
         for (const f of fields.value) {
             values[f.name] = f.default || '';
             defaultValues.value[f.name] = f.default || '';
@@ -263,15 +172,27 @@ onMounted(async () => {
         for (const key in values) {
             appliedValues[key] = values[key];
         }
-        // Set initial preview src (untuk tab "Live Preview" — buka di new tab)
+        // Set initial preview src — di-load oleh <iframe :src> SEKALI via @load.
+        // TIDAK di-update lagi tiap keystroke. Cache buster agar draft baru
+        // muncul setelah reset (lihat resetChanges yang increment previewKey).
         previewSrc.value = `/templates/${props.template.id}/preview/login.html?v=${Date.now()}`;
-        // Initial srcdoc render (supaya iframe tidak kosong saat onMounted)
-        previewSrcdoc.value = renderClientHtml();
-        previewKey.value++;
     } catch (e) {
         errorMsg.value = 'Gagal baca fields: ' + e.message;
     }
 });
+
+/**
+ * Handler @load pada <iframe>: dipanggil SEKALI saat iframe selesai load.
+ * Apply semua values ke DOM iframe. Setelah ini, watch(values) yang update
+ * field individual via applyFieldToIframe().
+ */
+function onIframeLoad() {
+    iframeReady.value = true;
+    // Tunggu 1 frame supaya DOM siap (beberapa browser butuh ini)
+    requestAnimationFrame(() => {
+        applyAllToIframe();
+    });
+}
 
 // ── Reset perubahan ke nilai default ──────────
 async function resetChanges() {
@@ -279,7 +200,7 @@ async function resetChanges() {
     if (!confirm('Reset semua perubahan ke nilai default? Tindakan ini tidak dapat dibatalkan.')) return;
     resetting.value = true;
     try {
-        // Reset values → watch real-time akan auto-update previewSrcdoc
+        // Reset values → watch real-time akan auto-update DOM iframe
         for (const key in values) {
             values[key] = defaultValues.value[key] || '';
         }
@@ -292,26 +213,43 @@ async function resetChanges() {
     }
 }
 
-// ── Real-time preview: render srcdoc saat user mengetik ──────
+// ── Real-time preview: update DOM di dalam iframe saat user mengetik ──────
 //
-// PERF: render() yang dulu langsung tiap keystroke menyebabkan layar putih
-// sesaat karena iframe re-parse total HTML (~50-200KB). Untuk user yang
-// mengetik 5-10 char/detik, ini bisa 50+ render/detik → browser跟不上.
+// Strategi FINAL: iframe di-load sekali, watch(values) → apply field langsung
+// ke DOM (textContent/src/href/backgroundImage). TIDAK ada re-parse HTML,
+// TIDAK ada srcdoc update, TIDAK ada flicker putih.
 //
-// Fix: debounce 60ms — coalesce multiple keystrokes per frame. Cukup cepat
-// untuk terasa instant (< 1 frame budget 16ms + 60ms = 76ms, well under
-// perceived "instant" threshold ~100ms), cukup lambat untuk tidak render
-// tiap karakter.
-//
-// Save ke server tetap debounce 1.5s terpisah (lihat watch berikutnya).
-let renderTimer = null;
-watch(values, () => {
-    if (!hasDataEdit.value) return;
-    if (renderTimer) clearTimeout(renderTimer);
-    renderTimer = setTimeout(() => {
-        previewSrcdoc.value = renderClientHtml();
-        renderTimer = null;
-    }, 60);
+// Debounce 50ms — coalesce multiple keystrokes per frame. Cukup cepat untuk
+// terasa instant (well under 100ms perceived threshold), cukup lambat untuk
+// tidak hit DOM API tiap karakter.
+let previewUpdateTimer = null;
+let pendingFields = new Set();
+watch(values, (newVals, oldVals) => {
+    if (!hasDataEdit.value || !iframeReady.value) return;
+
+    // Deteksi field yang berubah (deep watch → diff old vs new)
+    for (const name in newVals) {
+        const oldVal = oldVals ? oldVals[name] : undefined;
+        if (newVals[name] !== oldVal) {
+            pendingFields.add(name);
+        }
+    }
+    // Field yang dihapus dari newVals
+    if (oldVals) {
+        for (const name in oldVals) {
+            if (!(name in newVals)) pendingFields.add(name);
+        }
+    }
+
+    if (previewUpdateTimer) clearTimeout(previewUpdateTimer);
+    previewUpdateTimer = setTimeout(() => {
+        // Update hanya field yang berubah, bukan semua (efisien)
+        for (const name of pendingFields) {
+            applyFieldToIframe(name, values[name]);
+        }
+        pendingFields.clear();
+        previewUpdateTimer = null;
+    }, 50);
 }, { deep: true });
 
 // ── Auto-save ke server (debounced 1.5s) — supaya draft persisted ──────
@@ -619,14 +557,14 @@ async function save(opts = {}) {
                             hotspot.{{ template?.name?.toLowerCase().replace(/\s+/g, '-') }}/login
                         </div>
                     </div>
-                    <iframe :key="previewKey" :srcdoc="previewSrcdoc" class="w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                    <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
                 </div>
 
                 <!-- MOBILE preview -->
                 <div v-if="previewMode === 'mobile' && hasDataEdit" class="w-full flex justify-center">
                     <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl" style="width: 360px;">
                         <div class="flex justify-center mb-2"><div class="w-24 h-5 bg-slate-800 rounded-full"></div></div>
-                        <iframe :key="previewKey" :srcdoc="previewSrcdoc" class="w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
                     </div>
                 </div>
 
@@ -634,7 +572,7 @@ async function save(opts = {}) {
                 <div v-if="previewMode === 'tablet' && hasDataEdit" class="w-full flex justify-center">
                     <div class="bg-slate-900 rounded-[1.75rem] p-3 shadow-2xl" style="width: 768px; max-width: 100%;">
                         <div class="flex justify-center mb-2"><div class="w-1.5 h-1.5 bg-slate-800 rounded-full"></div></div>
-                        <iframe :key="previewKey" :srcdoc="previewSrcdoc" class="w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
                     </div>
                 </div>
 
