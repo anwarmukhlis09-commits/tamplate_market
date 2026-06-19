@@ -140,18 +140,27 @@ function applyAllToIframe() {
 }
 
 /**
- * Resolve contentDocument dari iframe ref, dengan fallback yang robust.
- * - Vue ref string syntax (iframeRef.value) → contentDocument
- * - Kalau null (sandbox block / cross-origin), coba window.frames[name]
- * - Kalau masih null, return null (caller harus early-exit)
+ * Resolve contentDocument dari iframe yang sedang di-render.
+ *
+ * PENTING: ada 3 <iframe> di template (desktop/tablet/mobile, masing-masing
+ * v-if), semuanya pake ref="iframeRef" yang sama. Vue 3 string ref di
+ * multiple v-if element TIDAK reliable — bisa null atau menunjuk ke element
+ * yang sudah di-unmount. Solusi: query DOM langsung dengan marker class
+ * (lihat :class di template).
  */
 function getIframeDoc() {
-    const el = iframeRef.value;
-    if (!el) return null;
-    try {
-        const doc = el.contentDocument;
-        if (doc) return doc;
-    } catch (_) { /* security exception */ }
+    // Cari iframe yang sedang visible (display !== 'none') dan di-load.
+    const iframes = document.querySelectorAll('iframe.preview-iframe');
+    for (const el of iframes) {
+        // Skip iframe yang hidden (display: none) atau offsetParent null
+        if (el.offsetParent === null && getComputedStyle(el).display !== 'none') continue;
+        try {
+            const doc = el.contentDocument;
+            if (doc && doc.readyState === 'complete') {
+                return doc;
+            }
+        } catch (_) { /* security exception */ }
+    }
     return null;
 }
 
@@ -605,14 +614,14 @@ async function save(opts = {}) {
                             hotspot.{{ template?.name?.toLowerCase().replace(/\s+/g, '-') }}/login
                         </div>
                     </div>
-                    <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1" inert></iframe>
+                    <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="preview-iframe w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1"></iframe>
                 </div>
 
                 <!-- MOBILE preview -->
                 <div v-if="previewMode === 'mobile' && hasDataEdit" class="w-full flex justify-center">
                     <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl" style="width: 360px;">
                         <div class="flex justify-center mb-2"><div class="w-24 h-5 bg-slate-800 rounded-full"></div></div>
-                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1" inert></iframe>
+                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="preview-iframe w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1"></iframe>
                     </div>
                 </div>
 
@@ -620,7 +629,7 @@ async function save(opts = {}) {
                 <div v-if="previewMode === 'tablet' && hasDataEdit" class="w-full flex justify-center">
                     <div class="bg-slate-900 rounded-[1.75rem] p-3 shadow-2xl" style="width: 768px; max-width: 100%;">
                         <div class="flex justify-center mb-2"><div class="w-1.5 h-1.5 bg-slate-800 rounded-full"></div></div>
-                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1" inert></iframe>
+                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="preview-iframe w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1"></iframe>
                     </div>
                 </div>
 
