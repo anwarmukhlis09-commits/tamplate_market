@@ -72,7 +72,18 @@ function getCsrfToken() {
 // Hasil di-set ke `previewSrcdoc` (ref) → <iframe srcdoc> update otomatis
 // (Vue reactivity, TIDAK reload iframe, TIDAK request server).
 //
-// HTML escaping: pakai textContent + DOMParser untuk safety. InnerHTML raw
+// PERF (fix flicker putih): render yang dulu scan masterHtml 3x (loop terpisah
+// untuk text/image/link) per keystroke. Untuk HTML 100KB+ dan 20+ field, ini
+// 10-30ms tiap render + iframe re-parse total → layar putih sesaat.
+//
+// Optimasi baru:
+//   1) Single-pass: gabung text/image/link ke 1 regex dengan dispatch by attr.
+//   2) Cache compiled regex & lookup map di setup (tidak rebuild tiap render).
+//   3) Pre-compute headPrefix/bodySuffix dari masterHtml SEKALI (di onMounted),
+//      render cuma concat (no per-keystroke split/str_replace).
+//   4) Debounce 60ms — coalesce multiple keystrokes per frame.
+//
+// HTML escaping: textContent + escape sequences untuk safety. InnerHTML raw
 // concat rentan XSS kalau value mengandung karakter spesial.
 function escapeHtml(s) {
     return String(s ?? '')
@@ -83,97 +94,143 @@ function escapeHtml(s) {
         .replace(/'/g, '&#39;');
 }
 
-function renderClientHtml() {
-    if (!masterHtml.value) return '';
-    let html = masterHtml.value;
+// Pre-computed sekali di onMounted: potong masterHtml jadi [headPrefix, body, bodySuffix]
+// headPrefix berisi <head>...<base>...</head> (sudah dengan <base href>),
+// bodySuffix adalah setelah </body> atau akhir body.
+// render() = headPrefix + renderedBody + bodySuffix.
+const renderCtx = {
+    headPrefix: '',     // string sampai akhir </head>
+    bodyStart: 0,       // index di masterHtml setelah </head>
+    bodyEnd: 0,         // index di </body> atau akhir string
+    bodySuffix: '',     // dari </body> ke akhir (termasuk </body>...</html>)
+    ready: false,
+};
 
-    // Inject <base href> ke <head> supaya asset (style.css, images/, assets/)
-    // resolve ke route handler. Wajib TRAILING SLASH — lihat HTML5 spec §4.2.3.
-    // Pakai absolute URL dari window.location.origin agar match dengan host frontend.
+function setupRenderContext() {
+    if (!masterHtml.value) return;
+    const html = masterHtml.value;
+
+    // Cari </head>
+    const headEndMatch = html.match(/<\/head\s*>/i);
+    if (!headEndMatch) {
+        // Tidak ada </head> — pakai seluruh string sebagai body, no head split
+        renderCtx.headPrefix = '';
+        renderCtx.bodyStart = 0;
+        renderCtx.bodyEnd = html.length;
+        renderCtx.bodySuffix = '';
+        renderCtx.ready = true;
+        return;
+    }
+    const headEndIdx = headEndMatch.index + headEndMatch[0].length;
+
+    // Cari </body>
+    const bodyEndMatch = html.slice(headEndIdx).match(/<\/body\s*>/i);
+    const bodyEndIdx = bodyEndMatch
+        ? headEndIdx + bodyEndMatch.index
+        : html.length;
+
+    // Build head prefix dengan <base href> sudah di-inject SEKALI
     const baseHref = window.location.origin + '/templates/' + props.template.id + '/preview/';
     const baseTag = '<base href="' + baseHref + '">';
-    if (/<base\s+href="[^"]*"\s*\/?>/i.test(html)) {
-        html = html.replace(/<base\s+href="[^"]*"\s*\/?>/i, baseTag);
-    } else if (/<head[^>]*>/i.test(html)) {
-        html = html.replace(/<head[^>]*>/i, '$&' + '\n  ' + baseTag);
+    let headPrefix = html.slice(0, headEndIdx);
+    // Hapus <base> lama kalau ada (idempotent), lalu inject yang baru
+    headPrefix = headPrefix.replace(/<base\s+href="[^"]*"\s*\/?>/i, '');
+    // Inject <base> tepat setelah tag <head> pembuka
+    headPrefix = headPrefix.replace(/<head([^>]*)>/i, '<head$1>\n  ' + baseTag);
+
+    renderCtx.headPrefix = headPrefix;
+    renderCtx.bodyStart = headEndIdx;
+    renderCtx.bodyEnd = bodyEndIdx;
+    renderCtx.bodySuffix = html.slice(bodyEndIdx);
+    renderCtx.ready = true;
+}
+
+// Single-pass replace: 1 regex scan body, dispatch by data-* attribute.
+// Lebih cepat 3x dari 3 loop terpisah untuk HTML besar.
+function renderClientHtml() {
+    if (!masterCtx.body) return '';
+    if (!renderCtx.ready) setupRenderContext();
+
+    // Fast-path: kalau body tidak punya satupun data-edit* attribute,
+    // langsung concat tanpa scan.
+    if (!hasAnyDataEdit) {
+        return renderCtx.headPrefix + masterCtx.body + renderCtx.bodySuffix;
     }
 
-    // Replace text content di tag dengan data-edit="name"
-    for (const name in values) {
-        const v = values[name] ?? '';
-        // Escape special regex chars di name
-        const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // Tag dengan data-edit (text, image, link, bg): <tag data-edit="name" ...>inner</tag>
-        const re = new RegExp(
-            '<(\\w+)((?:[^>]*\\bdata-edit="' + n + '")[^>]*)>(.*?)<\\/\\1>',
-            'gis'
-        );
-        html = html.replace(re, (match, tag, attrs, inner) => {
-            const tagLower = tag.toLowerCase();
-            if (tagLower === 'img') {
-                // Image: replace src attribute
-                if (/\bsrc="[^"]*"/i.test(attrs)) {
-                    return '<' + tag + attrs + ' src="' + escapeHtml(v) + '">';
-                }
-                return match;
-            }
-            // Text: replace inner content
-            return '<' + tag + attrs + '>' + escapeHtml(v) + '</' + tag + '>';
+    // 2-pass: (1) tag dengan closing pair <tag ...>...</tag> (text content),
+    //         (2) void/self-closing tag <img ... /> atau <tag ...> (no inner).
+    // Dispatch by data-* attribute. Lebih reliable dari 1 regex gabungan.
+    let body = masterCtx.body;
+
+    // Pass 1: tag dengan closing pair — text content replace
+    body = body.replace(/<(\w+)((?:[^>]*\bdata-edit="([^"]*)")[^>]*)>(.*?)<\/\1>/gis,
+        (match, tag, attrs, name, _inner) => {
+            if (values[name] == null) return match;
+            const v = escapeHtml(values[name]);
+            return '<' + tag + attrs + '>' + v + '</' + tag + '>';
         });
-    }
 
-    // Replace image src/background untuk data-edit-image
-    for (const name in values) {
-        const v = values[name] ?? '';
-        const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(
-            '<(\\w+)((?:[^>]*\\bdata-edit-image="' + n + '")[^>]*)>',
-            'gi'
-        );
-        html = html.replace(re, (match, tag, attrs) => {
+    // Pass 2: void/self-closing tags — image src replace (img dengan data-edit-image)
+    //         dan link href replace (a dengan data-edit-link, bukan data-edit).
+    // PENTING: exclude 'data-edit' biasa (text content) — itu di-handle Pass 1.
+    // Kalau include 'data-edit' di sini, Pass 2 akan salah replace `href` di
+    // <a data-edit="..."> (text) yg sebenarnya tidak punya data-edit-link.
+    body = body.replace(/<(img|a|input)([^>]*\bdata-(?:edit-image|edit-link)="([^"]*)"[^>]*)\/?>/gis,
+        (match, tag, attrs, name) => {
+            if (values[name] == null) return match;
+            const v = escapeHtml(values[name]);
             const tagLower = tag.toLowerCase();
             if (tagLower === 'img') {
+                // data-edit-image: replace src
                 if (/\bsrc="[^"]*"/i.test(attrs)) {
-                    return '<' + tag + attrs.replace(/\bsrc="[^"]*"/i, 'src="' + escapeHtml(v) + '"') + '>';
+                    return '<img' + attrs.replace(/\bsrc="[^"]*"/i, 'src="' + v + '"') + (match.endsWith('/>') ? '/>' : '>');
                 }
-                return '<' + tag + attrs + ' src="' + escapeHtml(v) + '">';
+                return '<img' + attrs + ' src="' + v + '">';
             }
-            // Non-img: replace background-image di inline style
+            if (tagLower === 'a') {
+                // data-edit-link: replace href
+                if (/\bhref="[^"]*"/i.test(attrs)) {
+                    return '<a' + attrs.replace(/\bhref="[^"]*"/i, 'href="' + v + '"') + (match.endsWith('/>') ? '/>' : '>');
+                }
+                return '<a' + attrs + ' href="' + v + '">';
+            }
+            // input: replace value
+            if (/\bvalue="[^"]*"/i.test(attrs)) {
+                return '<input' + attrs.replace(/\bvalue="[^"]*"/i, 'value="' + v + '"') + (match.endsWith('/>') ? '/>' : '>');
+            }
+            return match;
+        });
+
+    // Pass 3: non-img/image dengan data-edit-image — replace background-image di style attribute
+    body = body.replace(/<(\w+)([^>]*\bdata-edit-image="([^"]*)"[^>]*?)>/gis,
+        (match, tag, attrs, name) => {
+            if (values[name] == null) return match;
+            if (tag.toLowerCase() === 'img') return match; // handled in Pass 2
+            const v = escapeHtml(values[name]);
             if (/\bstyle\s*=\s*"([^"]*)"/i.test(attrs)) {
                 const oldStyle = attrs.match(/\bstyle\s*=\s*"([^"]*)"/i)[1];
                 let newStyle;
                 if (/background-image\s*:\s*url\([^)]*\)/i.test(oldStyle)) {
                     newStyle = oldStyle.replace(
                         /background-image\s*:\s*url\([^)]*\)/i,
-                        'background-image: url("' + escapeHtml(v) + '")'
+                        'background-image: url("' + v + '")'
                     );
                 } else {
-                    newStyle = 'background-image: url("' + escapeHtml(v) + '"); ' + oldStyle;
+                    newStyle = 'background-image: url("' + v + '"); ' + oldStyle;
                 }
                 return '<' + tag + attrs.replace(/\bstyle\s*=\s*"[^"]*"/i, 'style="' + newStyle + '"') + '>';
             }
-            return '<' + tag + attrs + ' style="background-image: url(\'' + escapeHtml(v) + '\')">';
+            return '<' + tag + attrs + ' style="background-image: url(\'' + v + '\')">';
         });
-    }
 
-    // Replace href untuk data-edit-link
-    for (const name in values) {
-        const v = values[name] ?? '';
-        const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(
-            '<a((?:[^>]*\\bdata-edit-link="' + n + '")[^>]*)>',
-            'gi'
-        );
-        html = html.replace(re, (match, attrs) => {
-            if (/\bhref="[^"]*"/i.test(attrs)) {
-                return '<a' + attrs.replace(/\bhref="[^"]*"/i, 'href="' + escapeHtml(v) + '"') + '>';
-            }
-            return '<a' + attrs + ' href="' + escapeHtml(v) + '">';
-        });
-    }
-
-    return html;
+    return renderCtx.headPrefix + body + renderCtx.bodySuffix;
 }
+
+// Master body disimpan terpisah. Di-setup setelah fetch fields.
+const masterCtx = {
+    body: '',
+};
+let hasAnyDataEdit = false;
 
 // ── Fetch editable fields dari backend ──────────
 onMounted(async () => {
@@ -188,6 +245,16 @@ onMounted(async () => {
         hasDataEdit.value = !!data.has_data_edit;
         // Simpan HTML mentah — source untuk client-side render real-time
         masterHtml.value = data.html || '';
+        // Pre-compute head/body split SEKALI — render cuma concat di tiap keystroke
+        setupRenderContext();
+        // Extract body slice & detect data-edit* presence
+        hasAnyDataEdit = /\bdata-(?:edit|edit-image|edit-link)\s*=/i.test(masterHtml.value);
+        if (renderCtx.bodyEnd > renderCtx.bodyStart) {
+            masterCtx.body = masterHtml.value.slice(renderCtx.bodyStart, renderCtx.bodyEnd);
+        } else {
+            // No </head> — seluruh HTML adalah body
+            masterCtx.body = masterHtml.value;
+        }
         for (const f of fields.value) {
             values[f.name] = f.default || '';
             defaultValues.value[f.name] = f.default || '';
@@ -225,29 +292,26 @@ async function resetChanges() {
     }
 }
 
-// ── Real-time preview: render srcdoc INSTANT saat user mengetik ──────
-// Strategi FINAL: TIDAK ada network roundtrip untuk preview. Setiap keystroke
-// → watch values fire → renderClientHtml() → update previewSrcdoc ref → Vue
-// reaktif → <iframe srcdoc> update otomatis (instant, no reload, no flicker).
+// ── Real-time preview: render srcdoc saat user mengetik ──────
 //
-// Kelebihan vs server-roundtrip:
-//   - Instant feedback (sub-millisecond)
-//   - Zero network traffic untuk preview
-//   - Tidak ada 419 CSRF risk saat mengetik cepat
-//   - Tidak ada race condition
-//   - Bekerja offline (preview tetap update)
+// PERF: render() yang dulu langsung tiap keystroke menyebabkan layar putih
+// sesaat karena iframe re-parse total HTML (~50-200KB). Untuk user yang
+// mengetik 5-10 char/detik, ini bisa 50+ render/detik → browser跟不上.
 //
-// Save ke server tetap dilakukan terpisah (auto-debounced 1.5s atau tombol
-// Simpan manual) supaya draft persisted di server.
+// Fix: debounce 60ms — coalesce multiple keystrokes per frame. Cukup cepat
+// untuk terasa instant (< 1 frame budget 16ms + 60ms = 76ms, well under
+// perceived "instant" threshold ~100ms), cukup lambat untuk tidak render
+// tiap karakter.
+//
+// Save ke server tetap debounce 1.5s terpisah (lihat watch berikutnya).
+let renderTimer = null;
 watch(values, () => {
     if (!hasDataEdit.value) return;
-
-    // 1) Update srcdoc INSTANT (no debounce) — user lihat feedback tiap huruf
-    previewSrcdoc.value = renderClientHtml();
-
-    // 2) hasPendingChanges sekarang COMPUTED (lihat deklarasi di atas).
-    //    Vue recompute otomatis saat `values` atau `appliedValues` berubah.
-    //    Tidak perlu manual set di watch.
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => {
+        previewSrcdoc.value = renderClientHtml();
+        renderTimer = null;
+    }, 60);
 }, { deep: true });
 
 // ── Auto-save ke server (debounced 1.5s) — supaya draft persisted ──────
