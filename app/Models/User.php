@@ -21,8 +21,15 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'is_admin',
     ];
+
+    /**
+     * Kolom yang dilindungi dari mass assignment.
+     * Field privilege (is_admin, role, dll) WAJIB diset manual via ->update() atau
+     * query langsung, BUKAN lewat $request->all() / ::create([...]) dari input user.
+     * Lihat Auth/RegisteredUserController & Profile update yang harus whitelist field manual.
+     */
+    protected $guarded = ['is_admin', 'is_super_admin', 'role'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',

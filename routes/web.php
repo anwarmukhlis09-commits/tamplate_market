@@ -315,12 +315,9 @@ HTML;
 // PENTING: route ini harus didefinisikan SEBELUM route HTML agar tidak
 // ter-match ke regex `.*\.html$` yang longgar.
 Route::get('/templates/{id}/preview/{path}', function ($id, $path) {
-    // Tolak path traversal
-    if (strpos($path, '..') !== false || strpos($path, '\\') !== false) {
-        abort(403, 'Invalid path');
-    }
-    // Tolak path absolut atau leading slash
-    if (strpos($path, '/') === 0) {
+    // SECURITY: tolak null byte, path absolut, dan karakter kontrol lebih dulu
+    if (strpos($path, "\0") !== false || strpos($path, '..') !== false
+        || strpos($path, '\\') !== false || strpos($path, '/') === 0) {
         abort(403, 'Invalid path');
     }
     // Hanya file dengan extension yang diizinkan (whitelist)
@@ -336,7 +333,6 @@ Route::get('/templates/{id}/preview/{path}', function ($id, $path) {
     // Resolve file: cek folder master DAN folder draft user (kalau ada).
     // 1) Master: templates/{id}/original/<subfolder>/{path}
     // 2) Draft user: templates/orders/{user_id}/{id}/<subfolder>/{path}
-    // 3) Fallback: scan rekursif di templates/{id}/original/ untuk path apapun
     //
     // Strategi: scan folder master templates/{id}/original/, cari file yang
     // path-nya diakhiri dengan $path. Ini handle semua struktur folder
@@ -372,6 +368,19 @@ Route::get('/templates/{id}/preview/{path}', function ($id, $path) {
     // memastikan exact filename match)
     $resolved = $candidates[0];
     $absolutePath = \Storage::disk('public')->path($resolved);
+
+    // SECURITY: realpath check — pastikan path absolut benar-benar ada di dalam
+    // folder template yang diizinkan. Menangani symlink/case-insensitive Windows
+    // tricks yang lolos dari filter string di atas.
+    $realResolved = realpath($absolutePath);
+    $realMaster = realpath(\Storage::disk('public')->path($masterBase));
+    $realDraft = realpath(\Storage::disk('public')->path($draftBase)) ?: $realMaster;
+    if (! $realResolved || ! $realMaster) {
+        abort(404, 'Asset not found on disk.');
+    }
+    if (strpos($realResolved, $realMaster) !== 0 && strpos($realResolved, $realDraft) !== 0) {
+        abort(403, 'Resolved path outside allowed template folder.');
+    }
 
     // MIME type dari extension
     $mime = match ($ext) {

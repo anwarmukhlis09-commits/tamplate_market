@@ -32,7 +32,8 @@ class AdminTemplateController extends Controller
         $query = Template::query();
 
         if ($request->search) {
-            $q = $request->search;
+            // Escape LIKE wildcard (%) & (_) supaya input user tidak匹配 semua row
+            $q = addcslashes($request->search, '%_\\');
             $query->where(function ($sql) use ($q) {
                 $sql->where('name', 'like', "%{$q}%")
                    ->orWhere('category', 'like', "%{$q}%");
@@ -71,13 +72,21 @@ class AdminTemplateController extends Controller
         $template = Template::create($data);
 
         // 2) Simpan SEMUA file upload ke templates/{id}/original/ — apa adanya
-        //    Tidak ada validasi, tidak ada cek login.html, tidak ada filter.
-        //    Apa yang user upload = apa yang tersimpan.
+        //    Validasi extension sudah di 'mimes' rule (whitelist). Tetap sanitize
+        //    relativePath: tolak .., leading slash, dan karakter aneh supaya
+        //    user tidak bisa menulis ke luar folder template.
         $basePath = "templates/{$template->id}/original";
         $files = $request->file('template_files') ?? [];
         $relativePaths = $request->input('relative_paths', []);
         foreach ($files as $i => $file) {
             $relativePath = $relativePaths[$i] ?? $file->getClientOriginalName();
+            // Sanitasi: tolak path traversal & absolut
+            if (strpos($relativePath, '..') !== false
+                || strpos($relativePath, '\\') !== false
+                || strpos($relativePath, '/') === 0
+                || strpos($relativePath, "\0") !== false) {
+                continue; // skip file berbahaya, lanjut ke file berikutnya
+            }
             $targetDir = dirname($basePath . '/' . $relativePath);
             Storage::disk('public')->putFileAs(
                 $targetDir,
@@ -139,11 +148,18 @@ class AdminTemplateController extends Controller
                 Storage::disk('public')->deleteDirectory($basePath);
             }
 
-            // Simpan file upload — apa adanya, tanpa validasi
+            // Simpan file upload — dengan validasi extension + sanitasi path
+            // (lihat store() untuk detail; update() pakai pola yang sama)
             $files = $request->file('template_files');
             $relativePaths = $request->input('relative_paths', []);
             foreach ($files as $i => $file) {
                 $relativePath = $relativePaths[$i] ?? $file->getClientOriginalName();
+                if (strpos($relativePath, '..') !== false
+                    || strpos($relativePath, '\\') !== false
+                    || strpos($relativePath, '/') === 0
+                    || strpos($relativePath, "\0") !== false) {
+                    continue;
+                }
                 $targetDir = dirname($basePath . '/' . $relativePath);
                 Storage::disk('public')->putFileAs(
                     $targetDir,
@@ -187,39 +203,96 @@ class AdminTemplateController extends Controller
         // Hapus folder template (original files) + thumbnail sebelum delete DB record
         // supaya tidak ada orphaned files di storage. Hanya menghapus folder
         // milik template_id ini, bukan template lain.
+        //
+        // SECURITY: Validasi ketat bahwa folder yang akan dihapus BERAWAL dengan
+        // "templates/" — JANGAN pernah deleteDirectory('/') atau path di luar
+        // namespace template. realpath() check memblokir symlink/case tricks.
+        $storageRoot = realpath(Storage::disk('public')->path(''));
+
         if ($template->zip_file) {
             // zip_file = "templates/{id}/original" → dirname = "templates/{id}"
             $idFolder = dirname($template->zip_file);
-            if (Storage::disk('public')->exists($idFolder)) {
-                Storage::disk('public')->deleteDirectory($idFolder);
-            }
+            $this->safeDeleteTemplateDir($idFolder, $storageRoot);
         }
 
-        // Defensive: kalau ada struktur lama pakai slug-based folder, bersihkan juga
-        if ($template->slug) {
+        // Defensive: kalau ada struktur lama pakai slug-based folder, bersihkan juga.
+        // Slug hanya boleh [a-z0-9-] — whitelist karakter sebelum dipakai di path.
+        if ($template->slug && preg_match('/^[a-z0-9-]+$/', $template->slug)) {
             $slugFolder = 'templates/' . $template->slug;
-            if (Storage::disk('public')->exists($slugFolder)) {
-                Storage::disk('public')->deleteDirectory($slugFolder);
-            }
+            $this->safeDeleteTemplateDir($slugFolder, $storageRoot);
         }
 
         // Hapus thumbnail eksplisit (preview_image) kalau masih ada — redundant
-        // dengan deleteDirectory di atas tapi aman kalau path-nya berbeda
-        if ($template->preview_image && Storage::disk('public')->exists($template->preview_image)) {
-            Storage::disk('public')->delete($template->preview_image);
+        // dengan deleteDirectory di atas tapi aman kalau path-nya berbeda.
+        // Validasi: path harus di dalam storage root & berawal "templates/".
+        if ($template->preview_image) {
+            $this->safeDeleteFile($template->preview_image, $storageRoot);
         }
 
         // Hapus cache/preview orphan di templates/previews (path ini dipakai oleh
         // `update()` saat upload manual preview image, lihat baris 184)
         if ($template->preview_image) {
             $previewInPreviews = 'templates/previews/' . basename($template->preview_image);
-            if (Storage::disk('public')->exists($previewInPreviews)) {
-                Storage::disk('public')->delete($previewInPreviews);
-            }
+            $this->safeDeleteFile($previewInPreviews, $storageRoot);
         }
 
         $template->delete();
         return back()->with('success', 'Template berhasil dihapus!');
+    }
+
+    /**
+     * Hapus directory template SETELAH verifikasi path absolut hasil realpath
+     * berada di dalam storage root. Mencegah deleteDirectory('/') atau escape
+     * keluar dari disk 'public' via path manipulation.
+     */
+    private function safeDeleteTemplateDir(string $relativePath, string $storageRoot): void
+    {
+        // Tolak null byte, traversal, path absolut, atau path di luar "templates/"
+        if (strpos($relativePath, "\0") !== false
+            || strpos($relativePath, '..') !== false
+            || strpos($relativePath, '\\') !== false
+            || strpos($relativePath, '/') === 0
+            || strpos($relativePath, 'templates/') !== 0) {
+            return;
+        }
+
+        $absPath = Storage::disk('public')->path($relativePath);
+        $realPath = realpath($absPath);
+        if ($realPath === false || $storageRoot === false) {
+            return;
+        }
+        if (strpos($realPath, $storageRoot) !== 0) {
+            return;
+        }
+        if (is_dir($realPath)) {
+            Storage::disk('public')->deleteDirectory($relativePath);
+        }
+    }
+
+    /**
+     * Hapus single file SETELAH verifikasi path aman (di dalam storage root,
+     * berawalan "templates/", tidak ada traversal).
+     */
+    private function safeDeleteFile(string $relativePath, string $storageRoot): void
+    {
+        if (strpos($relativePath, "\0") !== false
+            || strpos($relativePath, '..') !== false
+            || strpos($relativePath, '\\') !== false
+            || strpos($relativePath, '/') === 0
+            || strpos($relativePath, 'templates/') !== 0) {
+            return;
+        }
+        $absPath = Storage::disk('public')->path($relativePath);
+        $realPath = realpath($absPath);
+        if ($realPath === false || $storageRoot === false) {
+            return;
+        }
+        if (strpos($realPath, $storageRoot) !== 0) {
+            return;
+        }
+        if (is_file($realPath)) {
+            Storage::disk('public')->delete($relativePath);
+        }
     }
 
     // ── Toggle publish ────────────────
@@ -234,8 +307,16 @@ class AdminTemplateController extends Controller
     // ── Shared validation rules ─────────
     // Minimal validation: fokus pada field yang wajib untuk "upload = tampil".
     // Field tambahan (short_desc, badge, dll) divalidasi terpisah jika dikirim.
+    //
+    // SECURITY: template_files divalidasi extension (whitelist) supaya admin
+    // tidak bisa upload file executable (.php, .phtml, .jsp, .cgi, dll) ke
+    // folder template yang di-serve sebagai static asset via route preview.
+    // Whitelist: file yang relevan untuk template MikroTik hotspot + asset web standar.
     private function templateRules(bool $requireFiles = true): array
     {
+        $allowedExt = 'html,htm,css,js,svg,png,jpg,jpeg,gif,webp,ico,'
+                   . 'woff,woff2,ttf,otf,eot,json,txt,md,xml';
+
         return [
             'name' => 'required|string|max:255',
             'category' => 'required|string|in:modern,classic,minimalis,pro',
@@ -245,9 +326,9 @@ class AdminTemplateController extends Controller
             'features' => 'nullable|array',
             'features.*' => 'string',
             'template_files' => ($requireFiles ? 'required|' : '') . 'array|min:1',
-            'template_files.*' => 'file|max:10240',
+            'template_files.*' => "file|max:10240|mimes:{$allowedExt}",
             'relative_paths' => 'nullable|array',
-            'relative_paths.*' => 'string',
+            'relative_paths.*' => ['string', 'regex:#^(?!.*\.\.)(?!/)[A-Za-z0-9._\-/]+$#'],
             'preview_image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
         ];
     }
@@ -276,6 +357,9 @@ class AdminTemplateController extends Controller
 
             'template_files.*.file'  => 'Salah satu file dalam folder tidak dapat dibaca. Pastikan file tidak rusak.',
             'template_files.*.max'   => 'Ukuran salah satu file terlalu besar. Maksimal 10 MB per file. Silakan kompres folder Anda dan coba lagi.',
+            'template_files.*.mimes' => 'Tipe file tidak diizinkan. Hanya file HTML/CSS/JS/gambar/font/teks yang boleh diupload.',
+
+            'relative_paths.*.regex' => 'Path file mengandung karakter tidak valid (.. atau path absolut).',
         ];
     }
 }
