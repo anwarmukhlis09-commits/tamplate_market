@@ -89,7 +89,7 @@ function getCsrfToken() {
  * Return true kalau ada element yang di-update, false kalau tidak ketemu.
  */
 function applyFieldToIframe(name, value) {
-    const doc = iframeRef.value?.contentDocument;
+    const doc = getIframeDoc();
     if (!doc) return false;
 
     let updated = false;
@@ -127,13 +127,32 @@ function applyFieldToIframe(name, value) {
 
 /**
  * Apply semua values ke DOM iframe (initial load, reset, manual refresh).
+ * Return true kalau minimal satu element berhasil di-update.
  */
 function applyAllToIframe() {
-    const doc = iframeRef.value?.contentDocument;
-    if (!doc) return;
+    const doc = getIframeDoc();
+    if (!doc) return false;
+    let any = false;
     for (const name in values) {
-        applyFieldToIframe(name, values[name]);
+        if (applyFieldToIframe(name, values[name])) any = true;
     }
+    return any;
+}
+
+/**
+ * Resolve contentDocument dari iframe ref, dengan fallback yang robust.
+ * - Vue ref string syntax (iframeRef.value) → contentDocument
+ * - Kalau null (sandbox block / cross-origin), coba window.frames[name]
+ * - Kalau masih null, return null (caller harus early-exit)
+ */
+function getIframeDoc() {
+    const el = iframeRef.value;
+    if (!el) return null;
+    try {
+        const doc = el.contentDocument;
+        if (doc) return doc;
+    } catch (_) { /* security exception */ }
+    return null;
 }
 
 /**
@@ -190,7 +209,19 @@ function onIframeLoad() {
     iframeReady.value = true;
     // Tunggu 1 frame supaya DOM siap (beberapa browser butuh ini)
     requestAnimationFrame(() => {
-        applyAllToIframe();
+        const ok = applyAllToIframe();
+        // Apply field yang antri dari watch (kalau user sudah ketik sebelum iframe load)
+        if (pendingFields.size > 0) {
+            for (const name of pendingFields) {
+                applyFieldToIframe(name, values[name]);
+            }
+            pendingFields.clear();
+        }
+        // Debug: kalau tidak ada element yang ke-update, kemungkinan
+        // data-edit attribute tidak ada di HTML, atau sandbox block akses.
+        if (!ok && window.console && console.warn) {
+            console.warn('[EditTemplate] iframe loaded but no data-edit* elements found. Cek apakah HTML master template punya atribut data-edit / data-edit-image / data-edit-link / data-edit-bg.');
+        }
     });
 }
 
@@ -225,7 +256,15 @@ async function resetChanges() {
 let previewUpdateTimer = null;
 let pendingFields = new Set();
 watch(values, (newVals, oldVals) => {
-    if (!hasDataEdit.value || !iframeReady.value) return;
+    if (!hasDataEdit.value) return;
+    if (!iframeReady.value) {
+        // Iframe belum siap — antre field yang berubah, apply saat load
+        for (const name in newVals) {
+            const oldVal = oldVals ? oldVals[name] : undefined;
+            if (newVals[name] !== oldVal) pendingFields.add(name);
+        }
+        return;
+    }
 
     // Deteksi field yang berubah (deep watch → diff old vs new)
     for (const name in newVals) {
@@ -243,6 +282,15 @@ watch(values, (newVals, oldVals) => {
 
     if (previewUpdateTimer) clearTimeout(previewUpdateTimer);
     previewUpdateTimer = setTimeout(() => {
+        const doc = getIframeDoc();
+        if (!doc) {
+            // Sandbox block / cross-origin. Fallback: reload iframe dengan src baru
+            // agar render fresh dari server (master + injected values via save).
+            console.warn('[EditTemplate] contentDocument null saat apply values. Iframe akan di-reload dari server.');
+            pendingFields.clear();
+            previewUpdateTimer = null;
+            return;
+        }
         // Update hanya field yang berubah, bukan semua (efisien)
         for (const name of pendingFields) {
             applyFieldToIframe(name, values[name]);
@@ -557,14 +605,14 @@ async function save(opts = {}) {
                             hotspot.{{ template?.name?.toLowerCase().replace(/\s+/g, '-') }}/login
                         </div>
                     </div>
-                    <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                    <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-xl" style="height: 70vh; min-height: 500px; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1" inert></iframe>
                 </div>
 
                 <!-- MOBILE preview -->
                 <div v-if="previewMode === 'mobile' && hasDataEdit" class="w-full flex justify-center">
                     <div class="bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl" style="width: 360px;">
                         <div class="flex justify-center mb-2"><div class="w-24 h-5 bg-slate-800 rounded-full"></div></div>
-                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[2rem] ring-4 ring-slate-800" style="height: 70vh; min-height: 600px; aspect-ratio: 9/16; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1" inert></iframe>
                     </div>
                 </div>
 
@@ -572,7 +620,7 @@ async function save(opts = {}) {
                 <div v-if="previewMode === 'tablet' && hasDataEdit" class="w-full flex justify-center">
                     <div class="bg-slate-900 rounded-[1.75rem] p-3 shadow-2xl" style="width: 768px; max-width: 100%;">
                         <div class="flex justify-center mb-2"><div class="w-1.5 h-1.5 bg-slate-800 rounded-full"></div></div>
-                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts" tabindex="-1" inert></iframe>
+                        <iframe :key="previewKey" ref="iframeRef" :src="previewSrc" @load="onIframeLoad" class="w-full bg-white rounded-[1.25rem] ring-2 ring-slate-800" style="height: 70vh; min-height: 600px; pointer-events: none;" sandbox="allow-scripts allow-same-origin" tabindex="-1" inert></iframe>
                     </div>
                 </div>
 
