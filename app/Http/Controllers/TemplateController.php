@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Template;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\File;
 
 class TemplateController extends Controller
 {
@@ -43,11 +42,11 @@ class TemplateController extends Controller
      * Kalau belum bayar → redirect ke /checkout/{id} untuk checkout + payment.
      *
      * Prioritas sumber file:
-     *   1. Salinan edit user di `orders/{user_id}/{id}/` (kalau ada)
+     *   1. Salinan edit user di `orders/{user_id}/{id}/` (kalau ada & lengkap)
      *   2. Master template di `zip_file` (fallback)
      *
      * Hasil ZIP: login.html, status.html, logout.html, style.css, dan assets
-     * siap upload ke MikroTik.
+     * siap upload ke MikroTik. ZIP bersih dari __MACOSX & file ._* macOS.
      */
     public function download(Request $request, int $id)
     {
@@ -62,11 +61,8 @@ class TemplateController extends Controller
         $hasPaid = in_array($id, $paidTemplates, true);
 
         if (! $isFree && ! $isAdmin && ! $hasPaid) {
-            // Simpan intended URL supaya setelah payment kembali ke editor/download
             $request->session()->put('url.intended', "/template/{$id}/download");
 
-            // XHR (dari editor) → return 402 JSON supaya frontend bisa navigate SPA
-            // Browser normal → 302 redirect ke halaman checkout
             if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'ok' => false,
@@ -83,25 +79,22 @@ class TemplateController extends Controller
 
         $userId = $user?->id ?? 'guest';
 
-        // 1) Prioritas: salinan edit user
+        // 1) Prioritas: salinan edit user (kalau ada & berisi asset penting)
         $editedPath = "templates/orders/{$userId}/{$id}";
         $editedLoginFile = "{$editedPath}/login.html";
-        if (Storage::disk('public')->exists($editedLoginFile)) {
-            // Safety net: kalau edited folder ada tapi CUMA login.html
-            // (mis. dari versi lama sebelum Patch 1), copy asset dari master
-            // supaya ZIP berisi full template, bukan 1 file saja.
-            $editedStyleFile = "{$editedPath}/style.css";
-            if (! Storage::disk('public')->exists($editedStyleFile)) {
+        $useEdited = Storage::disk('public')->exists($editedLoginFile);
+
+        if ($useEdited) {
+            // Safety net: kalau edited folder ada tapi belum berisi asset
+            // (mis. draft lama dari versi sebelum recursive copy), copy dari
+            // master dulu supaya ZIP lengkap.
+            $hasStyle = $this->editedHasAsset($editedPath);
+            if (! $hasStyle) {
                 $this->copyAssetsFromMaster($template, $editedPath);
             }
-            $srcPath = Storage::disk('public')->path($editedPath);
+            $srcPath = $this->storagePublicPath($editedPath);
         } else {
             // 2) Fallback: master template
-            // PENTING: pakai folder berisi login.html sebagai srcPath, BUKAN root
-            // zip_file. Kalau master zip_file = "templates/4/original" tapi login.html
-            // ada di sub-folder "mikrotik-standard-template/", maka srcPath harus
-            // sub-folder itu. Kalau pakai root, ZIP entries akan punya prefix
-            // "mikrotik-standard-template/" yang bukan struktur yg user inginkan.
             $folder = $template->zip_file;
             if ($folder && Storage::disk('public')->exists($folder)) {
                 $srcPath = $this->resolveTemplateFolder($folder);
@@ -110,41 +103,121 @@ class TemplateController extends Controller
             }
         }
 
-        if (!File::exists($srcPath)) {
-            return back()->with('error', 'File template tidak ditemukan.');
+        // Validasi srcPath exist (cek pakai realpath supaya jalan di Windows
+        // dengan path ber-spasi seperti "loginpage 1/")
+        $realSrc = realpath($srcPath);
+        if (! $realSrc || ! is_dir($realSrc)) {
+            return back()->with('error', 'File template tidak ditemukan di storage.');
+        }
+
+        // Validasi minimal: harus ada login.html
+        if (! file_exists($realSrc . DIRECTORY_SEPARATOR . 'login.html')) {
+            return back()->with('error', 'Template tidak punya login.html. Upload folder template yang valid.');
         }
 
         // Cek zip extension aktif
-        if (!class_exists('ZipArchive')) {
+        if (! class_exists('ZipArchive')) {
             return back()->with('error', 'PHP zip extension belum aktif. Hubungi admin.');
         }
 
-        // Build archive — tambahkan suffix "_edited" kalau dari salinan user
-        // File tetap format ZIP standard (semua OS bisa extract via WinRAR/7-Zip/Explorer),
-        // suffix ".rar" untuk konsistensi dengan permintaan user. Include template ID
-        // di filename supaya jelas "berdasarkan id template yang sedang diedit".
-        $suffix = Storage::disk('public')->exists($editedLoginFile) ? '_edited' : '';
+        // Build archive
+        $suffix = $useEdited ? '_edited' : '';
         $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $template->name);
-        $zipFileName = 'Template_ID' . $template->id . '_' . $safeName . $suffix . '.rar';
-        $zipPath = storage_path('app/' . $zipFileName);
-        if (file_exists($zipPath)) {
-            @unlink($zipPath);
+        $zipFileName = 'Template_ID' . $template->id . '_' . $safeName . $suffix . '.zip';
+        // Pakai sys_get_temp_dir() agar unique & auto-cleanup. Fallback ke storage.
+        $zipPath = tempnam(sys_get_temp_dir(), 'tpl_zip_');
+        if ($zipPath === false) {
+            $zipPath = storage_path('app/' . $zipFileName);
         }
 
+        // Pakai realpath sebagai base (handle path dengan spasi)
         $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $files = File::allFiles($srcPath);
-            foreach ($files as $file) {
-                $relative = str_replace($srcPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
-                // Normalize path separator untuk cross-platform ZIP
+        // Replace nama file temp → nama .zip yang proper
+        $finalZipPath = preg_replace('/\.[^.]+$/', '', $zipPath) . '.zip';
+
+        $created = false;
+        if ($zip->open($finalZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+            $addedCount = 0;
+            $totalSize = 0;
+            // Pakai realpath agar path dengan spasi (mis. "loginpage 1") aman
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($realSrc, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iterator as $file) {
+                /** @var \SplFileInfo $file */
+                $realFile = $file->getRealPath();
+                if ($realFile === false) continue;
+
+                // Skip __MACOSX & file metadata macOS (._*) — bukan bagian template
+                $relative = str_replace($realSrc, '', $realFile);
                 $relative = str_replace('\\', '/', $relative);
-                $zip->addFile($file->getPathname(), $relative);
+                $relative = ltrim($relative, '/');
+                if (strpos($relative, '__MACOSX/') === 0) continue;
+                if (preg_match('#/\._[^/]+$#', $relative)) continue;
+                if (basename($relative) === 'Thumbs.db' || basename($relative) === '.DS_Store') continue;
+
+                if ($file->isDir()) {
+                    $zip->addEmptyDir($relative);
+                } else {
+                    $size = $file->getSize();
+                    if ($size === false || $size === 0) continue; // skip 0-byte file
+                    if ($zip->addFile($realFile, $relative)) {
+                        $addedCount++;
+                        $totalSize += $size;
+                    }
+                }
             }
             $zip->close();
-            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+            $created = true;
         }
 
-        return back()->with('error', 'Gagal membuat file ZIP.');
+        if (! $created || ! file_exists($finalZipPath) || filesize($finalZipPath) === 0) {
+            @unlink($finalZipPath);
+            return back()->with('error', 'Gagal membuat file ZIP. Coba lagi atau hubungi admin.');
+        }
+
+        // Log untuk audit
+        \Log::info('Template download', [
+            'template_id' => $id,
+            'user_id' => $userId,
+            'use_edited' => $useEdited,
+            'src_path' => $realSrc,
+            'zip_size' => filesize($finalZipPath),
+            'file_count' => $addedCount,
+        ]);
+
+        return response()
+            ->download($finalZipPath, $zipFileName)
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Convert relative path di disk 'public' jadi absolute path di filesystem.
+     * Pakai ini daripada Storage::disk('public')->path() karena method itu
+     * tidak ada di Filesystem contract (PHPStan warning). Implementasi ini
+     * equivalent: public disk root = storage_path('app/public').
+     */
+    private function storagePublicPath(string $relativePath): string
+    {
+        // Normalize: hilangkan leading slash kalau ada
+        $relativePath = ltrim($relativePath, '/');
+        return storage_path("app/public/{$relativePath}");
+    }
+
+    /**
+     * Cek apakah folder edited sudah berisi asset penting (style.css atau images/).
+     * Dipakai untuk safety net copy dari master kalau edited folder tidak lengkap.
+     */
+    private function editedHasAsset(string $editedPath): bool
+    {
+        // Cek di absolute path
+        $absPath = $this->storagePublicPath($editedPath);
+        if (! is_dir($absPath)) return false;
+        if (file_exists($absPath . DIRECTORY_SEPARATOR . 'style.css')) return true;
+        if (is_dir($absPath . DIRECTORY_SEPARATOR . 'images')) return true;
+        if (is_dir($absPath . DIRECTORY_SEPARATOR . 'assets')) return true;
+        return false;
     }
 
     /**
@@ -156,24 +229,35 @@ class TemplateController extends Controller
      * maka folder ini return path ke "mikrotik-standard-template/" (bukan "original/").
      * Hasilnya ZIP entries: "login.html", "style.css", "images/logo.svg", dll —
      * siap di-upload ke MikroTik tanpa extract+pindahkan file.
+     *
+     * Path dengan spasi (mis. "loginpage 1") aman karena pakai realpath().
      */
     private function resolveTemplateFolder(string $masterPath): string
     {
-        // Cek di root dulu
-        $rootLogin = $masterPath . '/login.html';
-        if (Storage::disk('public')->exists($rootLogin)) {
-            return Storage::disk('public')->path($masterPath);
+        $absMaster = $this->storagePublicPath($masterPath);
+        $realMaster = realpath($absMaster);
+        if ($realMaster === false) {
+            return $absMaster;
+        }
+
+        // Cek login.html di root master
+        if (file_exists($realMaster . DIRECTORY_SEPARATOR . 'login.html')) {
+            return $realMaster;
         }
 
         // Scan rekursif untuk cari folder berisi login.html
-        foreach (Storage::disk('public')->allFiles($masterPath) as $candidate) {
-            if (basename($candidate) === 'login.html') {
-                return Storage::disk('public')->path(dirname($candidate));
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($realMaster, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getFilename() === 'login.html') {
+                return dirname($file->getRealPath());
             }
         }
 
-        // Fallback ke root kalau login.html tidak ditemukan
-        return Storage::disk('public')->path($masterPath);
+        // Fallback ke master root
+        return $realMaster;
     }
 
     /**
@@ -192,27 +276,36 @@ class TemplateController extends Controller
             return;
         }
 
-        // Cari folder berisi login.html di master (root atau sub-folder)
-        $masterLoginFile = $folder . '/login.html';
-        if (! Storage::disk('public')->exists($masterLoginFile)) {
-            foreach (Storage::disk('public')->allFiles($folder) as $candidate) {
-                if (basename($candidate) === 'login.html') {
-                    $masterLoginFile = $candidate;
-                    break;
-                }
-            }
-        }
-        $assetSrcDir = dirname($masterLoginFile);
+        // Resolve folder master berisi login.html (handle sub-folder & spasi)
+        $masterLoginDir = $this->resolveTemplateFolder($folder);
+        if (! is_dir($masterLoginDir)) return;
 
         // Copy semua file master KECUALI login.html (sudah ada & sudah di-edit)
-        foreach (Storage::disk('public')->allFiles($assetSrcDir) as $srcFile) {
-            if (basename($srcFile) === 'login.html') continue;
-            $rel = substr($srcFile, strlen($assetSrcDir) + 1);
+        // Pakai realpath untuk handle path dengan spasi
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($masterLoginDir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($iterator as $file) {
+            if (! $file->isFile()) continue;
+            $realFile = $file->getRealPath();
+            if ($realFile === false) continue;
+            if (basename($realFile) === 'login.html') continue;
+            // Skip __MACOSX & ._file macOS metadata
+            if (strpos($realFile, '__MACOSX') !== false) continue;
+            if (strpos(basename($realFile), '._') === 0) continue;
+
+            $rel = str_replace($masterLoginDir, '', $realFile);
+            $rel = str_replace('\\', '/', $rel);
+            $rel = ltrim($rel, '/');
+            if ($rel === '') continue;
+
             $dstFile = $editedPath . '/' . $rel;
-            // Skip kalau file sudah ada (idempotent)
+            // Skip kalau file sudah ada (idempotent — kalau user edit style.css,
+            // kita tidak overwrite)
             if (Storage::disk('public')->exists($dstFile)) continue;
             Storage::disk('public')->makeDirectory(dirname($dstFile));
-            Storage::disk('public')->put($dstFile, Storage::disk('public')->get($srcFile));
+            Storage::disk('public')->put($dstFile, file_get_contents($realFile));
         }
     }
 }
