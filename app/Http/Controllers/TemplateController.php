@@ -88,11 +88,28 @@ class TemplateController extends Controller
             // Safety net: kalau edited folder ada tapi belum berisi asset
             // (mis. draft lama dari versi sebelum recursive copy), copy dari
             // master dulu supaya ZIP lengkap.
-            $hasStyle = $this->editedHasAsset($editedPath);
-            if (! $hasStyle) {
+            $hasAsset = $this->editedHasAsset($editedPath);
+            if (! $hasAsset) {
                 $this->copyAssetsFromMaster($template, $editedPath);
             }
-            $srcPath = $this->storagePublicPath($editedPath);
+            // VALIDASI POST-COPY: kalau setelah copy edited folder masih
+            // tidak punya asset (mis. copy gagal), fallback ke master agar
+            // ZIP tetap lengkap. Lebih baik kirim file master asli daripada
+            // ZIP 29KB yang hanya berisi login.html.
+            $editedAbs = $this->storagePublicPath($editedPath);
+            $hasAssetAfter = $this->editedHasAsset($editedPath);
+            if ($hasAssetAfter) {
+                $srcPath = $editedAbs;
+            } else {
+                $folder = $template->zip_file;
+                if ($folder && Storage::disk('public')->exists($folder)) {
+                    $srcPath = $this->resolveTemplateFolder($folder);
+                } else {
+                    $srcPath = storage_path('app/master_template');
+                }
+                // Override suffix — bukan edited version
+                $useEdited = false;
+            }
         } else {
             // 2) Fallback: master template
             $folder = $template->zip_file;
@@ -206,17 +223,23 @@ class TemplateController extends Controller
     }
 
     /**
-     * Cek apakah folder edited sudah berisi asset penting (style.css atau images/).
+     * Cek apakah folder edited sudah berisi asset penting (style.css, images/, img/, assets/).
      * Dipakai untuk safety net copy dari master kalau edited folder tidak lengkap.
+     *
+     * FIX: cek 'img' (singular) juga — beberapa template MikroTik pakai
+     * folder 'img/' (bukan 'images/' plural). Tanpa cek ini, editedHasAsset
+     * bisa return false padahal folder SUDAH berisi img/, menyebabkan
+     * copy berulang atau fallback ke master.
      */
     private function editedHasAsset(string $editedPath): bool
     {
-        // Cek di absolute path
         $absPath = $this->storagePublicPath($editedPath);
         if (! is_dir($absPath)) return false;
         if (file_exists($absPath . DIRECTORY_SEPARATOR . 'style.css')) return true;
         if (is_dir($absPath . DIRECTORY_SEPARATOR . 'images')) return true;
+        if (is_dir($absPath . DIRECTORY_SEPARATOR . 'img')) return true; // singular
         if (is_dir($absPath . DIRECTORY_SEPARATOR . 'assets')) return true;
+        if (is_dir($absPath . DIRECTORY_SEPARATOR . 'css')) return true;
         return false;
     }
 
@@ -268,6 +291,11 @@ class TemplateController extends Controller
      *
      * TUJUAN: pastikan ZIP yang di-download berisi SEMUA asset template,
      * bukan hanya login.html hasil edit.
+     *
+     * Pakai native PHP copy + mkdir (bukan Storage facade) karena:
+     *   - Lebih reliable di Windows (Storage::put() kadang silent fail)
+     *   - mkdir(true, ...) rekursif untuk sub-folder
+     *   - copy() lebih cepat dari file_get_contents + put
      */
     private function copyAssetsFromMaster(Template $template, string $editedPath): void
     {
@@ -280,8 +308,10 @@ class TemplateController extends Controller
         $masterLoginDir = $this->resolveTemplateFolder($folder);
         if (! is_dir($masterLoginDir)) return;
 
+        // Absolute path ke edited folder (target copy)
+        $editedAbs = $this->storagePublicPath($editedPath);
+
         // Copy semua file master KECUALI login.html (sudah ada & sudah di-edit)
-        // Pakai realpath untuk handle path dengan spasi
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($masterLoginDir, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
@@ -300,12 +330,26 @@ class TemplateController extends Controller
             $rel = ltrim($rel, '/');
             if ($rel === '') continue;
 
-            $dstFile = $editedPath . '/' . $rel;
+            $dstAbs = $editedAbs . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+
             // Skip kalau file sudah ada (idempotent — kalau user edit style.css,
             // kita tidak overwrite)
-            if (Storage::disk('public')->exists($dstFile)) continue;
-            Storage::disk('public')->makeDirectory(dirname($dstFile));
-            Storage::disk('public')->put($dstFile, file_get_contents($realFile));
+            if (file_exists($dstAbs)) continue;
+
+            // Buat parent directory secara rekursif (kalau belum ada)
+            $dstDir = dirname($dstAbs);
+            if (! is_dir($dstDir)) {
+                @mkdir($dstDir, 0755, true);
+            }
+
+            // Copy file langsung — lebih reliable dari Storage::put
+            if (! @copy($realFile, $dstAbs)) {
+                // Fallback ke file_get_contents + file_put_contents
+                $content = @file_get_contents($realFile);
+                if ($content !== false) {
+                    @file_put_contents($dstAbs, $content);
+                }
+            }
         }
     }
 }
