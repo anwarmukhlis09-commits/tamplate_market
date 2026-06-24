@@ -92,20 +92,17 @@ class TemplateController extends Controller
         // ── 1) Resolve MASTER folder (template default lengkap) ─────────
         $masterPath = $this->resolveMasterFolder($template);
         $realMaster = realpath($masterPath);
-        if (! $realMaster || ! is_dir($realMaster)) {
-            return back()->with('error', 'Template default tidak ditemukan di storage. Hubungi admin.');
-        }
-        if (! file_exists($realMaster . DIRECTORY_SEPARATOR . 'login.html')) {
-            return back()->with('error', 'Template default tidak punya login.html. Upload folder template yang valid di admin.');
-        }
+        $hasMaster = $realMaster !== false && is_dir($realMaster);
 
         // ── 2) Resolve EDITED folder (hasil edit user) ─────────
         $editedPath = "templates/orders/{$userId}/{$id}";
         $editedAbs = $this->storagePublicPath($editedPath);
         $realEdited = realpath($editedAbs);
-        $hasEdited = $realEdited !== false
-            && is_dir($realEdited)
-            && file_exists($realEdited . DIRECTORY_SEPARATOR . 'login.html');
+        $hasEdited = $realEdited !== false && is_dir($realEdited);
+
+        if (! $hasMaster && ! $hasEdited) {
+            return back()->with('error', 'Template tidak ditemukan di storage (baik master maupun hasil edit). Hubungi admin.');
+        }
 
         // ── 3) Setup folder TEMPORARY (akan di-ZIP) ─────────
         $tempBase = sys_get_temp_dir();
@@ -122,17 +119,24 @@ class TemplateController extends Controller
 
         try {
             // ── 4) Copy SELURUH isi master → temp ─────────
-            $copiedCount = $this->copyDirectoryFlat($realMaster, $tempDir);
+            $copiedCount = 0;
+            if ($hasMaster) {
+                $copiedCount = $this->copyDirectoryFlat($realMaster, $tempDir);
+            }
 
             // ── 5) Overlay file dari edited (jika ada) → timpa master ─────────
             $overlaidCount = 0;
             if ($hasEdited) {
-                $overlaidCount = $this->overlayDirectory($realEdited, $tempDir);
+                if (! $hasMaster) {
+                    $overlaidCount = $this->copyDirectoryFlat($realEdited, $tempDir);
+                } else {
+                    $overlaidCount = $this->overlayDirectory($realEdited, $tempDir);
+                }
             }
 
             // ── 6) Validasi minimal: temp harus ada login.html ─────────
             if (! file_exists($tempDir . DIRECTORY_SEPARATOR . 'login.html')) {
-                throw new \RuntimeException('Temp folder tidak punya login.html setelah copy dari master.');
+                throw new \RuntimeException('Folder ZIP tidak memiliki login.html (tidak ada di master maupun hasil edit).');
             }
 
             // ── 7) Build ZIP dari temp ─────────
@@ -154,8 +158,20 @@ class TemplateController extends Controller
             $addedCount = 0;
             $totalSize = 0;
             $created = false;
+            $closeStatus = false;
 
             if ($opened === true) {
+                // Normalize base path supaya str_replace reliable di Windows.
+                // realpath() di Windows bisa return lowercase drive letter
+                // (mis. 'c:\Users\...') sedangkan $tempDir pakai uppercase
+                // ('C:\Users\...'). str_replace case-sensitive — tanpa normalisasi,
+                // hasil replace gagal & ZIP entry jadi path absolute utuh.
+                $realTempBase = realpath($tempDir);
+                if ($realTempBase === false) $realTempBase = $tempDir;
+                // Pakai forward-slash versi & lowercase drive letter
+                $realTempBase = str_replace('\\', '/', $realTempBase);
+                $tempBaseLen = strlen($realTempBase);
+
                 $iterator = new \RecursiveIteratorIterator(
                     new \RecursiveDirectoryIterator($tempDir, \FilesystemIterator::SKIP_DOTS),
                     \RecursiveIteratorIterator::SELF_FIRST
@@ -164,8 +180,15 @@ class TemplateController extends Controller
                     $realFile = $file->getRealPath();
                     if ($realFile === false) continue;
 
-                    $relative = str_replace($tempDir, '', $realFile);
-                    $relative = str_replace('\\', '/', $relative);
+                    // Normalize ke forward-slash
+                    $normalized = str_replace('\\', '/', $realFile);
+                    // Hitung path relatif dari base (case-insensitive di Windows)
+                    if (stripos($normalized, $realTempBase) === 0) {
+                        $relative = substr($normalized, $tempBaseLen);
+                    } else {
+                        // Fallback: basename saja
+                        $relative = $file->getFilename();
+                    }
                     $relative = ltrim($relative, '/');
 
                     // Filter: skip __MACOSX, ._* (macOS), Thumbs.db, .DS_Store
@@ -182,16 +205,23 @@ class TemplateController extends Controller
                         }
                     }
                 }
-                $zip->close();
-                $created = true;
+                // PENTING: close() bisa return false kalau ZIP corrupt. Capture status.
+                $closeStatus = $zip->close();
+                $created = ($closeStatus === true);
             }
 
-            // ── 8) Validasi ZIP integrity ─────────
+            // ── 8) Validasi ZIP integrity (3 lapis) ─────────
             if (! $created) {
-                throw new \RuntimeException('ZipArchive::open() gagal (return=' . $opened . ').');
+                throw new \RuntimeException('ZipArchive::close() gagal (open=' . $opened . ', close=' . var_export($closeStatus, true) . ').');
             }
-            if (! file_exists($finalZipPath) || filesize($finalZipPath) === 0) {
-                throw new \RuntimeException('ZIP file tidak ada atau 0 bytes setelah dibuat.');
+            clearstatcache(true, $finalZipPath);
+            if (! file_exists($finalZipPath)) {
+                throw new \RuntimeException('ZIP file hilang setelah dibuat.');
+            }
+            $zipSize = filesize($finalZipPath);
+            if ($zipSize === false || $zipSize < 22) {
+                // ZIP min size = 22 bytes (end of central directory record)
+                throw new \RuntimeException('ZIP file terlalu kecil/corrupt (size=' . var_export($zipSize, true) . 'B).');
             }
 
             // Verifikasi ZIP bisa dibuka kembali
@@ -201,6 +231,12 @@ class TemplateController extends Controller
                 throw new \RuntimeException('ZIP corrupt setelah dibuat (verify open return=' . $verifyResult . ').');
             }
             $verifyFileCount = $verify->numFiles;
+            // Test extract 1 file sample untuk memastikan ZIP tidak corrupt di level data
+            $testExtract = $verify->getFromIndex(0);
+            if ($testExtract === false && $verifyFileCount > 0) {
+                $verify->close();
+                throw new \RuntimeException('ZIP corrupt: getFromIndex(0) gagal.');
+            }
             $verify->close();
 
             if ($verifyFileCount < 1) {
@@ -219,17 +255,43 @@ class TemplateController extends Controller
                 'file_count_in_zip' => $addedCount,
                 'total_uncompressed_bytes' => $totalSize,
                 'zip_file_path' => $finalZipPath,
-                'zip_file_size_bytes' => filesize($finalZipPath),
+                'zip_file_size_bytes' => $zipSize,
                 'verify_num_files' => $verifyFileCount,
                 'used_edited_overlay' => $hasEdited,
             ]);
 
             // ── 10) Kirim ZIP ke user ─────────
-            $response = response()->download($finalZipPath, $zipFileName);
-            $response->deleteFileAfterSend(true);
-            $response->headers->set('X-Template-Id', (string) $template->id);
-            $response->headers->set('X-File-Count', (string) $addedCount);
-            return $response;
+            // Bersihkan semua output buffer supaya tidak ada karakter stray
+            // sebelum binary stream ZIP. Sangat penting — kalau ada spasi/
+            // newline/echo sebelum file ZIP, file akan corrupt saat di-extract.
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            // Disable any PHP execution time limit issue — beri waktu ekstra untuk
+            // download file besar.
+            if (function_exists('set_time_limit')) {
+                @set_time_limit(120);
+            }
+            // Bersihkan file yang mungkin di-hold oleh antivirus (Windows).
+            // Flush semua buffer dan clearstatcache.
+            flush();
+            clearstatcache(true, $finalZipPath);
+
+            // PENTING: deleteFileAfterSend HANYA dipakai kalau kita yakin ZIP
+            // sudah benar-benar terkirim. Tapi untuk AMAN dari antivirus/
+            // scanner yang masih hold file handle, kita JANGAN pakai
+            // deleteFileAfterSend — biarkan file di temp, cleanup via finally.
+            // Untuk trigger download, kita pakai BinaryFileResponse langsung.
+            return response()->download($finalZipPath, $zipFileName, [
+                'Content-Type' => 'application/zip',
+                'Content-Length' => (string) $zipSize,
+                'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+                'X-Template-Id' => (string) $template->id,
+                'X-File-Count' => (string) $addedCount,
+            ]);
         } catch (\Throwable $e) {
             // Log error detail supaya admin bisa diagnosa
             \Log::error('Template download gagal', [
@@ -243,11 +305,20 @@ class TemplateController extends Controller
             ]);
             // Cleanup temp dir kalau ada
             $this->rmdirRecursive($tempDir);
-            @unlink($tempBase . DIRECTORY_SEPARATOR . $zipFileName);
+            if (isset($finalZipPath) && file_exists($finalZipPath)) {
+                @unlink($finalZipPath);
+            }
             return back()->with('error', 'Gagal membuat file ZIP: ' . $e->getMessage() . '. Hubungi admin.');
         } finally {
-            // Cleanup temp folder SELALU (baik sukses maupun gagal)
+            // Cleanup temp folder + ZIP file SELALU (baik sukses maupun gagal).
+            // CATATAN: pada sukses, ZIP file mungkin masih di-hold oleh antivirus
+            // scanner Windows — unlink akan return false tapi ZIP tetap terkirim
+            // ke user (response sudah flush). File akan di-cleanup oleh OS saat
+            // handle dilepas, atau bisa di-sweep berkala oleh cron.
             $this->rmdirRecursive($tempDir);
+            if (isset($finalZipPath) && file_exists($finalZipPath)) {
+                @unlink($finalZipPath);
+            }
         }
     }
 
@@ -332,9 +403,17 @@ class TemplateController extends Controller
             $rel = ltrim($rel, '/');
             if ($rel === '') continue;
             if ($this->shouldSkipEntry($rel)) continue;
-            if (! $file->isFile()) continue;
 
             $dstAbs = $dst . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+            
+            if ($file->isDir()) {
+                if (! is_dir($dstAbs)) @mkdir($dstAbs, 0755, true);
+                continue;
+            }
+
+            $dstDir = dirname($dstAbs);
+            if (! is_dir($dstDir)) @mkdir($dstDir, 0755, true);
+
             $size = $file->getSize();
             if ($size === false || $size === 0) continue;
             if (@copy($realFile, $dstAbs)) {
