@@ -11,43 +11,44 @@ const props = defineProps({
 const downloadState = ref('idle'); // 'idle' | 'downloading' | 'done' | 'error'
 const downloadError = ref(null);
 
-// Auto-trigger download ZIP saat halaman load (1 detik delay untuk
+// Auto-trigger download ZIP saat halaman load (1.5 detik delay untuk
 // user lihat "Pembayaran Berhasil" animation dulu).
+//
+// PENTING: pakai plain <a download> — BUKAN fetch + blob. Alasan:
+// - Inertia SPA auto-add header X-Inertia: true ke semua XHR/fetch.
+// - Server Inertia middleware proses response jadi HTML page (bukan
+//   binary ZIP). r.blob() terima HTML, lalu di-save sebagai .zip —
+//   user dapat file corrupt saat extract.
+// - Solusi: anchor element native browser. Browser handle download
+//   langsung via HTTP, ignore Inertia SPA layer (no XHR, no Inertia
+//   header).
 onMounted(async () => {
     if (!props.template.id) return;
-    // Delay 1.5s supaya user lihat animasi centang hijau dulu
     await new Promise(r => setTimeout(r, 1500));
-    await triggerDownload();
+    triggerDownload();
 });
 
-async function triggerDownload() {
+function triggerDownload() {
     downloadState.value = 'downloading';
     downloadError.value = null;
     try {
-        const r = await fetch(`/template/${props.template.id}/download`, {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/octet-stream, application/zip' },
-        });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const safeName = (props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_');
+        const filename = `Template_ID${props.template.id}_${safeName}_edited.zip`;
 
-        // Ambil filename dari Content-Disposition. Default: .rar (sesuai request user).
-        // File di backend tetap format ZIP standard — WinRAR/7-Zip/Explorer bisa extract.
-        const disp = r.headers.get('Content-Disposition') || '';
-        const match = disp.match(/filename="?([^"]+)"?/i);
-        const fallbackName = `Template_ID${props.template.id}_${(props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_')}_edited.rar`;
-        const filename = match ? match[1] : fallbackName;
-
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
+        // Plain anchor — browser download langsung, bypass Inertia XHR
         const a = document.createElement('a');
-        a.href = url;
+        a.href = `/template/${props.template.id}/download`;
         a.download = filename;
+        a.rel = 'noopener';
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        downloadState.value = 'done';
+
+        // Tunggu sebentar lalu set 'done' (browser mulai download stream)
+        setTimeout(() => {
+            downloadState.value = 'done';
+        }, 1500);
     } catch (e) {
         downloadState.value = 'error';
         downloadError.value = e.message;

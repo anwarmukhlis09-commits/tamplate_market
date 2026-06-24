@@ -372,56 +372,48 @@ watch(values, () => {
 
 // ── Download template hasil edit sebagai ZIP ──────────
 // Strategi:
-//   1) Backend cek payment. Kalau belum bayar → return 402 + JSON {redirect:'/checkout/{id}'}.
-//   2) Kalau sudah bayar → return ZIP blob → trigger download via <a>.
-//   3) Kalau dapat signal redirect (402) → navigate ke /checkout via Inertia (SPA).
-//
-// TIDAK pakai window.location.href (= navigasi browser) karena reload halaman
-// dan reset semua state Vue (values, fields, appliedValues). Pakai Inertia
-// supaya navigasi SPA, state editor TETAP HIDUP.
+//   1) Cek payment dulu via HEAD request (no body, no download).
+//      Kalau 402 → user belum bayar, redirect ke checkout via Inertia.
+//      Kalau 200/OK → lanjut download.
+//   2) Kalau sudah bayar → trigger download via plain <a download>.
+//      BUKAN fetch+blob — fetch() dari Inertia SPA auto-add X-Inertia
+//      header, server return HTML page (bukan binary ZIP), r.blob()
+//      terima HTML → corrupt ZIP saat user extract.
+//   3) Pakai anchor native = browser handle download langsung via HTTP.
 async function downloadZip() {
     if (downloading.value) return;
     downloading.value = true;
     errorMsg.value = null;
     try {
-        const r = await fetch(`/template/${props.template.id}/download`, {
-            method: 'GET',
+        // 1) Cek payment status dengan HEAD — biar bisa detect 402 tanpa download body
+        const headRes = await fetch(`/template/${props.template.id}/download`, {
+            method: 'HEAD',
             credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/octet-stream, application/zip, application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
         });
 
-        // Backend return 402 Payment Required → user belum bayar
-        if (r.status === 402) {
-            const data = await r.json().catch(() => ({}));
-            const redirectTo = data.redirect || route('checkout.show', { id: props.template.id });
-            // Inertia visit (SPA navigation) — state editor tetap utuh
-            router.visit(redirectTo);
+        if (headRes.status === 402) {
+            // User belum bayar — Inertia visit ke checkout, state editor TETAP HIDUP
+            router.visit(route('checkout.show', { id: props.template.id }));
             return;
         }
 
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        if (!headRes.ok && headRes.status !== 200) {
+            throw new Error(`HTTP ${headRes.status}`);
+        }
 
-        // Ambil filename dari Content-Disposition header.
-        // Default: Template_ID{id}_{name}_edited.rar (include ID template yang sedang
-        // diedit, suffix .rar — file tetap ZIP, WinRAR/7-Zip bisa extract).
-        const disp = r.headers.get('Content-Disposition') || '';
-        const match = disp.match(/filename="?([^"]+)"?/i);
-        const fallbackName = `Template_ID${props.template.id}_${(props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_')}_edited.rar`;
-        const filename = match ? match[1] : fallbackName;
+        // 2) Payment OK — trigger download via plain <a> (browser native, no Inertia)
+        const safeName = (props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_');
+        const filename = `Template_ID${props.template.id}_${safeName}_edited.zip`;
 
-        // Konversi response ke blob → klik <a> untuk download
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = `/template/${props.template.id}/download`;
         a.download = filename;
+        a.rel = 'noopener';
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
         errorMsg.value = 'Gagal download: ' + e.message;
     } finally {
