@@ -236,11 +236,18 @@ const newReleaseBadges = ['Baru Dirilis', 'Template Premium', 'Siap Digunakan'];
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     Edit Template
                                 </Link>
-                                <a :href="`/template/${t.id}/download`" class="py-3 text-sm font-semibold text-emerald-700 bg-white border-2 border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
+                                <a :href="`/template/${t.id}/download?source=master`" class="py-3 text-sm font-semibold text-emerald-700 bg-white border-2 border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                    Download
+                                    Download Asli
                                 </a>
                             </div>
+                            <!-- Tombol kedua: download versi edit user (kalau pernah edit).
+                                 Link kecil di bawah, pakai ?source=edited untuk trigger
+                                 overlay. Server akan return ZIP berisi master + login.html
+                                 versi edit user. -->
+                            <a :href="`/template/${t.id}/download?source=edited`" class="block w-full text-center py-2 text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors">
+                                Download versi edit saya (login.html) →
+                            </a>
                         </template>
 
                         <!-- Live Preview selalu tampil (untuk lihat sebelum/sesudah bayar) -->

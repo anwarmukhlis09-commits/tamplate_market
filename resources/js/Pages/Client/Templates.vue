@@ -59,7 +59,7 @@ function formatPrice(p) { return p === 0 ? 'Gratis' : 'Rp ' + Number(p).toLocale
                     <div class="grid grid-cols-2 gap-2">
                         <Link :href="`/template/${t.id}`" class="py-2 text-xs font-semibold text-center text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100">Detail</Link>
                         <Link :href="`/template/${t.id}/editor`" class="py-2 text-xs font-semibold text-center text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200">Editor</Link>
-                        <a :href="`/template/${t.id}/download`" class="py-2 text-xs font-semibold text-center text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 col-span-2">Download ZIP</a>
+                        <a :href="`/template/${t.id}/download?source=master`" class="py-2 text-xs font-semibold text-center text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 col-span-2">Download ZIP</a>
                     </div>
                 </div>
             </div>

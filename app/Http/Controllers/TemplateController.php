@@ -100,6 +100,26 @@ class TemplateController extends Controller
         $realEdited = realpath($editedAbs);
         $hasEdited = $realEdited !== false && is_dir($realEdited);
 
+        // ── 2a) Determine source: query param 'source' = master|edited ──
+        // DEFAULT: master (sesuai requirement — download dari katalog harus
+        // dapat aset original admin, bukan hasil edit user).
+        // - '?source=master' → ZIP hanya berisi master (no overlay)
+        // - '?source=edited' → ZIP berisi master + overlay edited (kalau ada)
+        // - Tanpa query param → default = master (aman & predictable)
+        //
+        // Exception: kalau admin sudah pilih download edited dari editor
+        // (via flag session 'download_edited'), pakai edited otomatis.
+        $sourceParam = strtolower((string) $request->query('source', 'master'));
+        $useEdited = false;
+        if ($sourceParam === 'edited') {
+            $useEdited = $hasEdited; // require edited folder exists
+        } elseif ($sourceParam === 'master') {
+            $useEdited = false;
+        } else {
+            // Unknown source — default master
+            $useEdited = false;
+        }
+
         if (! $hasMaster && ! $hasEdited) {
             return back()->with('error', 'Template tidak ditemukan di storage (baik master maupun hasil edit). Hubungi admin.');
         }
@@ -124,14 +144,10 @@ class TemplateController extends Controller
                 $copiedCount = $this->copyDirectoryFlat($realMaster, $tempDir);
             }
 
-            // ── 5) Overlay file dari edited (jika ada) → timpa master ─────────
+            // ── 5) Overlay file dari edited (hanya kalau $useEdited) ─────────
             $overlaidCount = 0;
-            if ($hasEdited) {
-                if (! $hasMaster) {
-                    $overlaidCount = $this->copyDirectoryFlat($realEdited, $tempDir);
-                } else {
-                    $overlaidCount = $this->overlayDirectory($realEdited, $tempDir);
-                }
+            if ($useEdited) {
+                $overlaidCount = $this->overlayDirectory($realEdited, $tempDir);
             }
 
             // ── 6) Validasi minimal: temp harus ada login.html ─────────
@@ -144,7 +160,8 @@ class TemplateController extends Controller
                 throw new \RuntimeException('PHP zip extension belum aktif.');
             }
 
-            $suffix = $hasEdited ? '_edited' : '';
+            // Suffix filename: _edited kalau pakai overlay edited, _master kalau pure master
+            $suffix = $useEdited ? '_edited' : '_master';
             $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $template->name);
             $zipFileName = 'Template_ID' . $template->id . '_' . $safeName . $suffix . '.zip';
             $finalZipPath = $tempBase . DIRECTORY_SEPARATOR . $zipFileName;
@@ -257,7 +274,8 @@ class TemplateController extends Controller
                 'zip_file_path' => $finalZipPath,
                 'zip_file_size_bytes' => $zipSize,
                 'verify_num_files' => $verifyFileCount,
-                'used_edited_overlay' => $hasEdited,
+                'used_edited_overlay' => $useEdited,
+                'source_param' => $sourceParam,
             ]);
 
             // ── 10) Kirim ZIP ke user ─────────
