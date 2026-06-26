@@ -278,62 +278,77 @@ class TemplateController extends Controller
                 'source_param' => $sourceParam,
             ]);
 
-            // ── 10) Kirim ZIP ke user ─────────
-            // Bersihkan semua output buffer supaya tidak ada karakter stray
-            // sebelum binary stream ZIP. Sangat penting — kalau ada spasi/
-            // newline/echo sebelum file ZIP, file akan corrupt saat di-extract.
+            // ── 10) Kirim ZIP ke user — STRATEGI PALING ROBUST ─────────
+            //
+            // Pendekatan: baca file ZIP ke memory SEKALI, return sebagai
+            // Response binary langsung. Ini menghindari:
+            //   - Antivirus Windows hold file handle (lock saat ZIP dibaca)
+            //   - BinaryFileResponse stream corruption (partial writes)
+            //   - deleteFileAfterSend race dengan antivirus
+            //   - PHP open_basedir / temp file permission issue
+            //
+            // Trade-off: pakai memory lebih besar (full ZIP di RAM), tapi
+            // untuk template < 50MB ini masih reasonable. Kalau di masa
+            // depan ada template > 100MB, bisa fallback ke streaming.
+            //
+            // Cleanup temp folder & ZIP setelah baca memory. Jangan pakai
+            // deleteFileAfterSend — kita 100% kontrol lifecycle.
+
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
-            // Disable any PHP execution time limit issue — beri waktu ekstra untuk
-            // download file besar.
             if (function_exists('set_time_limit')) {
                 @set_time_limit(120);
             }
-            // Bersihkan file yang mungkin di-hold oleh antivirus (Windows).
-            // Flush semua buffer dan clearstatcache.
-            flush();
-            clearstatcache(true, $finalZipPath);
 
-            // PENTING: deleteFileAfterSend HANYA dipakai kalau kita yakin ZIP
-            // sudah benar-benar terkirim. Tapi untuk AMAN dari antivirus/
-            // scanner yang masih hold file handle, kita JANGAN pakai
-            // deleteFileAfterSend — biarkan file di temp, cleanup via finally.
-            // Untuk trigger download, kita pakai BinaryFileResponse langsung.
-            return response()->download($finalZipPath, $zipFileName, [
+            // Baca ZIP ke memory SEBELUM return response
+            clearstatcache(true, $finalZipPath);
+            $zipContent = file_get_contents($finalZipPath);
+            if ($zipContent === false || strlen($zipContent) !== $zipSize) {
+                throw new \RuntimeException('Gagal baca ZIP dari disk (expected=' . $zipSize . 'B, got=' . strlen($zipContent) . 'B).');
+            }
+
+            // Cleanup SEBELUM return — supaya antivirus tidak hold file
+            @unlink($finalZipPath);
+            $this->rmdirRecursive($tempDir);
+
+            // Return binary response langsung — browser terima sebagai download
+            return response($zipContent, 200, [
                 'Content-Type' => 'application/zip',
-                'Content-Length' => (string) $zipSize,
+                'Content-Length' => (string) strlen($zipContent),
                 'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"',
+                'Content-Transfer-Encoding' => 'binary',
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
                 'Expires' => '0',
                 'X-Template-Id' => (string) $template->id,
                 'X-File-Count' => (string) $addedCount,
+                'X-Source' => $sourceParam,
             ]);
         } catch (\Throwable $e) {
             // Log error detail supaya admin bisa diagnosa
             \Log::error('Template download gagal', [
                 'template_id' => $id,
                 'user_id' => $userId,
-                'master_path' => $realMaster,
+                'master_path' => $realMaster ?? null,
                 'edited_path' => $hasEdited ? $realEdited : null,
-                'temp_path' => $tempDir,
+                'temp_path' => $tempDir ?? null,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
             // Cleanup temp dir kalau ada
-            $this->rmdirRecursive($tempDir);
+            if (isset($tempDir)) $this->rmdirRecursive($tempDir);
             if (isset($finalZipPath) && file_exists($finalZipPath)) {
                 @unlink($finalZipPath);
             }
             return back()->with('error', 'Gagal membuat file ZIP: ' . $e->getMessage() . '. Hubungi admin.');
         } finally {
-            // Cleanup temp folder + ZIP file SELALU (baik sukses maupun gagal).
-            // CATATAN: pada sukses, ZIP file mungkin masih di-hold oleh antivirus
-            // scanner Windows — unlink akan return false tapi ZIP tetap terkirim
-            // ke user (response sudah flush). File akan di-cleanup oleh OS saat
-            // handle dilepas, atau bisa di-sweep berkala oleh cron.
-            $this->rmdirRecursive($tempDir);
+            // Final cleanup safety net (untuk success path, cleanup sudah dilakukan
+            // sebelum return response; ini backup kalau exception terjadi setelah
+            // cleanup)
+            if (isset($tempDir) && is_dir($tempDir)) {
+                $this->rmdirRecursive($tempDir);
+            }
             if (isset($finalZipPath) && file_exists($finalZipPath)) {
                 @unlink($finalZipPath);
             }
