@@ -33,11 +33,13 @@ function triggerDownload() {
     downloadError.value = null;
     try {
         const safeName = (props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_');
-        const filename = `Template_ID${props.template.id}_${safeName}_edited.zip`;
+        // Download MASTER original (aset yang diupload admin) — bukan hasil edit user.
+        // Server default: ?source=master. Filename suffix: _master.
+        const filename = `Template_ID${props.template.id}_${safeName}_master.zip`;
 
         // Plain anchor — browser download langsung, bypass Inertia XHR
         const a = document.createElement('a');
-        a.href = `/template/${props.template.id}/download`;
+        a.href = `/template/${props.template.id}/download?source=master`;
         a.download = filename;
         a.rel = 'noopener';
         a.style.display = 'none';

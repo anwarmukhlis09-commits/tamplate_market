@@ -402,12 +402,14 @@ async function downloadZip() {
             throw new Error(`HTTP ${headRes.status}`);
         }
 
-        // 2) Payment OK — trigger download via plain <a> (browser native, no Inertia)
+        // 2) Payment OK — trigger download via plain <a> (browser native, no Inertia).
+        // Pada konteks EDITOR, user sudah edit template → download versi edit
+        // (master + overlay login.html). Query ?source=edited.
         const safeName = (props.template.name || 'template').replace(/[^A-Za-z0-9\-]/g, '_');
         const filename = `Template_ID${props.template.id}_${safeName}_edited.zip`;
 
         const a = document.createElement('a');
-        a.href = `/template/${props.template.id}/download`;
+        a.href = `/template/${props.template.id}/download?source=edited`;
         a.download = filename;
         a.rel = 'noopener';
         a.style.display = 'none';
