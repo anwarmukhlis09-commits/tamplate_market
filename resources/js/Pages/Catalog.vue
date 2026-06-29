@@ -167,6 +167,32 @@ function toggleWishlist(id) {
     if (wishlist.value.has(id)) wishlist.value.delete(id);
     else wishlist.value.add(id);
 }
+
+// Quick add to cart dari card katalog (ikon keranjang di bawah harga).
+// Pakai fetch dengan X-XSRF-TOKEN + Accept JSON — return JSON {redirect} atau
+// success. Tidak pakai Inertia visit (cukup update state cart saja).
+async function quickAddToCart(templateId) {
+    try {
+        const token = document.head.querySelector('meta[name="csrf-token"]')?.content;
+        if (!token) return;
+        const r = await fetch(`/cart/${templateId}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        });
+        if (r.ok) {
+            // Optional: show toast "ditambahkan ke keranjang"
+            // Pakai console.log sederhana — tidak pakai toast component
+            console.log('Template ditambahkan ke keranjang');
+        }
+    } catch (e) {
+        console.warn('Gagal tambah ke keranjang:', e.message);
+    }
+}
 function formatPrice(p) { return 'Rp ' + Number(p).toLocaleString('id-ID'); }
 // Validasi imageUrl: hanya render <img> kalau path valid (URL absolute
 // atau path relatif). Reject path Windows absolut seperti "C:\..." yang
@@ -422,8 +448,17 @@ function applyFilters() { closeDrawer(); }
                                     <div v-if="tpl.badge"
                                         class="absolute bottom-3 left-3 px-2 py-0.5 bg-white/95 backdrop-blur text-slate-800 text-[10px] font-bold rounded-md shadow-md">
                                         {{ tpl.badge }}</div>
-                                    <!-- Favorite -->
-                                    <button @click.prevent="toggleWishlist(tpl.id)"
+                                    <!-- Indikator Sudah Dibeli: ikon centang hijau kecil di pojok kiri bawah
+                                         (timpa custom badge position kalau ada, atau di samping) -->
+                                    <div v-if="isPaid(tpl.id)"
+                                        class="absolute bottom-3 right-3 w-9 h-9 bg-emerald-500/95 backdrop-blur rounded-full flex items-center justify-center shadow-md"
+                                        title="Sudah dimiliki">
+                                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                    <!-- Favorite (geser ke kiri kalau sudah dibeli, atau hide) -->
+                                    <button v-if="!isPaid(tpl.id)" @click.prevent="toggleWishlist(tpl.id)"
                                         class="absolute bottom-3 right-3 w-9 h-9 bg-white/95 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform">
                                         <svg class="w-4 h-4"
                                             :class="wishlist.has(tpl.id) ? 'text-rose-500 fill-rose-500' : 'text-slate-400'"
@@ -449,6 +484,18 @@ function applyFilters() { closeDrawer(); }
                                                 formatPrice(tpl.discountPrice) }}</div>
                                             <div class="text-base font-extrabold text-indigo-600 whitespace-nowrap">{{
                                                 tpl.price === 0 ? 'Gratis' : formatPrice(tpl.price) }}</div>
+                                            <!-- Ikon keranjang kecil di bawah harga (quick add to cart)
+                                                 Hanya untuk template yang belum dimiliki -->
+                                            <button v-if="!isPaid(tpl.id)" @click.prevent="quickAddToCart(tpl.id)"
+                                                class="mt-1 inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                                                title="Tambah ke keranjang">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -466,7 +513,7 @@ function applyFilters() { closeDrawer(); }
                                         <span class="text-slate-500">{{ tpl.sold || 0 }} terjual</span>
                                     </div>
 
-                                    <!-- Action buttons: Demo + Beli -->
+                                    <!-- 2 tombol utama: Demo + (Beli / Edit Template) -->
                                     <div class="grid grid-cols-2 gap-2">
                                         <a :href="`/templates/${tpl.id}/preview`" target="_blank" rel="noopener"
                                             class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors">
@@ -479,7 +526,7 @@ function applyFilters() { closeDrawer(); }
                                             </svg>
                                             Demo
                                         </a>
-                                        <!-- Tombol kondisional: Beli / Sudah Dibeli / Edit Template -->
+                                        <!-- Template BELUM dimiliki → tombol "Beli" -->
                                         <Link v-if="!isPaid(tpl.id)" :href="'/template/' + tpl.id"
                                             class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-center text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
@@ -489,23 +536,14 @@ function applyFilters() { closeDrawer(); }
                                             </svg>
                                             {{ tpl.price === 0 ? 'Download' : 'Beli' }}
                                         </Link>
-                                        <div v-else class="grid grid-cols-2 gap-2">
-                                            <!-- Sudah Dibeli: badge hijau, non-clickable -->
-                                            <div class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl">
-                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                                </svg>
-                                                Sudah Dibeli
-                                            </div>
-                                            <!-- Edit Template: link ke editor -->
-                                            <Link :href="'/template/' + tpl.id + '/edit'"
-                                                class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 transition-colors shadow-sm shadow-violet-200">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                                Edit
-                                            </Link>
-                                        </div>
+                                        <!-- Template SUDAH dimiliki → tombol "Edit Template" -->
+                                        <Link v-else :href="'/template/' + tpl.id + '/edit'"
+                                            class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 transition-colors shadow-sm shadow-violet-200">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                            Edit Template
+                                        </Link>
                                     </div>
                                 </div>
                             </div>
