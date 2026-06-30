@@ -416,8 +416,13 @@ function applyFilters() { closeDrawer(); }
                             class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                             <div v-for="tpl in paginatedTemplates" :key="tpl.id"
                                 class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-2xl hover:shadow-slate-300/60 hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300">
-                                <!-- Thumbnail: imageUrl dari DB, fallback skeleton abu-abu -->
-                                <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                                <!-- Thumbnail: imageUrl dari DB, fallback skeleton abu-abu.
+                                     rounded-t-2xl + overflow-hidden supaya image rectangle
+                                     ter-clip mengikuti sudut card atas yang rounded —
+                                     tanpa ini, hover effect (translate-y + shadow)
+                                     mengekspos area kosong di sudut sehingga image
+                                     kelihatan berubah jadi kotak sesaat. -->
+                                <div class="relative aspect-[4/3] overflow-hidden bg-slate-100 rounded-t-2xl">
                                     <img v-if="isValidImageUrl(tpl.imageUrl)" :src="tpl.imageUrl" :alt="tpl.name"
                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         loading="lazy" />
