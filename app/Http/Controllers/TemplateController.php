@@ -312,11 +312,12 @@ class TemplateController extends Controller
             @unlink($finalZipPath);
             $this->rmdirRecursive($tempDir);
 
-            // Return binary response langsung — browser terima sebagai download
-            return response($zipContent, 200, [
+            // Return binary response menggunakan streamDownload untuk mencegah file zip corrupt
+            // akibat kompresi GZIP dari web server atau middleware.
+            return response()->streamDownload(function () use ($zipContent) {
+                echo $zipContent;
+            }, $zipFileName, [
                 'Content-Type' => 'application/zip',
-                'Content-Length' => (string) strlen($zipContent),
-                'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"',
                 'Content-Transfer-Encoding' => 'binary',
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
