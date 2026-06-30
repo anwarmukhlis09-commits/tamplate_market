@@ -425,24 +425,52 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         abort(404, 'File not found');
     }
 
-    // Resolve HANYA dari folder template #{$id} (ID-based, no cross-template).
-    // Scan rekursif semua file di basePath, pilih file dengan nama $file.
+    // Resolve file dengan PRIORITY: edited draft user dulu, fallback ke master.
+    // Penting untuk live preview di editor — user expect lihat hasil edit mereka,
+    // bukan master original.
+    //
+    // 1) Draft edited (orders/{user_id}/{id}/login.html) — PRIORITY TERTINGGI
+    //    kalau ada, pakai ini (hasil edit user)
+    // 2) Master (templates/{id}/original/...) — fallback kalau draft kosong
+    //
+    // Untuk file login.html, cek DRAFT dulu. Untuk file lain (status.html dll),
+    // cek DRAFT dulu, fallback ke master — biar preview konsisten dengan template
+    // yang sudah diedit.
+    //
+    // SECURITY: scan rekursif semua file di basePath, pilih file dengan nama $file.
     // Kalau ada beberapa (root + subfolder), pilih yang path-nya PALING PANJANG
     // (= paling dalam = file user upload asli, bukan orphan di root).
-    $basePath = "templates/{$t->id}/original";
-    $allFiles = \Storage::disk('public')->allFiles($basePath);
+    $userId = auth()->id() ?? 'guest';
+    $draftPath = "templates/orders/{$userId}/{$id}";
+    $masterPath = "templates/{$t->id}/original";
+
     $matches = [];
-    foreach ($allFiles as $candidate) {
-        if (basename($candidate) === $file) {
-            $matches[] = $candidate;
+    // Priority 1: cek draft edited user dulu
+    if (\Storage::disk('public')->exists($draftPath)) {
+        foreach (\Storage::disk('public')->allFiles($draftPath) as $candidate) {
+            if (basename($candidate) === $file) {
+                $matches[] = ['path' => $candidate, 'priority' => 1];
+            }
+        }
+    }
+    // Priority 2: fallback ke master kalau draft tidak punya file ini
+    if (empty($matches) && \Storage::disk('public')->exists($masterPath)) {
+        foreach (\Storage::disk('public')->allFiles($masterPath) as $candidate) {
+            if (basename($candidate) === $file) {
+                $matches[] = ['path' => $candidate, 'priority' => 2];
+            }
         }
     }
     if (!$matches) {
-        abort(404, "File '{$file}' tidak ada di template #{$id} (root atau subfolder). Upload folder template yang berisi login.html.");
+        abort(404, "File '{$file}' tidak ada di template #{$id} (master atau draft edited). Upload folder template yang berisi login.html.");
     }
-    // Pilih path terpanjang (= paling dalam di tree)
-    usort($matches, function ($a, $b) { return strlen($b) - strlen($a); });
-    $filePath = \Storage::disk('public')->path($matches[0]);
+    // Pilih berdasarkan priority dulu (draft > master), lalu path terpanjang
+    // (= paling dalam di tree, kalau ada beberapa file dengan nama sama)
+    usort($matches, function ($a, $b) {
+        if ($a['priority'] !== $b['priority']) return $a['priority'] - $b['priority'];
+        return strlen($b['path']) - strlen($a['path']);
+    });
+    $filePath = \Storage::disk('public')->path($matches[0]['path']);
     // FIX: <base> menunjuk ke ROUTE HANDLER /templates/{id}/preview/, BUKAN storage symlink.
     // Alasan: storage symlink bisa tidak ada di production; route handler konsisten
     // baca dari folder master, dan <base> akan resolve relative path (style.css,
