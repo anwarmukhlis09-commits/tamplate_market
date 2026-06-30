@@ -110,12 +110,17 @@ const newReleaseBadges = ['Baru Dirilis', 'Template Premium', 'Siap Digunakan'];
                         </div>
 
                         <!-- Iframe preview (langsung ke file asli) -->
-                        <div class="relative bg-slate-100" :class="previewMode === 'mobile' ? 'flex justify-center py-6' : ''" :style="previewMode === 'mobile' ? '' : 'height: 65vh; min-height: 500px;'">
+                        <!-- Wrapper: tinggi fix tapi scrollable supaya template panjang
+                             (biasanya min-height:100vh di template MikroTik) bisa
+                             di-scroll dalam container, tidak terpotong -->
+                        <div class="relative bg-slate-100 overflow-auto"
+                             :class="previewMode === 'mobile' ? 'flex justify-center py-6' : ''"
+                             :style="previewMode === 'mobile' ? '' : 'height: 70vh; min-height: 500px; max-height: 800px;'">
                             <iframe
                                 :src="`/templates/${t.id}/preview/login.html`"
-                                :class="previewMode === 'mobile' ? 'w-[375px] h-[700px] border-8 border-slate-800 rounded-3xl shadow-2xl' : 'w-full h-full'"
-                                style="border: 0;"
-                                :style="previewMode === 'desktop' ? 'min-height: 500px; height: 65vh;' : ''"
+                                :class="previewMode === 'mobile' ? 'w-[375px] h-[812px] border-8 border-slate-800 rounded-3xl shadow-2xl' : 'w-full'"
+                                style="border: 0; min-height: 100%; overflow: auto;"
+                                :style="previewMode === 'desktop' ? 'min-height: 700px; height: auto;' : ''"
                             ></iframe>
                         </div>
 
