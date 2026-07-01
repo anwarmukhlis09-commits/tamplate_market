@@ -415,13 +415,14 @@ function applyFilters() { closeDrawer(); }
                         <div v-if="paginatedTemplates.length > 0"
                             class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                             <div v-for="tpl in paginatedTemplates" :key="tpl.id"
-                                class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-2xl hover:shadow-slate-300/60 hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300">
+                                class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-2xl hover:shadow-slate-300/60 hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300 flex flex-col">
                                 <!-- Thumbnail: imageUrl dari DB, fallback skeleton abu-abu.
                                      rounded-t-2xl + overflow-hidden supaya image rectangle
                                      ter-clip mengikuti sudut card atas yang rounded —
                                      tanpa ini, hover effect (translate-y + shadow)
                                      mengekspos area kosong di sudut sehingga image
-                                     kelihatan berubah jadi kotak sesaat. -->
+                                     kelihatan berubah jadi kotak sesaat.
+                                     aspect-[4/3] FIX ratio = tinggi card image konsisten -->
                                 <div class="relative aspect-[4/3] overflow-hidden bg-slate-100 rounded-t-2xl">
                                     <img v-if="isValidImageUrl(tpl.imageUrl)" :src="tpl.imageUrl" :alt="tpl.name"
                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -474,25 +475,32 @@ function applyFilters() { closeDrawer(); }
                                     </button>
                                 </div>
 
-                                <!-- Card body -->
-                                <div class="p-5">
-                                    <div class="flex items-start justify-between gap-3 mb-2">
+                                <!-- Card body — flex-col + flex-1 supaya tinggi konsisten -->
+                                <div class="p-5 flex flex-col flex-1">
+                                    <!-- Header: nama + kategori (fixed height) -->
+                                    <div class="mb-2 min-h-[3.25rem]">
+                                        <h3
+                                            class="font-bold text-slate-900 leading-snug truncate group-hover:text-indigo-600 transition-colors">
+                                            {{ tpl.name }}</h3>
+                                        <p class="text-xs text-slate-500 mt-0.5 capitalize truncate">{{ tpl.category }}</p>
+                                    </div>
+
+                                    <!-- Price row: fixed height (discountPrice line + price + cart icon)
+                                         min-h agar semua card seragam, baik dengan/tanpa diskon -->
+                                    <div class="flex items-start justify-between gap-3 mb-4 min-h-[3rem]">
                                         <div class="min-w-0 flex-1">
-                                            <h3
-                                                class="font-bold text-slate-900 leading-snug truncate group-hover:text-indigo-600 transition-colors">
-                                                {{ tpl.name }}</h3>
-                                            <p class="text-xs text-slate-500 mt-0.5 capitalize">{{ tpl.category }}</p>
+                                            <div class="text-[10px] text-slate-400 line-through h-3"
+                                                 v-if="tpl.discountPrice && tpl.discountPrice > tpl.price">
+                                                {{ formatPrice(tpl.discountPrice) }}
+                                            </div>
+                                            <div class="text-base font-extrabold text-indigo-600 whitespace-nowrap leading-none">
+                                                {{ tpl.price === 0 ? 'Gratis' : formatPrice(tpl.price) }}</div>
                                         </div>
-                                        <div class="text-right shrink-0">
-                                            <div v-if="tpl.discountPrice && tpl.discountPrice > tpl.price"
-                                                class="text-[10px] text-slate-400 line-through">{{
-                                                formatPrice(tpl.discountPrice) }}</div>
-                                            <div class="text-base font-extrabold text-indigo-600 whitespace-nowrap">{{
-                                                tpl.price === 0 ? 'Gratis' : formatPrice(tpl.price) }}</div>
-                                            <!-- Ikon keranjang kecil di bawah harga (quick add to cart)
-                                                 Hanya untuk template yang belum dimiliki -->
+                                        <!-- Ikon keranjang kecil (quick add to cart).
+                                             min-h-[28px] untuk alignment konsisten dengan line-through di kiri. -->
+                                        <div class="shrink-0 w-7 h-7 flex items-center justify-center">
                                             <button v-if="!isPaid(tpl.id)" @click.prevent="quickAddToCart(tpl.id)"
-                                                class="mt-1 inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                                                class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
                                                 title="Tambah ke keranjang">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
@@ -504,7 +512,8 @@ function applyFilters() { closeDrawer(); }
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center gap-2 mb-4 text-xs">
+                                    <!-- Rating row: fixed height -->
+                                    <div class="flex items-center gap-2 mb-4 text-xs min-h-[1.25rem]">
                                         <div class="flex items-center gap-0.5">
                                             <svg v-for="i in 5" :key="i" class="w-3.5 h-3.5"
                                                 :class="i <= Math.round(tpl.rating || 4.8) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'"
@@ -518,10 +527,13 @@ function applyFilters() { closeDrawer(); }
                                         <span class="text-slate-500">{{ tpl.sold || 0 }} terjual</span>
                                     </div>
 
-                                    <!-- 2 tombol utama: Demo + (Beli / Edit Template) -->
-                                    <div class="grid grid-cols-2 gap-2">
+                                    <!-- 2 tombol utama: Demo + (Beli / Edit Template).
+                                         mt-auto push ke bawah card supaya tombol SELALU
+                                         di posisi bawah yang sama antar card.
+                                         min-h untuk tinggi konsisten (38px) -->
+                                    <div class="grid grid-cols-2 gap-2 mt-auto">
                                         <a :href="`/templates/${tpl.id}/preview`" target="_blank" rel="noopener"
-                                            class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors">
+                                            class="inline-flex items-center justify-center gap-1.5 min-h-[38px] py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -533,7 +545,7 @@ function applyFilters() { closeDrawer(); }
                                         </a>
                                         <!-- Template BELUM dimiliki → tombol "Beli" -->
                                         <Link v-if="!isPaid(tpl.id)" :href="'/template/' + tpl.id"
-                                            class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-center text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+                                            class="inline-flex items-center justify-center gap-1.5 min-h-[38px] py-2 text-xs font-semibold text-center text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -543,7 +555,7 @@ function applyFilters() { closeDrawer(); }
                                         </Link>
                                         <!-- Template SUDAH dimiliki → tombol "Edit Template" -->
                                         <Link v-else :href="'/template/' + tpl.id + '/edit'"
-                                            class="inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 transition-colors shadow-sm shadow-violet-200">
+                                            class="inline-flex items-center justify-center gap-1.5 min-h-[38px] py-2 text-xs font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 transition-colors shadow-sm shadow-violet-200">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
