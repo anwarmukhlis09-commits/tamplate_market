@@ -30,7 +30,6 @@ watch(() => props.templates, (newTemplates) => {
     currentPage.value = 1;
     searchQuery.value = '';
     selectedCategory.value = 'all';
-    selectedTypes.value = [];
     selectedFeatures.value = [];
     priceMin.value = 0;
     priceMax.value = 100000;
@@ -41,7 +40,6 @@ watch(() => props.templates, (newTemplates) => {
 // ── Filter State ──────────────────────
 const searchQuery = ref('');
 const selectedCategory = ref('all');
-const selectedTypes = ref([]); // 'premium' | 'free'
 const selectedFeatures = ref([]); // 'responsive', 'dark-mode', ...
 const priceMin = ref(0);
 const priceMax = ref(100000);
@@ -94,14 +92,6 @@ const filteredTemplates = computed(() => {
         result = result.filter(t => t.category === selectedCategory.value);
     }
 
-    if (selectedTypes.value.length > 0) {
-        result = result.filter(t => {
-            if (selectedTypes.value.includes('free') && t.price === 0) return true;
-            if (selectedTypes.value.includes('premium') && t.price > 0) return true;
-            return false;
-        });
-    }
-
     if (selectedFeatures.value.length > 0) {
         result = result.filter(t => {
             const feats = (t.features || []).map(f => f.toLowerCase());
@@ -134,7 +124,6 @@ const totalResults = computed(() => filteredTemplates.value.length);
 const activeFilterCount = computed(() => {
     let n = 0;
     if (selectedCategory.value !== 'all') n++;
-    if (selectedTypes.value.length > 0) n++;
     if (selectedFeatures.value.length > 0) n++;
     if (priceMin.value > 0 || priceMax.value < 100000) n++;
     if (searchQuery.value.trim()) n++;
@@ -150,7 +139,6 @@ function goToPage(p) {
 function resetFilters() {
     searchQuery.value = '';
     selectedCategory.value = 'all';
-    selectedTypes.value = [];
     selectedFeatures.value = [];
     priceMin.value = 0;
     priceMax.value = 100000;
@@ -302,32 +290,6 @@ function applyFilters() { closeDrawer(); }
                                                     class="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600" />
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <!-- Template Type (Platform) -->
-                                <div class="bg-white border border-slate-200 rounded-2xl p-5">
-                                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Platform
-                                    </h4>
-                                    <div class="space-y-2">
-                                        <label class="flex items-center gap-2.5 cursor-pointer group">
-                                            <input type="checkbox" :checked="selectedTypes.includes('premium')"
-                                                @change="toggleArrayValue(selectedTypes, 'premium')"
-                                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                                            <span
-                                                class="text-sm text-slate-700 flex-1 group-hover:text-indigo-600 transition-colors">Premium</span>
-                                            <span
-                                                class="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded">PRO</span>
-                                        </label>
-                                        <label class="flex items-center gap-2.5 cursor-pointer group">
-                                            <input type="checkbox" :checked="selectedTypes.includes('free')"
-                                                @change="toggleArrayValue(selectedTypes, 'free')"
-                                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                                            <span
-                                                class="text-sm text-slate-700 flex-1 group-hover:text-indigo-600 transition-colors">Free</span>
-                                            <span
-                                                class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded">FREE</span>
-                                        </label>
                                     </div>
                                 </div>
 
@@ -697,32 +659,6 @@ function applyFilters() { closeDrawer(); }
                                                     class="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600" />
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <!-- Platform -->
-                                <div>
-                                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Platform
-                                    </h4>
-                                    <div class="space-y-2">
-                                        <label class="flex items-center gap-2.5 cursor-pointer group">
-                                            <input type="checkbox" :checked="selectedTypes.includes('premium')"
-                                                @change="toggleArrayValue(selectedTypes, 'premium')"
-                                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                                            <span
-                                                class="text-sm text-slate-700 flex-1 group-hover:text-indigo-600 transition-colors">Premium</span>
-                                            <span
-                                                class="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded">PRO</span>
-                                        </label>
-                                        <label class="flex items-center gap-2.5 cursor-pointer group">
-                                            <input type="checkbox" :checked="selectedTypes.includes('free')"
-                                                @change="toggleArrayValue(selectedTypes, 'free')"
-                                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                                            <span
-                                                class="text-sm text-slate-700 flex-1 group-hover:text-indigo-600 transition-colors">Free</span>
-                                            <span
-                                                class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded">FREE</span>
-                                        </label>
                                     </div>
                                 </div>
 
