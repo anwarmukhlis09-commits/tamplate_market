@@ -67,8 +67,9 @@ class TemplateController extends Controller
         // Skip kalau user adalah admin (bypass) atau template gratis (price=0).
         $isFree = (int) $template->price === 0;
         $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
-        $paidTemplates = (array) $request->session()->get('paid_templates', []);
-        $hasPaid = in_array($id, $paidTemplates, true);
+        // Single source of truth: cek dari DB (table orders), BUKAN session.
+        // Session hilang saat logout/login ulang, DB persistent.
+        $hasPaid = $user && \App\Models\Order::isUserPaid($user->id, $id);
 
         if (! $isFree && ! $isAdmin && ! $hasPaid) {
             $request->session()->put('url.intended', "/template/{$id}/download");

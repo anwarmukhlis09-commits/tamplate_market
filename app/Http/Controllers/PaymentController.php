@@ -72,7 +72,26 @@ class PaymentController extends Controller
             abort(403, 'Template ini tidak ada di keranjang Anda.');
         }
 
-        // Tandai sebagai paid di session
+        // Tandai sebagai paid — PERSIST KE DB (single source of truth)
+        // agar status pembelian tetap ada walaupun user logout/login ulang.
+        // Idempotent: pakai updateOrCreate biar tidak error kalau order double-submit.
+        $template = \App\Models\Template::find($templateId);
+        $orderModel = \App\Models\Order::updateOrCreate(
+            [
+                'user_id' => $orderUserId,
+                'template_id' => $templateId,
+            ],
+            [
+                'order_id' => $order,
+                'status' => 'completed',
+                'amount' => $template ? $template->price : 0,
+                'payment_method' => 'simulated',
+                'paid_at' => now(),
+            ]
+        );
+
+        // Backward compat: tetap tulis di session supaya flow yang existing
+        // (mis. PaymentController::success() pakai session) tidak langsung break.
         $paid = (array) $request->session()->get('paid_templates', []);
         if (! in_array($templateId, $paid, true)) {
             $paid[] = $templateId;
@@ -115,9 +134,10 @@ class PaymentController extends Controller
             }
         }
 
-        // canEdit: true kalau template ada di paid_templates session user
-        $paid = (array) $request->session()->get('paid_templates', []);
-        $canEdit = $templateId !== null && in_array($templateId, $paid, true);
+        // canEdit: cek dari DB (single source of truth) bukan session,
+        // supaya status pembelian tetap valid walaupun session expired.
+        $user = $request->user();
+        $canEdit = $templateId !== null && $user && \App\Models\Order::isUserPaid($user->id, $templateId);
 
         return Inertia::render('Payment/Success', [
             'orderId' => $order,

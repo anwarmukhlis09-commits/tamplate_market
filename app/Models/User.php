@@ -49,4 +49,29 @@ class User extends Authenticatable
     {
         return (bool) ($this->is_admin ?? false);
     }
+
+    /**
+     * Relasi ke orders user.
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Daftar template ID yang sudah dibeli user (status completed).
+     * Single source of truth untuk "Sudah Dibeli" di katalog & dashboard.
+     */
+    public function getPaidTemplateIdsAttribute(): array
+    {
+        return Order::getPaidTemplateIds($this->id);
+    }
+
+    /**
+     * Cek apakah user sudah membeli template tertentu (status completed).
+     */
+    public function hasPaidFor(int $templateId): bool
+    {
+        return Order::isUserPaid($this->id, $templateId);
+    }
 }
