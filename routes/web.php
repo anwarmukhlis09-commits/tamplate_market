@@ -425,39 +425,48 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         abort(404, 'File not found');
     }
 
-    // Resolve file dengan PRIORITY: edited draft user dulu, fallback ke master.
-    // Penting untuk live preview di editor — user expect lihat hasil edit mereka,
-    // bukan master original.
-    //
-    // 1) Draft edited (orders/{user_id}/{id}/login.html) — PRIORITY TERTINGGI
-    //    kalau ada, pakai ini (hasil edit user)
-    // 2) Master (templates/{id}/original/...) — fallback kalau draft kosong
-    //
-    // Untuk file login.html, cek DRAFT dulu. Untuk file lain (status.html dll),
-    // cek DRAFT dulu, fallback ke master — biar preview konsisten dengan template
-    // yang sudah diedit.
+    // Resolve file dengan PRIORITY berdasarkan query param 'source':
+    // - DEFAULT (no query atau source=master) → MASTER only
+    //   Pakai untuk: Demo button di katalog, preview publik, link share.
+    //   User harus lihat hotspot UTAMA yang diupload admin, bukan hasil edit
+    //   orang lain.
+    // - source=edited → cek edited DULU, fallback ke master
+    //   Pakai untuk: live preview editor (kalau ada user yang login & edit).
     //
     // SECURITY: scan rekursif semua file di basePath, pilih file dengan nama $file.
     // Kalau ada beberapa (root + subfolder), pilih yang path-nya PALING PANJANG
     // (= paling dalam = file user upload asli, bukan orphan di root).
     $userId = auth()->id() ?? 'guest';
+    $sourceParam = strtolower((string) request('source', 'master'));
     $draftPath = "templates/orders/{$userId}/{$id}";
     $masterPath = "templates/{$t->id}/original";
 
     $matches = [];
-    // Priority 1: cek draft edited user dulu
-    if (\Storage::disk('public')->exists($draftPath)) {
-        foreach (\Storage::disk('public')->allFiles($draftPath) as $candidate) {
-            if (basename($candidate) === $file) {
-                $matches[] = ['path' => $candidate, 'priority' => 1];
+    if ($sourceParam === 'edited') {
+        // Priority 1: cek draft edited user dulu (edited > master)
+        if (\Storage::disk('public')->exists($draftPath)) {
+            foreach (\Storage::disk('public')->allFiles($draftPath) as $candidate) {
+                if (basename($candidate) === $file) {
+                    $matches[] = ['path' => $candidate, 'priority' => 1];
+                }
             }
         }
-    }
-    // Priority 2: fallback ke master kalau draft tidak punya file ini
-    if (empty($matches) && \Storage::disk('public')->exists($masterPath)) {
-        foreach (\Storage::disk('public')->allFiles($masterPath) as $candidate) {
-            if (basename($candidate) === $file) {
-                $matches[] = ['path' => $candidate, 'priority' => 2];
+        // Priority 2: fallback ke master kalau draft tidak punya file ini
+        if (empty($matches) && \Storage::disk('public')->exists($masterPath)) {
+            foreach (\Storage::disk('public')->allFiles($masterPath) as $candidate) {
+                if (basename($candidate) === $file) {
+                    $matches[] = ['path' => $candidate, 'priority' => 2];
+                }
+            }
+        }
+    } else {
+        // source=master (default): MASTER only, jangan load edited (mungkin berisi
+        // konten punya user lain kalau ID bentrok).
+        if (\Storage::disk('public')->exists($masterPath)) {
+            foreach (\Storage::disk('public')->allFiles($masterPath) as $candidate) {
+                if (basename($candidate) === $file) {
+                    $matches[] = ['path' => $candidate, 'priority' => 1];
+                }
             }
         }
     }

@@ -270,7 +270,7 @@ onMounted(async () => {
         // Set initial preview src — di-load oleh <iframe :src> SEKALI via @load.
         // TIDAK di-update lagi tiap keystroke. Cache buster agar draft baru
         // muncul setelah reset (lihat resetChanges yang increment previewKey).
-        previewSrc.value = `/templates/${props.template.id}/preview/login.html?v=${Date.now()}`;
+        previewSrc.value = `/templates/${props.template.id}/preview/login.html?source=edited&v=${Date.now()}`;
     } catch (e) {
         errorMsg.value = 'Gagal baca fields: ' + e.message;
     }
@@ -537,7 +537,7 @@ async function save(opts = {}) {
 
             <!-- Kanan: Action buttons -->
             <div class="flex items-center gap-1.5 shrink-0">
-                <a :href="`/templates/${template?.id || ''}/preview/login.html`" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" title="Buka preview di tab baru">
+                <a :href="`/templates/${template?.id || ''}/preview/login.html?source=edited`" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" title="Buka preview di tab baru">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     <span class="hidden md:inline">Live Preview</span>
                 </a>
