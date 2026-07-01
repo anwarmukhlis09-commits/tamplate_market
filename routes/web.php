@@ -1147,8 +1147,57 @@ Route::post('/template/{id}/editor/save', function (\Illuminate\Http\Request $re
 
 // ── Client Routes ───────────────────────
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Client/Dashboard');
+    Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
+        $user = $request->user();
+
+        // Stats dari DB (single source of truth: orders table)
+        // - templates_count: jumlah template unik yang sudah dibeli user
+        // - orders_count: jumlah transaksi pembelian user
+        // - total_spent: total amount dari orders completed
+        $paidTemplateIds = \App\Models\Order::getPaidTemplateIds($user->id);
+        $templatesCount = count($paidTemplateIds);
+
+        $ordersCount = \App\Models\Order::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->count();
+
+        $totalSpent = \App\Models\Order::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        // Recent orders (5 terakhir) untuk section "Aktivitas Terbaru"
+        $recentOrders = \App\Models\Order::with('template:id,name,slug,preview_image,category,price')
+            ->where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->orderBy('paid_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($o) {
+                return [
+                    'id' => $o->id,
+                    'order_id' => $o->order_id,
+                    'template' => $o->template ? [
+                        'id' => $o->template->id,
+                        'name' => $o->template->name,
+                        'slug' => $o->template->slug,
+                        'category' => $o->template->category,
+                        'price' => $o->template->price,
+                        'imageUrl' => $o->template->preview_image ? asset('storage/' . $o->template->preview_image) : null,
+                    ] : null,
+                    'amount' => (float) $o->amount,
+                    'paid_at' => $o->paid_at?->format('Y-m-d H:i'),
+                ];
+            })
+            ->all();
+
+        return Inertia::render('Client/Dashboard', [
+            'stats' => [
+                'templates_count' => $templatesCount,
+                'orders_count' => $ordersCount,
+                'total_spent' => (float) $totalSpent,
+            ],
+            'recentOrders' => $recentOrders,
+        ]);
     })->name('dashboard');
 
     Route::get('/dashboard/templates', function () {
