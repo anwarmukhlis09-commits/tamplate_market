@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -35,6 +36,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_admin' => 'boolean',
+        'disabled_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -49,6 +51,25 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return (bool) ($this->is_admin ?? false);
+    }
+
+    /**
+     * Cek apakah akun user dinonaktifkan oleh admin.
+     * User disabled TIDAK boleh login (di-block di LoginRequest::authenticate).
+     * Session lama yang masih aktif tetap berlaku sampai timeout.
+     */
+    public function isDisabled(): bool
+    {
+        return $this->disabled_at !== null;
+    }
+
+    /**
+     * Relasi ke admin yang menonaktifkan akun ini.
+     * Untuk audit trail di panel admin.
+     */
+    public function disabledByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'disabled_by');
     }
 
     /**

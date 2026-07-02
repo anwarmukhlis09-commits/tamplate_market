@@ -1243,7 +1243,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->name('transactions');
     Route::get('/transactions/stats', [\App\Http\Controllers\AdminTransactionController::class, 'stats'])
         ->name('transactions.stats');
-    Route::get('/users', fn() => Inertia::render('Admin/Users'))->name('users');
+
+    // User management
+    Route::get('/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('users');
+    Route::patch('/users/{user}', [\App\Http\Controllers\AdminUserController::class, 'update'])->name('users.update');
+    Route::post('/users/{user}/reset-password', [\App\Http\Controllers\AdminUserController::class, 'resetPassword'])->name('users.reset-password');
+    Route::patch('/users/{user}/toggle-active', [\App\Http\Controllers\AdminUserController::class, 'toggleActive'])->name('users.toggle-active');
+    Route::delete('/users/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('users.destroy');
+
     Route::get('/categories', fn() => Inertia::render('Admin/Categories'))->name('categories');
     Route::get('/settings', fn() => Inertia::render('Admin/Settings'))->name('settings');
 

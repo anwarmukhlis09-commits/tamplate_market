@@ -50,6 +50,21 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // Block user yang dinonaktifkan admin dari login. Cek ini SETELAH
+        // Auth::attempt sukses (jadi password valid dulu, baru cek status).
+        // User yang disabled tidak boleh punya session baru — invalidate
+        // session + logout paksa.
+        $user = Auth::user();
+        if ($user && $user->isDisabled()) {
+            Auth::guard('web')->logout();
+            $this->session()->invalidate();
+            $this->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun Anda dinonaktifkan oleh admin. Hubungi admin untuk informasi lebih lanjut.',
+            ]);
+        }
     }
 
     /**
