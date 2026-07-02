@@ -145,16 +145,42 @@ function simulate(status) {
 }
 
 // ═══ Lifecycle ═══
+// Listener: tab kembali aktif (user balik dari Tripay) — trigger immediate poll.
+// Tripay redirect ke return_url setelah bayar, tapi user bisa saja sudah
+// nutup tab Tripay & buka tab waiting lagi, atau ada delay. Focus event +
+// visibility change memastikan poll langsung fire saat tab aktif lagi.
+function onFocusOrVisible() {
+    if (polling.value && document.visibilityState === 'visible') {
+        pollStatus();
+    }
+}
+
+// Listener: storage event dari tab lain (mis. user bayar di tab Tripay,
+// set localStorage flag → waiting tab lain detect via 'storage' event).
+// Berguna kalau user buka waiting di satu tab dan bayar di tab lain.
+function onStorage(e) {
+    if (e.key === 'payment-completed' && e.newValue === props.orderId) {
+        pollStatus();
+    }
+}
+
 onMounted(() => {
     updateCountdown();
     countdownTimer = setInterval(updateCountdown, 1000);
-    pollStatus();
+    pollStatus(); // Immediate poll saat mount
     pollTimer = setInterval(pollStatus, 3000);
+
+    window.addEventListener('focus', onFocusOrVisible);
+    document.addEventListener('visibilitychange', onFocusOrVisible);
+    window.addEventListener('storage', onStorage);
 });
 
 onUnmounted(() => {
     countdownTimer && clearInterval(countdownTimer);
     pollTimer && clearInterval(pollTimer);
+    window.removeEventListener('focus', onFocusOrVisible);
+    document.removeEventListener('visibilitychange', onFocusOrVisible);
+    window.removeEventListener('storage', onStorage);
 });
 </script>
 
