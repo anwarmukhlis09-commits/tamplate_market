@@ -328,7 +328,9 @@ class AdminTemplateController extends Controller
             'template_files' => ($requireFiles ? 'required|' : '') . 'array|min:1',
             'template_files.*' => "file|max:10240|mimes:{$allowedExt}",
             'relative_paths' => 'nullable|array',
-            'relative_paths.*' => ['string', 'regex:#^(?!.*\.\.)(?!/)[A-Za-z0-9._\-/]+$#'],
+            // Allow alphanumeric, dot, underscore, dash, slash, dan spasi (untuk nama folder).
+            // Block: '..' (path traversal), leading '/' (path absolut), backslash (Windows path).
+            'relative_paths.*' => ['string', 'regex:#^(?!.*\.\.)(?!/)(?!.*\\\\)[A-Za-z0-9._\-/ ]+$#'],
             'preview_image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
         ];
     }
