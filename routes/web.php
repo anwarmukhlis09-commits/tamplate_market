@@ -1239,7 +1239,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/templates/{template}/toggle', [\App\Http\Controllers\AdminTemplateController::class, 'togglePublish'])->name('templates.toggle');
 
     // Placeholder admin routes
-    Route::get('/transactions', fn() => Inertia::render('Admin/Transactions'))->name('transactions');
+    Route::get('/transactions', [\App\Http\Controllers\AdminTransactionController::class, 'index'])
+        ->name('transactions');
+    Route::get('/transactions/stats', [\App\Http\Controllers\AdminTransactionController::class, 'stats'])
+        ->name('transactions.stats');
     Route::get('/users', fn() => Inertia::render('Admin/Users'))->name('users');
     Route::get('/categories', fn() => Inertia::render('Admin/Categories'))->name('categories');
     Route::get('/settings', fn() => Inertia::render('Admin/Settings'))->name('settings');
