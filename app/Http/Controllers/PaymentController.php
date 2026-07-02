@@ -57,7 +57,7 @@ class PaymentController extends Controller
      * Proses payment: buat transaksi Tripay dan redirect ke checkout URL.
      * Route: POST /payment/{order}/process
      */
-    public function process(Request $request, string $order): RedirectResponse
+    public function process(Request $request, string $order): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
             'method' => 'required|string',
@@ -127,9 +127,22 @@ class PaymentController extends Controller
                 'expired_at' => $expiredAt,
             ]);
 
+            // Kalau request dari Inertia ATAU XHR JSON, JANGAN return 302 ke URL
+            // external — browser akan trigger CORS preflight ke tripay.co.id
+            // dan gagal. Solusi: return JSON {checkout_url} supaya frontend
+            // pakai window.location.href untuk full navigation (no CORS issue).
+            if ($request->header('X-Inertia') || $request->wantsJson()) {
+                return response()->json([
+                    'checkout_url' => $transaction['checkout_url'],
+                ]);
+            }
+
             return redirect($transaction['checkout_url']);
 
         } catch (\Exception $e) {
+            if ($request->header('X-Inertia') || $request->wantsJson()) {
+                return response()->json(['error' => $e->getMessage()], 500);
+            }
             return back()->withErrors(['error' => $e->getMessage()]);
         }
     }

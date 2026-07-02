@@ -1,6 +1,6 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     orderId: { type: String, required: true },
@@ -9,10 +9,13 @@ const props = defineProps({
     amount: { type: [Number, String], default: 0 },
 });
 
-const form = useForm({
+const form = ref({
     method: '',
     phone: props.user?.phone || '',
 });
+
+const errors = ref({});
+const submitting = ref(false);
 
 const orderShort = computed(() => props.orderId.slice(0, 16) + '...');
 
@@ -21,26 +24,99 @@ function formatRupiah(number) {
 }
 
 function selectChannel(code) {
-    form.method = code;
+    form.value.method = code;
+    errors.value.method = null;
 }
 
-function payNow() {
-    if (!form.method) {
-        alert('Silakan pilih metode pembayaran terlebih dahulu.');
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[2]) : '';
+}
+
+async function payNow() {
+    if (!form.value.method) {
+        errors.value.method = 'Silakan pilih metode pembayaran terlebih dahulu.';
         return;
     }
+
     // Normalisasi phone: hanya digit, dan pastikan prefix 62
-    let phone = form.phone.replace(/\D/g, '');
+    let phone = form.value.phone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
     if (!phone.startsWith('62')) phone = '62' + phone;
 
     if (phone.length < 10 || phone.length > 15) {
-        form.setError('phone', 'Nomor HP tidak valid (contoh: 081234567890).');
+        errors.value.phone = 'Nomor HP tidak valid (contoh: 081234567890).';
         return;
     }
-    form.phone = phone;
-    form.clearErrors();
-    form.post(`/payment/${props.orderId}/process`);
+
+    errors.value = {};
+    submitting.value = true;
+
+    // Pakai plain fetch + JSON. Bypass Inertia XHR layer.
+    //
+    // Alasan: kalau pakai Inertia form.post / router.post, Inertia auto-add
+    // header X-Inertia dan auto-follow 302 redirect via XHR. Kalau server
+    // return 302 ke external URL (Tripay), browser fire CORS preflight dan
+    // ditolak (Tripay tidak return Access-Control-Allow-Origin).
+    //
+    // Solusi: server return JSON {checkout_url}, frontend pakai
+    // window.location.href untuk full-page navigation ke Tripay (no XHR,
+    // no CORS).
+    //
+    // CSRF: pakai header X-XSRF-TOKEN dengan nilai dari XSRF-TOKEN cookie.
+    // Laravel VerifyCsrfToken auto-decrypt cookie value untuk compare.
+    // (Pakai X-CSRF-TOKEN butuh plain token — tidak tersedia di cookie,
+    // hanya di meta tag csrf-token.)
+    try {
+        const response = await fetch(`/payment/${props.orderId}/process`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': getCookie('XSRF-TOKEN'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                method: form.value.method,
+                phone,
+            }),
+        });
+
+        if (response.status === 422) {
+            // Validation error
+            const data = await response.json();
+            errors.value = data.errors || { error: 'Validasi gagal' };
+            submitting.value = false;
+            return;
+        }
+
+        if (response.status === 419) {
+            // CSRF token mismatch — refresh page
+            errors.value = { error: 'Session habis. Silakan refresh halaman.' };
+            submitting.value = false;
+            return;
+        }
+
+        if (!response.ok) {
+            errors.value = { error: 'Gagal memproses pembayaran. Silakan coba lagi.' };
+            submitting.value = false;
+            return;
+        }
+
+        const data = await response.json();
+        if (data.checkout_url) {
+            // Full navigation ke Tripay — bypass XHR/CORS layer
+            window.location.href = data.checkout_url;
+            return;
+        }
+
+        errors.value = { error: 'Response tidak valid dari server.' };
+        submitting.value = false;
+    } catch (e) {
+        errors.value = { error: 'Network error. Silakan coba lagi.' };
+        submitting.value = false;
+    }
 }
 </script>
 
@@ -65,9 +141,9 @@ function payNow() {
                 type="tel"
                 placeholder="081234567890"
                 class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:border-indigo-500 focus:ring-0 outline-none transition-colors"
-                :class="form.errors.phone ? 'border-red-400' : ''"
+                :class="errors.phone ? 'border-red-400' : ''"
             />
-            <p v-if="form.errors.phone" class="text-xs text-red-500 mt-1.5">{{ form.errors.phone }}</p>
+            <p v-if="errors.phone" class="text-xs text-red-500 mt-1.5">{{ errors.phone }}</p>
         </div>
 
         <div v-if="channels.length === 0" class="text-sm text-red-500 mb-6">
@@ -75,7 +151,7 @@ function payNow() {
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 text-left max-h-60 overflow-y-auto pr-2">
-            <div v-for="channel in channels" :key="channel.code" 
+            <div v-for="channel in channels" :key="channel.code"
                  @click="selectChannel(channel.code)"
                  class="border-2 rounded-xl p-3 cursor-pointer flex items-center gap-3 transition-all"
                  :class="form.method === channel.code ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'">
@@ -86,12 +162,12 @@ function payNow() {
             </div>
         </div>
 
-        <div v-if="form.errors.error" class="text-sm text-red-500 mb-4 bg-red-50 p-2 rounded">
-            {{ form.errors.error }}
+        <div v-if="errors.error || errors.method" class="text-sm text-red-500 mb-4 bg-red-50 p-2 rounded">
+            {{ errors.error || errors.method }}
         </div>
 
-        <button @click="payNow" :disabled="form.processing || !form.method" class="w-full py-3.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50">
-            <span v-if="form.processing">Membuka Halaman Pembayaran...</span>
+        <button @click="payNow" :disabled="submitting || !form.method" class="w-full py-3.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50">
+            <span v-if="submitting">Membuka Halaman Pembayaran...</span>
             <span v-else>Bayar Sekarang</span>
         </button>
 
