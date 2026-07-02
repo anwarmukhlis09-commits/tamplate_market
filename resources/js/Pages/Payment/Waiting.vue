@@ -22,6 +22,14 @@ const secondsLeft = ref(null);
 const polling = ref(true);
 const simulating = ref(null); // 'PAID' | 'FAILED' | null
 
+// Verifying mode: true kalau user baru balik dari Tripay (return_url punya
+// query param tripay_reference). UI kasih banner "Memverifikasi pembayaran..."
+// dan pakai aggressive polling tiap 1 detik (30x) supaya feedback cepat saat
+// callback Tripay sudah masuk.
+const verifying = ref(false);
+const pollCount = ref(0);
+const maxAggressivePolls = 30; // 30 × 1 detik = 30 detik aggressive window
+
 // ═══ Helpers ═══
 function formatRupiah(n) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
@@ -78,8 +86,22 @@ function updateCountdown() {
 
 // ═══ Polling status ═══
 let pollTimer = null;
+
+function startPolling(intervalMs) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(pollStatus, intervalMs);
+}
+
 async function pollStatus() {
     if (!polling.value) return;
+    pollCount.value += 1;
+
+    // Setelah aggressive window selesai, switch ke normal interval (3 detik)
+    if (verifying.value && pollCount.value >= maxAggressivePolls) {
+        verifying.value = false;
+        startPolling(3000);
+    }
+
     try {
         const r = await fetch(route('payment.status', { order: props.orderId }), {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -167,8 +189,16 @@ function onStorage(e) {
 onMounted(() => {
     updateCountdown();
     countdownTimer = setInterval(updateCountdown, 1000);
+
+    // Detect kalau user balik dari Tripay (return_url include tripay_reference).
+    // Kalau ada, aktifkan aggressive polling 1 detik selama 30 detik pertama
+    // supaya callback yang sudah masuk dari Tripay langsung ketangkep.
+    const url = new URL(window.location.href);
+    const fromTripay = url.searchParams.has('tripay_reference');
+    verifying.value = fromTripay;
+
     pollStatus(); // Immediate poll saat mount
-    pollTimer = setInterval(pollStatus, 3000);
+    startPolling(fromTripay ? 1000 : 3000);
 
     window.addEventListener('focus', onFocusOrVisible);
     document.addEventListener('visibilitychange', onFocusOrVisible);
@@ -243,6 +273,15 @@ onUnmounted(() => {
                 <span class="font-mono font-bold tabular-nums" :class="isUrgent ? 'text-rose-600' : 'text-slate-800'">
                     {{ countdown }}
                 </span>
+            </div>
+        </div>
+
+        <!-- ═══ Verifying banner (muncul saat user balik dari Tripay) ═══ -->
+        <div v-if="verifying && state === 'waiting'" class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 text-left flex items-start gap-3">
+            <svg class="w-5 h-5 text-emerald-600 animate-spin shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+            <div class="flex-1">
+                <p class="text-sm font-bold text-emerald-700">Memverifikasi pembayaran...</p>
+                <p class="text-xs text-emerald-600 mt-0.5">Kami sedang mengkonfirmasi pembayaran Anda di Tripay. Halaman ini akan otomatis berubah ke tampilan sukses dalam beberapa detik.</p>
             </div>
         </div>
 
