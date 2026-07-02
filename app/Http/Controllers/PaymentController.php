@@ -37,6 +37,19 @@ class PaymentController extends Controller
             return redirect()->route('payment.success', ['order' => $order]);
         }
 
+        // Admin bypass: kalau admin reach payment page (mis. order pending lama
+        // atau direct URL), auto-complete + redirect ke success. Mencegah admin
+        // stuck di UI pilih channel yang tidak perlu.
+        if ($request->user() && $request->user()->isAdmin()) {
+            $orderModel->update([
+                'status' => 'completed',
+                'paid_at' => now(),
+                'payment_method' => 'admin_bypass',
+            ]);
+            return redirect()->route('payment.success', ['order' => $order])
+                ->with('info', 'Admin mode: order otomatis dilunaskan.');
+        }
+
         // Kalau order sudah kadaluarsa / gagal, arahkan ke failed page
         if (in_array($orderModel->status, ['expired', 'failed'], true)) {
             return redirect()->route('payment.failed', ['order' => $order]);
@@ -71,6 +84,24 @@ class PaymentController extends Controller
         }
 
         if ($orderModel->status === 'completed') {
+            return redirect()->route('payment.success', ['order' => $order]);
+        }
+
+        // Admin bypass: SKIP Tripay call — langsung set completed + redirect.
+        // Mencegah admin dari membuat transaksi Tripay nyata yang tidak perlu.
+        if ($request->user() && $request->user()->isAdmin()) {
+            $orderModel->update([
+                'status' => 'completed',
+                'paid_at' => now(),
+                'payment_method' => 'admin_bypass',
+            ]);
+
+            // Inertia/JSON request: return JSON {redirect} supaya Vue bisa navigate
+            if ($request->header('X-Inertia') || $request->wantsJson()) {
+                return response()->json([
+                    'redirect' => route('payment.success', ['order' => $order]),
+                ]);
+            }
             return redirect()->route('payment.success', ['order' => $order]);
         }
 

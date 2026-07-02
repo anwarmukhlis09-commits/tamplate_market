@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\Template;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,9 +20,22 @@ class CheckoutController extends Controller
      * Tampilkan halaman checkout untuk template tertentu.
      * Route: GET /checkout/{id}
      */
-    public function show(Request $request, int $id): Response
+    public function show(Request $request, int $id): Response|RedirectResponse
     {
         $template = Template::where('status', 'published')->findOrFail($id);
+        $user = $request->user();
+
+        // Admin bypass: skip form checkout, auto-create completed order + redirect
+        // ke template detail (yang punya tombol Download). Konsisten dengan admin
+        // experience (semua fitur gratis) + audit trail di DB.
+        if ($user && $user->isAdmin()) {
+            $this->autoCreateAdminOrder($user, $template);
+            // Pakai route() ke template download — admin otomatis ke halaman
+            // download, atau fallback ke template detail URL. Route /template/{id}
+            // adalah closure tanpa name, jadi pakai URL path langsung.
+            return redirect("/template/{$template->id}")
+                ->with('info', 'Admin mode: akses template gratis.');
+        }
 
         // Auto-add template ke cart. Alur normal: user dari editor/download
         // di-redirect ke /checkout/{id} — di titik ini user BELUM add-to-cart
@@ -35,7 +50,7 @@ class CheckoutController extends Controller
 
         return Inertia::render('Checkout/Show', [
             'template' => $this->transformTemplate($template),
-            'auth' => ['user' => $request->user()],
+            'auth' => ['user' => $user],
         ]);
     }
 
@@ -48,6 +63,14 @@ class CheckoutController extends Controller
         $template = Template::where('status', 'published')->findOrFail($id);
         $user = $request->user();
 
+        // Admin bypass: skip payment flow, auto-create completed order + redirect
+        // ke success page (yang akan auto-trigger download).
+        if ($user && $user->isAdmin()) {
+            $order = $this->autoCreateAdminOrder($user, $template);
+            return redirect()->route('payment.success', ['order' => $order->order_id])
+                ->with('success', 'Admin mode: template otomatis terbuka.');
+        }
+
         // Safety: kalau show() di-skip (mis. POST langsung), tetap add ke cart
         $cart = (array) $request->session()->get('cart', []);
         if (! in_array($template->id, $cart, true)) {
@@ -55,8 +78,8 @@ class CheckoutController extends Controller
             $request->session()->put('cart', $cart);
         }
 
-        if (\App\Models\Order::isUserPaid($user->id, $template->id)) {
-            $existingOrder = \App\Models\Order::where('user_id', $user->id)
+        if (Order::isUserPaid($user->id, $template->id)) {
+            $existingOrder = Order::where('user_id', $user->id)
                 ->where('template_id', $template->id)
                 ->where('status', 'completed')
                 ->first();
@@ -66,7 +89,7 @@ class CheckoutController extends Controller
 
         $orderId = 'ORD-' . now()->format('Ymd') . '-' . $template->id . '-' . $user->id;
 
-        \App\Models\Order::updateOrCreate(
+        Order::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'template_id' => $template->id,
@@ -80,6 +103,25 @@ class CheckoutController extends Controller
 
         return redirect()->route('payment.show', ['order' => $orderId])
             ->with('success', 'Order dibuat. Silakan pilih metode pembayaran.');
+    }
+
+    /**
+     * Auto-create completed order untuk admin (audit trail + muncul di
+     * /admin/transactions dengan payment_method='admin_bypass').
+     * Idempotent: kalau sudah ada order untuk user+template, no-op.
+     */
+    private function autoCreateAdminOrder(User $user, Template $template): Order
+    {
+        return Order::updateOrCreate(
+            ['user_id' => $user->id, 'template_id' => $template->id],
+            [
+                'order_id' => 'ADMIN-' . now()->format('Ymd') . '-' . $template->id . '-' . $user->id,
+                'status' => 'completed',
+                'amount' => 0,
+                'payment_method' => 'admin_bypass',
+                'paid_at' => now(),
+            ]
+        );
     }
 
     private function transformTemplate(Template $t): array
