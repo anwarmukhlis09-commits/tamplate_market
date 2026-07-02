@@ -17,12 +17,21 @@ class Order extends Model
         'status',
         'amount',
         'payment_method',
+        'tripay_reference',
+        'tripay_checkout_url',
+        'tripay_pay_code',
+        'tripay_pay_url',
+        'tripay_qr_string',
         'paid_at',
+        'expired_at',
+        'callback_payload',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'expired_at' => 'datetime',
+        'callback_payload' => 'array',
     ];
 
     public function user(): BelongsTo
@@ -58,5 +67,25 @@ class Order extends Model
             ->pluck('template_id')
             ->map(fn($id) => (int) $id)
             ->all();
+    }
+
+    /**
+     * Cek apakah order sudah lewat expired_at (kalau ada).
+     * Server-side authoritative — countdown UI di Waiting.vue hanya untuk UX.
+     */
+    public function isExpired(): bool
+    {
+        return $this->expired_at !== null && now()->greaterThan($this->expired_at);
+    }
+
+    /**
+     * Sisa detik sampai expired. Negatif kalau sudah lewat.
+     */
+    public function secondsUntilExpiry(): ?int
+    {
+        if ($this->expired_at === null) {
+            return null;
+        }
+        return (int) now()->diffInSeconds($this->expired_at, false);
     }
 }

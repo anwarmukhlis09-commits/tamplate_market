@@ -1267,6 +1267,14 @@ Route::middleware(['auth'])->group(function () {
         ->name('payment.show');
     Route::post('/payment/{order}/process', [\App\Http\Controllers\PaymentController::class, 'process'])
         ->name('payment.process');
+    Route::get('/payment/{order}/waiting', [\App\Http\Controllers\PaymentController::class, 'waiting'])
+        ->name('payment.waiting');
+    Route::get('/payment/{order}/status', [\App\Http\Controllers\PaymentController::class, 'status'])
+        ->name('payment.status');
+    Route::get('/payment/{order}/failed', [\App\Http\Controllers\PaymentController::class, 'failed'])
+        ->name('payment.failed');
+    Route::post('/payment/{order}/simulate-callback', [\App\Http\Controllers\PaymentController::class, 'simulateCallback'])
+        ->name('payment.simulate-callback');
     Route::get('/payment/{order}/success', [\App\Http\Controllers\PaymentController::class, 'success'])
         ->name('payment.success');
 

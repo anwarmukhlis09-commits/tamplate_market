@@ -55,13 +55,31 @@ class CheckoutController extends Controller
             $request->session()->put('cart', $cart);
         }
 
-        // Placeholder: kalau ada model Order, simpan di sini
-        // Order::create([...])
-        // Untuk sekarang, simulate order ID dan redirect ke payment
+        if (\App\Models\Order::isUserPaid($user->id, $template->id)) {
+            $existingOrder = \App\Models\Order::where('user_id', $user->id)
+                ->where('template_id', $template->id)
+                ->where('status', 'completed')
+                ->first();
+            return redirect()->route('payment.success', ['order' => $existingOrder->order_id])
+                ->with('info', 'Anda sudah membeli template ini.');
+        }
+
         $orderId = 'ORD-' . now()->format('Ymd') . '-' . $template->id . '-' . $user->id;
 
+        \App\Models\Order::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'template_id' => $template->id,
+            ],
+            [
+                'order_id' => $orderId,
+                'status' => 'pending',
+                'amount' => $template->price,
+            ]
+        );
+
         return redirect()->route('payment.show', ['order' => $orderId])
-            ->with('success', 'Order dibuat. Silakan selesaikan pembayaran.');
+            ->with('success', 'Order dibuat. Silakan pilih metode pembayaran.');
     }
 
     private function transformTemplate(Template $t): array

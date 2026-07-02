@@ -2,108 +2,277 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Services\TripayService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * Payment Controller — payment gateway simulation.
- * Route {order} berisi order ID, scope ke order spesifik.
- *
- * SECURITY: Pada produksi, /process TIDAK boleh dipakai untuk mark-as-paid dari
- * client. Payment callback HARUS datang dari server gateway (Midtrans webhook)
- * yang sudah verify signature & status transaksi. Endpoint ini sementara
- * untuk simulasi & dev — TETAP ada validasi ownership supaya attacker tidak
- * bisa mark template ID sembarang sebagai paid.
- */
 class PaymentController extends Controller
 {
+    protected $tripayService;
+
+    public function __construct(TripayService $tripayService)
+    {
+        $this->tripayService = $tripayService;
+    }
+
     /**
      * Tampilkan halaman payment untuk order tertentu.
      * Route: GET /payment/{order}
      */
-    public function show(Request $request, string $order): Response
+    public function show(Request $request, string $order)
     {
-        // Pastikan order milik user yang sedang login
-        if (! $this->orderBelongsToUser($order, $request->user()?->id)) {
+        // Pastikan order ada di DB dan milik user yang sedang login
+        $orderModel = Order::where('order_id', $order)->where('user_id', $request->user()?->id)->first();
+
+        if (! $orderModel) {
             abort(403, 'Order tidak ditemukan atau bukan milik Anda.');
         }
+
+        if ($orderModel->status === 'completed') {
+            return redirect()->route('payment.success', ['order' => $order]);
+        }
+
+        // Kalau order sudah kadaluarsa / gagal, arahkan ke failed page
+        if (in_array($orderModel->status, ['expired', 'failed'], true)) {
+            return redirect()->route('payment.failed', ['order' => $order]);
+        }
+
+        // Ambil payment channels dari Tripay
+        $channels = $this->tripayService->getPaymentChannels();
 
         return Inertia::render('Payment/Show', [
             'orderId' => $order,
             'user' => $request->user(),
+            'channels' => $channels,
+            'amount' => $orderModel->amount,
         ]);
     }
 
     /**
-     * Proses payment (simulasi — produksi: integrasikan Midtrans callback).
+     * Proses payment: buat transaksi Tripay dan redirect ke checkout URL.
      * Route: POST /payment/{order}/process
      */
     public function process(Request $request, string $order): RedirectResponse
     {
-        // Placeholder: integrasikan dengan Midtrans API
-        // $response = Midtrans::charge([...]);
-        // Pada produksi, payment status di-set dari webhook Midtrans, BUKAN dari
-        // request ini. Endpoint ini sementara diizinkan dengan strict validation
-        // supaya user demo bisa alur lengkap.
+        $request->validate([
+            'method' => 'required|string',
+            'phone'  => 'required|string|min:10|max:15',
+        ]);
 
-        if (! preg_match('/^ORD-\d{8}-(\d+)-(\d+)$/', $order, $m)) {
-            abort(400, 'Format order ID tidak valid.');
+        $orderModel = Order::where('order_id', $order)->where('user_id', $request->user()?->id)->first();
+
+        if (! $orderModel) {
+            abort(403, 'Order tidak ditemukan atau bukan milik Anda.');
         }
 
-        $templateId = (int) $m[1];
-        $orderUserId = (int) $m[2];
-
-        // Validasi 1: order harus milik user yang sedang login
-        if (! $request->user() || (int) $request->user()->id !== $orderUserId) {
-            abort(403, 'Order ini bukan milik Anda.');
+        if ($orderModel->status === 'completed') {
+            return redirect()->route('payment.success', ['order' => $order]);
         }
 
-        // Validasi 2: template harus exist
-        if (! \App\Models\Template::where('id', $templateId)->exists()) {
-            abort(404, 'Template tidak ditemukan.');
+        $template = $orderModel->template;
+
+        // Normalisasi phone ke format 62xxx (Tripay requirement)
+        $phone = preg_replace('/\D/', '', $request->input('phone'));
+        if (str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        } elseif (! str_starts_with($phone, '62')) {
+            $phone = '62' . $phone;
         }
 
-        // Validasi 3: pastikan template ada di cart user (anti-spam mark-paid
-        // untuk template yang user tidak niat beli)
-        $cart = (array) $request->session()->get('cart', []);
-        if (! in_array($templateId, $cart, true)) {
-            abort(403, 'Template ini tidak ada di keranjang Anda.');
-        }
+        $customer = [
+            'name' => $request->user()->name,
+            'email' => $request->user()->email,
+            'phone' => $phone,
+        ];
 
-        // Tandai sebagai paid — PERSIST KE DB (single source of truth)
-        // agar status pembelian tetap ada walaupun user logout/login ulang.
-        // Idempotent: pakai updateOrCreate biar tidak error kalau order double-submit.
-        $template = \App\Models\Template::find($templateId);
-        $orderModel = \App\Models\Order::updateOrCreate(
+        $orderItems = [
             [
-                'user_id' => $orderUserId,
-                'template_id' => $templateId,
-            ],
-            [
-                'order_id' => $order,
-                'status' => 'completed',
-                'amount' => $template ? $template->price : 0,
-                'payment_method' => 'simulated',
-                'paid_at' => now(),
+                'sku' => $template->slug,
+                'name' => $template->name,
+                'price' => (int) $orderModel->amount,
+                'quantity' => 1,
             ]
+        ];
+
+        // Return URL → Waiting.vue, BUKAN langsung success. Status real-time
+        // diputuskan dari polling di Waiting page, bukan dari return_url.
+        $returnUrl = route('payment.waiting', ['order' => $order]);
+
+        try {
+            $transaction = $this->tripayService->createTransaction(
+                $request->input('method'),
+                $orderModel->order_id,
+                (int) $orderModel->amount,
+                $customer,
+                $orderItems,
+                $returnUrl
+            );
+
+            // Simpan payment method + metadata Tripay ke DB.
+            // expired_at_normalized sudah dinormalisasi ke Carbon timestamp oleh service.
+            $expiredAt = $transaction['expired_at_normalized'] ?? null;
+
+            $orderModel->update([
+                'payment_method' => $request->input('method'),
+                'tripay_reference' => $transaction['reference'] ?? null,
+                'tripay_checkout_url' => $transaction['checkout_url'] ?? null,
+                'tripay_pay_code' => $transaction['pay_code'] ?? null,
+                'tripay_pay_url' => $transaction['pay_url'] ?? null,
+                'tripay_qr_string' => $transaction['qr_string'] ?? ($transaction['qr_url'] ?? null),
+                'expired_at' => $expiredAt,
+            ]);
+
+            return redirect($transaction['checkout_url']);
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Halaman menunggu pembayaran — polling status real-time.
+     * Route: GET /payment/{order}/waiting
+     */
+    public function waiting(Request $request, string $order): Response|RedirectResponse
+    {
+        $orderModel = Order::where('order_id', $order)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        // Shortcut: kalau sudah terminal, langsung redirect
+        if ($orderModel->status === 'completed') {
+            return redirect()->route('payment.success', ['order' => $order]);
+        }
+        if (in_array($orderModel->status, ['expired', 'failed'], true)) {
+            return redirect()->route('payment.failed', ['order' => $order]);
+        }
+
+        return Inertia::render('Payment/Waiting', [
+            'orderId' => $order,
+            'amount' => (int) $orderModel->amount,
+            'paymentMethod' => $orderModel->payment_method,
+            'expiredAt' => $orderModel->expired_at?->toIso8601String(),
+            'tripayReference' => $orderModel->tripay_reference,
+            'tripayCheckoutUrl' => $orderModel->tripay_checkout_url,
+            'tripayPayCode' => $orderModel->tripay_pay_code,
+            'tripayQrString' => $orderModel->tripay_qr_string,
+            'debugEnabled' => config('app.debug'),
+            'template' => [
+                'id' => $orderModel->template->id,
+                'name' => $orderModel->template->name,
+            ],
+        ]);
+    }
+
+    /**
+     * Endpoint polling status (return JSON).
+     * Route: GET /payment/{order}/status
+     */
+    public function status(Request $request, string $order): JsonResponse
+    {
+        $orderModel = Order::where('order_id', $order)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        return response()->json([
+            'status' => $orderModel->status,
+            'expired_at' => $orderModel->expired_at?->toIso8601String(),
+            'is_expired' => $orderModel->isExpired(),
+            'paid_at' => $orderModel->paid_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Halaman pembayaran gagal / kadaluarsa.
+     * Route: GET /payment/{order}/failed
+     */
+    public function failed(Request $request, string $order): \Symfony\Component\HttpFoundation\Response
+    {
+        $orderModel = Order::where('order_id', $order)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        return Inertia::render('Payment/Failed', [
+            'orderId' => $order,
+            'status' => $orderModel->status,
+            'amount' => (int) $orderModel->amount,
+            'paymentMethod' => $orderModel->payment_method,
+            'template' => [
+                'id' => $orderModel->template->id,
+                'name' => $orderModel->template->name,
+            ],
+        ]);
+    }
+
+    /**
+     * Simulasi callback (HANYA untuk development/testing).
+     * Route: POST /payment/{order}/simulate-callback
+     * Refused kalau APP_DEBUG=false.
+     */
+    public function simulateCallback(Request $request, string $order): RedirectResponse
+    {
+        if (! config('app.debug')) {
+            abort(403, 'Simulasi callback hanya tersedia di mode development.');
+        }
+
+        $request->validate([
+            'status' => 'required|in:PAID,EXPIRED,FAILED',
+        ]);
+
+        $orderModel = Order::where('order_id', $order)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $ok = $this->tripayService->simulateCallback(
+            $orderModel->order_id,
+            $request->input('status')
         );
 
-        // Backward compat: tetap tulis di session supaya flow yang existing
-        // (mis. PaymentController::success() pakai session) tidak langsung break.
-        $paid = (array) $request->session()->get('paid_templates', []);
-        if (! in_array($templateId, $paid, true)) {
-            $paid[] = $templateId;
-            $request->session()->put('paid_templates', $paid);
+        if (! $ok) {
+            return back()->withErrors(['error' => 'Gagal simulasi callback (order tidak ditemukan atau status tidak valid).']);
         }
 
-        // Bersihkan dari cart
-        $cart = array_values(array_diff($cart, [$templateId]));
-        $request->session()->put('cart', $cart);
+        return back()->with('info', "Simulasi callback " . $request->input('status') . " berhasil — order sekarang: " . strtolower($request->input('status')));
+    }
 
-        return redirect()->route('payment.success', ['order' => $order])
-            ->with('success', 'Pembayaran berhasil!');
+    /**
+     * Webhook callback dari Tripay.
+     * Route: POST /api/tripay/callback
+     *
+     * Catatan: middleware group = 'api' (NO session, NO CSRF).
+     * Jadi cleanup cart TIDAK dilakukan di sini — dipindah ke success()
+     * yang jalan di web group (session aktif).
+     */
+    public function callback(Request $request)
+    {
+        $jsonPayload = $request->getContent();
+        $signature = $request->server('HTTP_X_CALLBACK_SIGNATURE');
+
+        if (! $this->tripayService->validateSignature($signature, $jsonPayload)) {
+            Log::warning('Tripay callback: invalid signature');
+            return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
+        }
+
+        $data = json_decode($jsonPayload);
+
+        if (! isset($data->merchant_ref, $data->status)) {
+            return response()->json(['success' => false, 'message' => 'Payload tidak lengkap'], 400);
+        }
+
+        $order = Order::where('order_id', $data->merchant_ref)->first();
+        if (! $order) {
+            Log::warning('Tripay callback: order not found', ['ref' => $data->merchant_ref]);
+            return response()->json(['success' => false, 'message' => 'Order tidak ditemukan'], 404);
+        }
+
+        $this->tripayService->applyStatusToOrder($order, $data->status, (array) $data);
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -112,51 +281,30 @@ class PaymentController extends Controller
      */
     public function success(Request $request, string $order): Response
     {
-        // Validasi ownership (template info bersifat publik, tapi order tidak)
-        $template = ['id' => null, 'name' => 'Template', 'slug' => null];
-        $templateId = null;
-        if (preg_match('/^ORD-\d{8}-(\d+)-(\d+)$/', $order, $m)) {
-            $templateId = (int) $m[1];
-            $orderUserId = (int) $m[2];
+        $orderModel = Order::where('order_id', $order)->where('user_id', $request->user()?->id)->firstOrFail();
 
-            // Ownership check: hanya owner order yang bisa lihat success page detail
-            if (! $request->user() || (int) $request->user()->id !== $orderUserId) {
-                abort(403, 'Order ini bukan milik Anda.');
-            }
-
-            $t = \App\Models\Template::find($templateId);
-            if ($t) {
-                $template = [
-                    'id' => $t->id,
-                    'name' => $t->name,
-                    'slug' => $t->slug,
-                ];
+        // Cart cleanup dipindah dari callback() ke sini karena success() ada di
+        // web group (session aktif), sedangkan callback() ada di api group (no session).
+        if ($orderModel->status === 'completed') {
+            $cart = (array) $request->session()->get('cart', []);
+            if (in_array($orderModel->template_id, $cart, true)) {
+                $cart = array_values(array_diff($cart, [$orderModel->template_id]));
+                $request->session()->put('cart', $cart);
             }
         }
 
-        // canEdit: cek dari DB (single source of truth) bukan session,
-        // supaya status pembelian tetap valid walaupun session expired.
-        $user = $request->user();
-        $canEdit = $templateId !== null && $user && \App\Models\Order::isUserPaid($user->id, $templateId);
+        $template = [
+            'id' => $orderModel->template->id,
+            'name' => $orderModel->template->name,
+            'slug' => $orderModel->template->slug,
+        ];
+
+        $canEdit = $orderModel->status === 'completed';
 
         return Inertia::render('Payment/Success', [
             'orderId' => $order,
             'template' => $template,
             'canEdit' => $canEdit,
         ]);
-    }
-
-    /**
-     * Cek apakah order (ORD-...) milik user tertentu.
-     */
-    private function orderBelongsToUser(string $order, ?int $userId): bool
-    {
-        if (! $userId) {
-            return false;
-        }
-        if (preg_match('/^ORD-\d{8}-(\d+)-(\d+)$/', $order, $m)) {
-            return (int) $m[2] === $userId;
-        }
-        return false;
     }
 }
