@@ -13,8 +13,10 @@ const finalPrice = computed(() => props.template.discountPrice || props.template
 const tax = computed(() => Math.round(finalPrice.value * 0.11));
 const total = computed(() => finalPrice.value + tax.value);
 
+// Payment method fixed ke Tripay — semua channel (BCA VA, QRIS, DANA, Alfamart, dll)
+// dipilih di halaman /payment/{order} setelah order dibuat. Tidak ada pilihan
+// di checkout karena tidak ada gunanya — semua redirect ke Tripay anyway.
 const form = useForm({
-    payment_method: 'midtrans',
     voucher_code: '',
 });
 
@@ -71,34 +73,26 @@ function submit() {
                 <!-- Payment method -->
                 <form @submit.prevent="submit" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <h2 class="text-sm font-bold text-slate-900 mb-3">Metode Pembayaran</h2>
-                    <div class="space-y-2.5">
-                        <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors">
-                            <input v-model="form.payment_method" type="radio" value="midtrans" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-slate-800">Midtrans Payment Gateway</p>
-                                <p class="text-xs text-slate-500">Transfer bank, e-wallet, kartu kredit</p>
+
+                    <!-- Tripay info box — semua pembayaran diproses via Tripay.
+                         User pilih channel spesifik (BCA VA, QRIS, DANA, Alfamart, dll)
+                         di halaman berikutnya. -->
+                    <div class="flex items-start gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center shrink-0 border border-indigo-100">
+                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-sm font-bold text-slate-900">Tripay Payment Gateway</p>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">Aman</span>
                             </div>
-                            <span class="text-xs font-bold text-indigo-600">Direkomendasikan</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors">
-                            <input v-model="form.payment_method" type="radio" value="dana" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-slate-800">DANA</p>
-                                <p class="text-xs text-slate-500">Saldo DANA</p>
-                            </div>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors">
-                            <input v-model="form.payment_method" type="radio" value="ovo" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-slate-800">OVO</p>
-                                <p class="text-xs text-slate-500">Saldo OVO</p>
-                            </div>
-                        </label>
+                            <p class="text-xs text-slate-600 leading-relaxed">Pembayaran diproses via Tripay. Anda bisa pilih metode favorit di langkah berikutnya: <span class="font-semibold text-slate-700">BCA VA, QRIS, DANA, Alfamart, Alfamidi, Indomaret, Mandiri VA</span>, dan lainnya.</p>
+                        </div>
                     </div>
 
                     <button type="submit" :disabled="form.processing" class="mt-5 w-full py-3.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md disabled:opacity-50 transition-colors">
                         <span v-if="form.processing">Memproses...</span>
-                        <span v-else>Bayar Sekarang — {{ formatPrice(total) }}</span>
+                        <span v-else>Lanjut ke Pembayaran — {{ formatPrice(total) }}</span>
                     </button>
                 </form>
             </div>
