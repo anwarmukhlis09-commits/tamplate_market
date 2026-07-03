@@ -1,14 +1,62 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout.vue';
 
-defineProps({
+const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
     laravelVersion: String,
     phpVersion: String,
     templates: { type: Array, default: () => [] },
+});
+
+// ── Showcase mockup: auto-rotate state ──
+const activeIndex = ref(0);
+let rotateTimer = null;
+
+function rotate() {
+    if (!props.templates?.length) return;
+    activeIndex.value = (activeIndex.value + 1) % props.templates.length;
+}
+
+function startRotation() {
+    if (rotateTimer) clearInterval(rotateTimer);
+    rotateTimer = setInterval(rotate, 4000);
+}
+
+function pauseRotation() {
+    if (rotateTimer) clearInterval(rotateTimer);
+    rotateTimer = null;
+}
+
+function onVisibilityChange() {
+    // Pause rotation saat tab hidden (hemat CPU/battery), resume saat visible
+    if (document.visibilityState === 'hidden') {
+        pauseRotation();
+    } else {
+        startRotation();
+    }
+}
+
+const activeTemplate = computed(() => props.templates?.[activeIndex.value] || null);
+
+// Floating cards: 4 next templates setelah main (no overlap dengan main kalau length >= 5)
+const floatingTemplates = computed(() => {
+    if (!props.templates?.length) return [];
+    return [1, 2, 3, 4].map(i => props.templates[(activeIndex.value + i) % props.templates.length]).filter(Boolean);
+});
+
+onMounted(() => {
+    if (props.templates?.length > 1) {
+        startRotation();
+        document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+});
+
+onUnmounted(() => {
+    pauseRotation();
+    document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
 // ── Category pills
@@ -183,85 +231,90 @@ function getGradient(seed) {
                         <div class="w-[380px] h-[380px] bg-gradient-to-br from-indigo-400 to-violet-500 rounded-full opacity-20 blur-3xl"></div>
                     </div>
 
-                    <!-- Center main mockup (largest, premium hotspot template) -->
+                    <!-- Center main mockup (dynamic template via activeIndex, cross-fade on rotate) -->
                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 sm:w-72 z-20">
-                        <div class="bg-slate-900 rounded-[2.2rem] p-2.5 shadow-2xl ring-1 ring-white/10">
-                            <div class="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-[1.8rem] aspect-[9/16] overflow-hidden flex flex-col">
-                                <!-- Best badge -->
-                                <div class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/95 backdrop-blur rounded-md text-[9px] font-bold uppercase tracking-wider text-white z-10">Best</div>
-                                <!-- Mini status bar -->
-                                <div class="flex items-center justify-between px-5 pt-3.5 text-white/80 text-[10px] font-semibold">
-                                    <span>9:41</span>
-                                    <div class="flex items-center gap-1">
-                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
-                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.077 13.308-5.077 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 01-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zM12.12 13.88a3 3 0 00-4.242 0 1 1 0 01-1.415-1.415 5 5 0 017.072 0 1 1 0 01-1.415 1.415zM9 16a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                        <Transition name="mockup-fade" mode="out-in">
+                            <div :key="activeIndex" class="bg-slate-900 rounded-[2.2rem] p-2.5 shadow-2xl ring-1 ring-white/10">
+                                <div class="relative rounded-[1.8rem] aspect-[9/16] overflow-hidden flex flex-col"
+                                     :class="activeTemplate?.imageUrl ? 'bg-slate-900' : `bg-gradient-to-br ${getGradient(activeTemplate?.name || '')}`">
+                                    <!-- Image layer (kalau admin upload preview_image) -->
+                                    <img v-if="activeTemplate?.imageUrl" :src="activeTemplate.imageUrl" :alt="activeTemplate.name" class="absolute inset-0 w-full h-full object-cover" />
+                                    <!-- Gradient overlay supaya text tetap kebaca di atas image -->
+                                    <div v-if="activeTemplate?.imageUrl" class="absolute inset-0 bg-gradient-to-b from-slate-900/30 via-slate-900/55 to-slate-900/85"></div>
+
+                                    <div class="relative flex-1 flex flex-col">
+                                        <!-- Badge dinamis dari template.badge -->
+                                        <div v-if="activeTemplate?.badge" class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/95 backdrop-blur rounded-md text-[9px] font-bold uppercase tracking-wider text-white z-10">{{ activeTemplate.badge }}</div>
+                                        <!-- Mini status bar (static) -->
+                                        <div class="flex items-center justify-between px-5 pt-3.5 text-white/80 text-[10px] font-semibold">
+                                            <span>9:41</span>
+                                            <div class="flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.077 13.308-5.077 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 01-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zM12.12 13.88a3 3 0 00-4.242 0 1 1 0 01-1.415-1.415 5 5 0 017.072 0 1 1 0 01-1.415 1.415zM9 16a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                                            </div>
+                                        </div>
+                                        <!-- Content -->
+                                        <div class="flex-1 px-5 pt-6 pb-5 text-white flex flex-col items-center text-center justify-center">
+                                            <div class="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-3 ring-1 ring-white/20">
+                                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>
+                                            </div>
+                                            <p class="text-[9px] uppercase tracking-widest opacity-70 mb-1">{{ activeTemplate?.category || 'Template' }}</p>
+                                            <h3 class="text-base font-bold mb-0.5 line-clamp-1">{{ activeTemplate?.name || 'Hotspot Login' }}</h3>
+                                            <p class="text-[9px] opacity-80 mb-3 line-clamp-2">{{ activeTemplate?.shortDesc || 'Premium Template' }}</p>
+                                            <div class="w-full max-w-[160px] space-y-1.5">
+                                                <div class="h-7 bg-white/15 backdrop-blur rounded-md border border-white/20"></div>
+                                                <div class="h-7 bg-white/15 backdrop-blur rounded-md border border-white/20"></div>
+                                                <div class="h-8 bg-white text-indigo-600 rounded-md font-bold text-[10px] flex items-center justify-center mt-2">Login</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <!-- Content -->
-                                <div class="flex-1 px-5 pt-6 pb-5 text-white flex flex-col items-center text-center justify-center">
-                                    <div class="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-3 ring-1 ring-white/20">
-                                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>
+                            </div>
+                        </Transition>
+                    </div>
+
+                    <!-- Floating cards: cycle through 4 next templates, position variants per idx -->
+                    <TransitionGroup name="floating-fade" tag="div" class="contents">
+                        <div v-for="(t, idx) in floatingTemplates" :key="t?.id || idx"
+                             :class="[
+                                 'absolute z-10 hover:rotate-0 transition-all duration-500',
+                                 idx === 0 ? 'top-4 left-0 w-36 sm:w-40 -rotate-6' : '',
+                                 idx === 1 ? 'top-12 right-0 w-36 sm:w-40 rotate-6' : '',
+                                 idx === 2 ? 'bottom-4 left-8 w-32 sm:w-36 rotate-3 hover:-rotate-2' : '',
+                                 idx === 3 ? 'bottom-8 right-8 w-32 sm:w-36 -rotate-3 hover:rotate-2' : '',
+                             ]">
+                            <div class="bg-slate-900 rounded-[1.5rem] p-2 shadow-xl ring-1 ring-white/10">
+                                <div class="relative rounded-[1.1rem] aspect-[9/16] overflow-hidden flex flex-col items-center justify-center p-3 text-white"
+                                     :class="t?.imageUrl
+                                         ? ''
+                                         : `bg-gradient-to-br ${
+                                             idx === 0 ? 'from-emerald-400 via-teal-500 to-cyan-600' :
+                                             idx === 1 ? 'from-rose-400 via-pink-500 to-fuchsia-600' :
+                                             idx === 2 ? 'from-amber-400 via-orange-500 to-red-500' :
+                                             'from-violet-500 via-purple-600 to-indigo-700'
+                                           }`">
+                                    <!-- Image layer (kalau ada) -->
+                                    <img v-if="t?.imageUrl" :src="t.imageUrl" :alt="t.name" class="absolute inset-0 w-full h-full object-cover" />
+                                    <div v-if="t?.imageUrl" class="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/70"></div>
+
+                                    <div class="relative">
+                                        <div v-if="idx === 0" class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">PRO</div>
+                                        <div v-else-if="idx === 1" class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">NEW</div>
+                                        <!-- Avatar/icon per position -->
+                                        <div v-if="idx === 0 || idx === 1" class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-1.5 text-xs font-bold">
+                                            {{ (t?.name || (idx === 0 ? 'H' : 'C')).charAt(0).toUpperCase() }}
+                                        </div>
+                                        <div v-else class="w-7 h-7 rounded-md bg-white/20 backdrop-blur flex items-center justify-center mb-1.5">
+                                            <svg v-if="idx === 2" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>
+                                            <svg v-else class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zM5 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zm5-15a7 7 0 00-7 7c0 2 .5 3.5 1.5 5L3 17h14l-1.5-3c1-1.5 1.5-3 1.5-5a7 7 0 00-7-7z"/></svg>
+                                        </div>
+                                        <p class="text-[11px] font-bold truncate max-w-full">{{ t?.name || (idx === 0 ? 'Hotel' : idx === 1 ? 'Cafe' : idx === 2 ? 'Voucher' : 'Gaming') }}</p>
+                                        <p class="text-[8px] opacity-80 truncate max-w-full">{{ t?.category || (idx === 0 ? 'Premium' : idx === 1 ? 'Voucher' : idx === 2 ? 'Template' : 'Game') }}</p>
                                     </div>
-                                    <p class="text-[9px] uppercase tracking-widest opacity-70 mb-1">Selamat Datang</p>
-                                    <h3 class="text-base font-bold mb-0.5">Hotspot Login</h3>
-                                    <p class="text-[9px] opacity-80 mb-3">Premium Template</p>
-                                    <div class="w-full max-w-[160px] space-y-1.5">
-                                        <div class="h-7 bg-white/15 backdrop-blur rounded-md border border-white/20"></div>
-                                        <div class="h-7 bg-white/15 backdrop-blur rounded-md border border-white/20"></div>
-                                        <div class="h-8 bg-white text-indigo-600 rounded-md font-bold text-[10px] flex items-center justify-center mt-2">Login</div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Floating card: Hotel (top-left, behind) -->
-                    <div class="absolute top-4 left-0 w-36 sm:w-40 z-10 transform -rotate-6 hover:rotate-0 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.5rem] p-2 shadow-xl ring-1 ring-white/10">
-                            <div class="bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-[1.1rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white relative">
-                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">PRO</div>
-                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-1.5 text-xs font-bold">H</div>
-                                <p class="text-[11px] font-bold">Hotel</p>
-                                <p class="text-[8px] opacity-80">Premium</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Floating card: Cafe (top-right, behind) -->
-                    <div class="absolute top-12 right-0 w-36 sm:w-40 z-10 transform rotate-6 hover:rotate-0 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.5rem] p-2 shadow-xl ring-1 ring-white/10">
-                            <div class="bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-600 rounded-[1.1rem] aspect-[9/16] flex flex-col items-center justify-center p-3 text-white relative">
-                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">NEW</div>
-                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center mb-1.5 text-xs font-bold">C</div>
-                                <p class="text-[11px] font-bold">Cafe</p>
-                                <p class="text-[8px] opacity-80">Voucher</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Floating card: Voucher (bottom-left) -->
-                    <div class="absolute bottom-4 left-8 w-32 sm:w-36 z-10 transform rotate-3 hover:-rotate-2 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.4rem] p-2 shadow-xl ring-1 ring-white/10">
-                            <div class="bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 rounded-[1rem] aspect-[9/16] flex flex-col items-center justify-center p-2 text-white">
-                                <div class="w-7 h-7 rounded-md bg-white/20 backdrop-blur flex items-center justify-center mb-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>
-                                </div>
-                                <p class="text-[10px] font-bold">Voucher</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Floating card: Gaming (bottom-right) -->
-                    <div class="absolute bottom-8 right-8 w-32 sm:w-36 z-10 transform -rotate-3 hover:rotate-2 transition-transform duration-500">
-                        <div class="bg-slate-900 rounded-[1.4rem] p-2 shadow-xl ring-1 ring-white/10">
-                            <div class="bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 rounded-[1rem] aspect-[9/16] flex flex-col items-center justify-center p-2 text-white">
-                                <div class="w-7 h-7 rounded-md bg-white/20 backdrop-blur flex items-center justify-center mb-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zM5 17a1 1 0 102 0v-1a1 1 0 10-2 0v1zm5-15a7 7 0 00-7 7c0 2 .5 3.5 1.5 5L3 17h14l-1.5-3c1-1.5 1.5-3 1.5-5a7 7 0 00-7-7z"/></svg>
-                                </div>
-                                <p class="text-[10px] font-bold">Gaming</p>
-                            </div>
-                        </div>
-                    </div>
+                    </TransitionGroup>
                 </div>
             </div>
         </div>
@@ -536,3 +589,30 @@ function getGradient(seed) {
     </div>
 </MarketplaceLayout>
 </template>
+
+<style scoped>
+/* Main mockup: cross-fade antara activeIndex transitions */
+.mockup-fade-enter-active,
+.mockup-fade-leave-active {
+    transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+}
+.mockup-fade-enter-from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+}
+.mockup-fade-leave-to {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+}
+
+/* Floating cards: cross-fade dengan subtle scale */
+.floating-fade-enter-active,
+.floating-fade-leave-active {
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+}
+.floating-fade-enter-from,
+.floating-fade-leave-to {
+    opacity: 0;
+    transform: scale(0.9);
+}
+</style>
