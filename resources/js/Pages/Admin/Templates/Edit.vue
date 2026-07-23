@@ -21,6 +21,7 @@ const form = useForm({
     allow_edit_before_checkout: props.template.allow_edit_before_checkout,
     preview_gradients: props.template.preview_gradients || [],
     preview_image: null,
+    showcase_image: null,
     template_files: [],
     relative_paths: [],
 });
@@ -39,13 +40,18 @@ function onFolderChange(e) {
     form.template_files = [];
     form.relative_paths = [];
     let total = 0;
+    const junkNames = ['.ds_store', 'thumbs.db', 'desktop.ini', '.gitignore'];
     files.forEach(f => {
+        const fileName = f.name.toLowerCase();
+        if (junkNames.includes(fileName) || fileName.startsWith('._')) {
+            return; // Skip OS metadata junk files
+        }
         const path = f.webkitRelativePath || f.name;
         form.template_files.push(f);
         form.relative_paths.push(path);
         total += f.size;
     });
-    folderCount.value = files.length;
+    folderCount.value = form.template_files.length;
     totalSize.value = formatSize(total);
 }
 
@@ -205,14 +211,63 @@ function formatPrice(p) { return 'Rp ' + p.toLocaleString('id-ID'); }
                     </div>
                 </div>
 
+                <!-- ═══ PANDUAN INTEGRASI LIVE EDITOR ═══ -->
+                <div class="bg-gradient-to-br from-indigo-50/90 to-slate-50 border border-indigo-100 rounded-2xl p-5 shadow-sm space-y-3">
+                    <div class="flex items-center gap-2 text-indigo-950 font-bold text-sm">
+                        <div class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span>Ketentuan &amp; Panduan Integrasi Live Editor</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Editor mendukung pengeditan otomatis di semua halaman &amp; seksi (seperti <b>Home, Paket, Kontak Admin, FAQ, dan Account</b>). Agar elemen HTML dapat terdeteksi oleh Live Editor, tambahkan atribut khusus berikut pada file <code>login.html</code>, <code>status.html</code>, atau <code>logout.html</code>:
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+                        <div class="bg-white p-3.5 rounded-xl border border-indigo-100/80 space-y-1.5 shadow-2xs">
+                            <div class="flex items-center gap-1.5 font-bold text-indigo-700">
+                                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                <span>Teks, Judul, &amp; Harga</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500">Otomatis membuat bidang teks di sidebar editor:</p>
+                            <code class="text-[11px] bg-slate-100 px-2 py-1 rounded text-indigo-900 font-mono block overflow-x-auto whitespace-nowrap">data-edit="admin_name"</code>
+                            <code class="text-[11px] bg-slate-100 px-2 py-1 rounded text-indigo-900 font-mono block overflow-x-auto whitespace-nowrap">data-label="Nama Admin"</code>
+                        </div>
+
+                        <div class="bg-white p-3.5 rounded-xl border border-indigo-100/80 space-y-1.5 shadow-2xs">
+                            <div class="flex items-center gap-1.5 font-bold text-indigo-700">
+                                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                <span>Gambar &amp; Background</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500">Untuk <code>&lt;img&gt;</code> src atau gambar latar belakang:</p>
+                            <code class="text-[11px] bg-slate-100 px-2 py-1 rounded text-indigo-900 font-mono block overflow-x-auto whitespace-nowrap">data-edit-image="brand_logo"</code>
+                            <code class="text-[11px] bg-slate-100 px-2 py-1 rounded text-indigo-900 font-mono block overflow-x-auto whitespace-nowrap">data-edit-bg="hero_bg"</code>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Upload (optional replace) -->
-                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
                     <h2 class="font-semibold text-slate-900">Upload File (opsional — kosongkan jika tidak ingin ganti)</h2>
-                    <div v-if="template.preview_image" class="text-xs text-slate-400 mb-2">Preview saat ini: {{ template.preview_image }}</div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Ganti Preview Image (PNG/JPG, max 2MB)</label>
+                    
+                    <!-- 1. Card Preview Image -->
+                    <div class="space-y-1.5">
+                        <div v-if="template.preview_image" class="text-xs text-slate-400">Card Preview saat ini: <code class="bg-slate-100 px-1 py-0.5 rounded">{{ template.preview_image }}</code></div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase">Ganti Gambar Card Preview (Single HP - PNG/JPG, max 2MB)</label>
                         <input type="file" accept="image/png,image/jpeg" @input="form.preview_image = $event.target.files[0]" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     </div>
+
+                    <hr class="border-slate-100" />
+
+                    <!-- 2. Showcase Image -->
+                    <div class="space-y-1.5">
+                        <div v-if="template.showcase_image" class="text-xs text-slate-400">Showcase saat ini: <code class="bg-slate-100 px-1 py-0.5 rounded">{{ template.showcase_image }}</code></div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase">Ganti Gambar Showcase (Kolase 5 HP - PNG/JPG, max 2MB)</label>
+                        <input type="file" accept="image/png,image/jpeg" @input="form.showcase_image = $event.target.files[0]" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
+
+                    <hr class="border-slate-100" />
+
                     <div v-if="template.zip_file" class="text-xs text-slate-400 mb-2">Folder saat ini: {{ template.zip_file }}</div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Ganti Folder Template (pilih folder hotspot)</label>

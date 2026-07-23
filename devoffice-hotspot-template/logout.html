@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-edit="logout_page_title" data-label="Judul Halaman Logout">Koneksi Terputus - DevOffice Hotspot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-container">
+      <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#logoGrad)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6366f1" />
+            <stop offset="1" stop-color="#06b6d4" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="brand-info">
+        <span class="brand-name" data-edit="brand_name" data-label="Nama Bisnis">DevOffice</span>
+        <span class="brand-sub" data-edit="brand_sub" data-label="Sub Nama Bisnis">Network Solution</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Logout Wrapper -->
+  <main class="status-wrapper">
+    <section class="status-card logout">
+      <div class="status-badge-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+
+      <h1 class="status-title" data-edit="logout_title" data-label="Judul Logout">Koneksi Terputus</h1>
+      <p class="status-desc" data-edit="logout_desc" data-label="Deskripsi Logout">Sesi internet Anda telah dinonaktifkan atau Anda telah keluar secara manual.</p>
+
+      <!-- Details List -->
+      <div class="details-grid">
+        <div class="detail-row">
+          <span>Username / Voucher</span>
+          <strong>$(username)</strong>
+        </div>
+        <div class="detail-row">
+          <span>IP Address</span>
+          <strong>$(ip)</strong>
+        </div>
+        <div class="detail-row">
+          <span>MAC Address</span>
+          <strong>$(mac)</strong>
+        </div>
+        <div class="detail-row">
+          <span>Lama Terhubung</span>
+          <strong>$(uptime)</strong>
+        </div>
+      </div>
+
+      <!-- Action Button to login again -->
+      <a class="action-btn btn-success" href="$(link-login)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <polyline points="10 17 15 12 10 7"></polyline>
+          <line x1="15" y1="12" x2="3" y2="12"></line>
+        </svg>
+        <span data-edit="login_again_btn_text" data-label="Teks Tombol Hubungkan Lagi">Hubungkan Kembali</span>
+      </a>
+
+      <p class="footer" data-edit="logout_footer" data-label="Footer Logout">Powered by DevOffice Network</p>
+    </section>
+  </main>
+
+</body>
+</html>

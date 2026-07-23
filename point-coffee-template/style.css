@@ -1,0 +1,566 @@
+/* Point Coffee Hotspot Portal - Premium CSS Stylesheet (100% Offline Compatible) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;950&display=swap');
+
+:root {
+    --forest-green: #004B23;
+    --forest-green-dark: #022c22;
+    --cream-bg: #F5EBE0;
+    --cream-light: #FDFBF7;
+    --coffee-brown: #4A3728;
+    --coffee-gold: #E6CCB2;
+    --coffee-gold-dark: #7F5539;
+    --coffee-gold-light: rgba(230, 204, 178, 0.5);
+    --white-glass: rgba(255, 255, 255, 0.75);
+    --white-border: rgba(255, 255, 255, 0.5);
+    --shadow-light: rgba(0, 0, 0, 0.08);
+    --shadow-forest: rgba(0, 75, 35, 0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, var(--coffee-gold) 0%, var(--cream-bg) 50%, var(--coffee-gold) 100%);
+    font-family: 'Poppins', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    color: var(--coffee-brown);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* CONTAINER TATA LETAK */
+header {
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.logo-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-container {
+    width: 80px;
+    height: 80px;
+    background-color: var(--forest-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.logo-container svg {
+    width: 44px;
+    height: 44px;
+    color: white;
+}
+
+.brand-title {
+    font-size: 24px;
+    font-weight: 950;
+    letter-spacing: 2px;
+    color: var(--forest-green);
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.brand-subtitle {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--coffee-gold-dark);
+    text-transform: uppercase;
+}
+
+/* KARTU UTAMA (GLASSMORPHISM) */
+.main-card {
+    width: 100%;
+    max-width: 380px;
+    background-color: var(--white-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--white-border);
+    border-radius: 32px;
+    padding: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.card-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: rgba(0, 75, 35, 0.1);
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--forest-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--forest-green);
+    line-height: 1.25;
+}
+
+.card-desc {
+    font-size: 12px;
+    color: var(--coffee-brown);
+    font-weight: 500;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* ERROR MESSAGE */
+.error-box {
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: #FEF2F2;
+    border: 1px solid #FEE2E2;
+    border-radius: 16px;
+    display: flex;
+    align-items: start;
+    gap: 10px;
+    font-size: 12px;
+    color: #991B1B;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.error-icon {
+    font-size: 14px;
+}
+
+/* TAB SWITCHER */
+.tab-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 6px;
+    background-color: var(--coffee-gold-light);
+    border-radius: 16px;
+    margin-bottom: 20px;
+    gap: 4px;
+}
+
+.tab-btn {
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--coffee-brown);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.tab-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.tab-btn.active {
+    background-color: white;
+    color: var(--forest-green);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* FORM & INPUT */
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--forest-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    margin-left: 4px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    color: rgba(0, 75, 35, 0.7);
+}
+
+.input-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 14px 16px 14px 44px;
+    background-color: white;
+    border: 1px solid var(--coffee-gold);
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--forest-green);
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    border-color: var(--forest-green);
+    box-shadow: 0 0 0 3px rgba(0, 75, 35, 0.15);
+}
+
+.uppercase-input {
+    text-transform: uppercase;
+}
+
+/* TOMBOL UTAMA */
+.btn-primary {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--forest-green);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(0, 75, 35, 0.1), 0 2px 4px -1px rgba(0, 75, 35, 0.06);
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+    margin-top: 12px;
+}
+
+.btn-primary:hover {
+    background-color: var(--forest-green-dark);
+    box-shadow: 0 10px 15px -3px rgba(0, 75, 35, 0.2);
+}
+
+/* LINK LAINNYA */
+.links-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.link-trial {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #B45309;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.link-trial hover {
+    color: #92400E;
+    text-decoration: underline;
+}
+
+.link-trial svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* DAFTAR TARIF WiFi */
+.pricing-section {
+    width: 100%;
+    max-width: 380px;
+    background-color: var(--forest-green);
+    border-radius: 32px;
+    padding: 24px;
+    color: white;
+    box-shadow: 0 20px 25px -5px rgba(0, 75, 35, 0.15);
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+.pricing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.pricing-title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--coffee-gold);
+}
+
+.pricing-badge {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.price-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.price-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.price-item:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.item-name {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--coffee-gold);
+    font-weight: 700;
+}
+
+.item-price {
+    font-size: 16px;
+    font-weight: 900;
+    color: #FACC15;
+}
+
+/* STRUK SESI AKTIF (RECEIPT STYLE) */
+.receipt-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.receipt-card::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 24px;
+    background-color: var(--cream-bg);
+    border-radius: 50%;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: #D1FAE5;
+    border: 1px solid #A7F3D0;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #065F46;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.receipt-title {
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--forest-green);
+    letter-spacing: 0.5px;
+}
+
+.receipt-subtitle {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--coffee-gold-dark);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.receipt-table {
+    border-top: 2px dashed var(--coffee-gold);
+    padding-top: 16px;
+    padding-bottom: 16px;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.row-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--coffee-gold-dark);
+    text-transform: uppercase;
+}
+
+.row-value {
+    font-weight: 700;
+    color: var(--coffee-brown);
+}
+
+.row-value.highlight {
+    color: var(--forest-green);
+}
+
+.time-box {
+    background-color: rgba(0, 75, 35, 0.05);
+    border: 1px solid rgba(0, 75, 35, 0.1);
+    padding: 10px 14px;
+    border-radius: 16px;
+}
+
+.time-box .row-label {
+    color: var(--forest-green);
+    font-weight: 800;
+}
+
+.time-box .row-value {
+    color: var(--forest-green);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.receipt-footer {
+    border-top: 2px dashed var(--coffee-gold);
+    padding-top: 20px;
+}
+
+.btn-danger {
+    width: 100%;
+    padding: 14px;
+    background-color: #DC2626;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1);
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+}
+
+.btn-danger:hover {
+    background-color: #B91C1C;
+    box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.2);
+}
+
+/* KARTU LOGOUT */
+.logout-icon {
+    width: 48px;
+    height: 48px;
+    background-color: #FEF3C7;
+    border: 1px solid #FDE68A;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: #D97706;
+}
+
+.logout-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.btn-back {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background-color: var(--forest-green);
+    color: white;
+    text-decoration: none;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 4px 6px -1px rgba(0, 75, 35, 0.1);
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+}
+
+.btn-back:hover {
+    background-color: var(--forest-green-dark);
+}
+
+/* FOOTER */
+footer {
+    width: 100%;
+    text-align: center;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--coffee-gold-dark);
+    letter-spacing: 1px;
+}
+
+.hidden {
+    display: none !important;
+}

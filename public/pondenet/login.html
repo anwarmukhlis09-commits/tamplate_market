@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PondeNet - Hotspot Login</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        var trialUrl = "$(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)";
+    </script>
+</head>
+<body data-edit-bg="body_bg" data-label="Latar Belakang Halaman">
+    <!-- Main Wrapper -->
+    <div class="page-wrapper">
+        <!-- Top Banner Header -->
+        <header class="top-banner" data-edit-bg="banner_background" data-label="Banner Atas Background">
+            <!-- Navigation Header -->
+            <div class="nav-container" data-edit-visible="show_navigation" data-label="Tampilkan Navigasi Header">
+                <!-- Logo -->
+                <div class="logo-container">
+                    <img src="logo.svg" alt="PondeNet Logo" class="brand-logo" data-edit-image="brand_logo" data-label="Logo Brand" data-edit-height="brand_logo_height" data-label-height="Tinggi Logo" style="height: 32px;">
+                </div>
+                <!-- Menu Links -->
+                <nav class="nav-menu">
+                    <a href="#about" class="nav-link" data-edit-link="about_link" data-label="Link About Us">About us</a>
+                    <a href="#package" class="nav-link" data-edit-link="package_link" data-label="Link Package">Package</a>
+                    <a href="#services" class="nav-link" data-edit-link="services_link" data-label="Link Services">Services</a>
+                </nav>
+                <!-- Contact Action Button -->
+                <div class="nav-actions">
+                    <a href="https://wa.me/6281234567890" class="btn-contact" data-edit-link="contact_link" data-label="Link Contact Us" data-edit-bg-color="contact_btn_bg" data-label-bg="Warna Tombol Contact Us" data-edit-color="contact_btn_text_color" data-label-color="Warna Teks Contact Us" data-edit="contact_text" data-label="Teks Tombol Contact">
+                        Contact us
+                    </a>
+                </div>
+            </div>
+
+            <!-- City Skyline Illustration (Loaded dynamically or as background element) -->
+            <div class="city-illustration-wrapper" data-edit-visible="show_city_illustration" data-label="Tampilkan Ilustrasi Kota">
+                <img src="city_banner.svg" alt="City Skyline" class="city-skyline-img">
+            </div>
+        </header>
+
+        <!-- Lower Section (White Background) -->
+        <main class="bottom-section">
+            <!-- Overlapping Sign In Card -->
+            <div class="auth-card-container">
+                <div class="auth-card">
+                    <h2 class="auth-title" data-edit="auth_title" data-label="Judul Sign In" data-edit-color="auth_title_color" data-label-color="Warna Judul Sign In">
+                        Sign In
+                    </h2>
+                    <p class="auth-subtitle" data-edit="auth_subtitle" data-label="Subjudul Sign In" data-edit-color="auth_subtitle_color" data-label-color="Warna Subjudul Sign In">
+                        Please enter username dan password
+                    </p>
+
+                    <!-- MikroTik Error Message Section -->
+                    <div class="error-container">
+                        $(if error)
+                        <div class="error-message" id="mikrotik-error">$(error)</div>
+                        $(endif)
+                        <div id="simulated-error" class="error-message" style="display: none;"></div>
+                    </div>
+
+                    <!-- Auth Tabs -->
+                    <div class="auth-tabs">
+                        <button type="button" class="tab-btn active" id="tab-member" data-edit-bg-color="active_tab_bg" data-label="Warna Tab Aktif" data-edit-color="active_tab_text_color" data-label-color="Warna Teks Tab Aktif">
+                            Member
+                        </button>
+                        <button type="button" class="tab-btn" id="tab-voucher">
+                            Voucher
+                        </button>
+                    </div>
+
+                    <!-- MikroTik Login Form -->
+                    <form name="login" action="$(link-login-only)" method="post" id="hotspot-form">
+                        <!-- MikroTik Hidden Inputs -->
+                        <input type="hidden" name="dst" value="http://www.google.com" />
+                        <input type="hidden" name="popup" value="false" />
+                        <input type="hidden" name="username" id="hidden-username" />
+                        <input type="hidden" name="password" id="hidden-password" />
+
+                        <!-- Form Fields Container -->
+                        <div class="fields-container">
+                            <!-- Username / Voucher Code Field -->
+                            <div class="input-group">
+                                <input type="text" id="auth-username" value="Pondenet" placeholder="Username" data-edit-placeholder="username_placeholder" data-label="Placeholder Username/Voucher" class="form-input">
+                            </div>
+
+                            <!-- Password Field (Hidden in Voucher Tab) -->
+                            <div class="input-group" id="password-group">
+                                <input type="password" id="auth-password" placeholder="Password" data-edit-placeholder="password_placeholder" data-label="Placeholder Password" class="form-input">
+                            </div>
+
+                            <!-- Show Password Checkbox (Hidden in Voucher Tab) -->
+                            <div class="checkbox-group" id="show-password-group">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-show-password">
+                                    <span class="checkmark"></span>
+                                    <span class="checkbox-label" data-edit="show_password_label" data-label="Teks Tampilkan Password" data-edit-color="show_password_label_color" data-label-color="Warna Teks Tampilkan Password">
+                                        Show password
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Action Submit Button -->
+                        <button type="submit" id="btn-submit" class="btn-submit" data-edit-bg-color="submit_btn_bg" data-label="Warna Tombol Submit" data-edit-color="submit_btn_text_color" data-label-color="Warna Teks Tombol Submit">
+                            Sign in
+                        </button>
+
+                        <!-- "Or" Separator -->
+                        <div class="separator-container" data-edit-visible="show_or_separator" data-label="Tampilkan Pemisah OR">
+                            <span class="separator-text" data-edit="or_text" data-label="Teks Pemisah OR" data-edit-color="or_text_color" data-label-color="Warna Teks Pemisah">Or</span>
+                        </div>
+
+                        <!-- Sign In with QR Button -->
+                        <button type="button" id="btn-qr" class="btn-qr-scan" data-edit-visible="show_qr_option" data-label="Tampilkan Opsi QR Code" data-edit-bg-color="qr_btn_bg" data-label-bg="Warna Tombol QR" data-edit-color="qr_btn_text_color" data-label-color="Warna Teks Tombol QR">
+                            <!-- QR Icon -->
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="qr-icon"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="7" y="17" width="2" height="2"></rect><rect x="17" y="17" width="2" height="2"></rect><rect x="7" y="7" width="2" height="2"></rect><rect x="17" y="7" width="2" height="2"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            Sign in with QR
+                        </button>
+
+                        <!-- Trial / Free Link -->
+                        <div class="trial-container" data-edit-visible="show_trial_link" data-label="Tampilkan Link Free Trial">
+                            <a href="#trial" id="link-trial" class="link-trial" data-edit-link="trial_action_link" data-label="Link Free Trial" data-edit-color="trial_link_color" data-label-color="Warna Teks Free Trial">
+                                Trial free WiFi here
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer Section -->
+            <footer class="footer">
+                <p class="footer-text" data-edit="footer_text" data-label="Teks Footer" data-edit-color="footer_text_color" data-label-color="Warna Teks Footer">
+                    © Copyright 2022. All rights reserved. Made with love by pondenet
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- QR Code Scan Modal Simulation -->
+    <div id="qr-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Simulasi QR Code Scanner</h3>
+            <div class="qr-scanner-box">
+                <div class="scanner-line"></div>
+                <p class="scanner-text">Mencari Kode QR...</p>
+            </div>
+            <p class="modal-tip">Arahkan kamera Anda ke kode QR voucher Anda.</p>
+            <button type="button" id="btn-scan-sim" class="btn-scan-success">Simulasi Berhasil Scan</button>
+        </div>
+    </div>
+
+    <!-- Info Links Modal (About, Package, Services) -->
+    <div id="info-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="close-info-modal">&times;</span>
+            <h3 class="modal-title" id="info-modal-title">Informasi</h3>
+            <div id="info-modal-body" style="text-align: left; margin-top: 15px; font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+                <!-- Dynamic Content -->
+            </div>
+            <button type="button" id="btn-info-close" class="btn-scan-success" style="margin-top: 20px; width: 100%;">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Connection Loading Overlay -->
+    <div id="loader-overlay" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 320px; padding: 30px 20px;">
+            <h3 class="modal-title" id="loader-title" style="margin-bottom: 15px;">Connecting...</h3>
+            <div style="width: 100%; height: 6px; background-color: var(--border-color); border-radius: 3px; overflow: hidden; margin-bottom: 15px; position: relative;">
+                <div id="loader-bar" style="width: 0%; height: 100%; background-color: var(--primary); transition: width 0.1s linear;"></div>
+            </div>
+            <p id="loader-status" style="font-size: 0.85rem; color: var(--text-muted);">Memulai koneksi WiFi...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -19,6 +19,7 @@ class Template extends Model
         'status',
         'allow_edit_before_checkout',
         'preview_image',
+        'showcase_image',
         'preview_gradients',
         'zip_file',
         'sold_count',

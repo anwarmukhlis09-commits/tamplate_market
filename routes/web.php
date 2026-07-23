@@ -38,6 +38,7 @@ Route::get('/', function () {
                 'shortDesc' => $t->short_desc,
                 'image' => $t->preview_gradients[0] ?? 'bg-gradient-to-br from-indigo-500 to-purple-500',
                 'imageUrl' => $t->preview_image ? asset('storage/' . $t->preview_image) : null,
+                'showcaseImageUrl' => $t->showcase_image ? asset('storage/' . $t->showcase_image) : null,
                 'rating' => (float) $t->rating,
                 'sold' => $t->sold_count,
             ]),
@@ -61,6 +62,7 @@ Route::get('/katalog', function () {
             'longDesc' => $t->long_desc,
             'image' => $t->preview_gradients[0] ?? 'bg-gradient-to-br from-indigo-500 to-purple-500',
             'imageUrl' => $t->preview_image ? asset('storage/' . $t->preview_image) : null,
+            'showcaseImageUrl' => $t->showcase_image ? asset('storage/' . $t->showcase_image) : null,
             'rating' => (float) $t->rating,
             'sold' => $t->sold_count,
         ])
@@ -111,6 +113,7 @@ Route::get('/template/{id}', function ($id) {
         'category' => $rt->category,
         'price' => $rt->price,
         'imageUrl' => $rt->preview_image ? asset('storage/' . $rt->preview_image) : null,
+        'showcaseImageUrl' => $rt->showcase_image ? asset('storage/' . $rt->showcase_image) : null,
     ])->all();
 
     return Inertia::render('TemplateDetail', [
@@ -126,6 +129,7 @@ Route::get('/template/{id}', function ($id) {
             'badge' => $t->badge,
             'features' => $t->features,
             'previewImageUrl' => $t->preview_image ? asset('storage/' . $t->preview_image) : null,
+            'showcaseImageUrl' => $t->showcase_image ? asset('storage/' . $t->showcase_image) : null,
             'previews' => $t->preview_gradients ?? ['bg-gradient-to-br from-indigo-500 to-purple-500'],
             'whatsIncluded' => ['File HTML/CSS/JS lengkap', 'Panduan instalasi', 'File MikroTik hotspot', 'Free update 1 tahun'],
             'rating' => (float) $t->rating,
@@ -223,6 +227,35 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
         '{{VOUCHER_2_NAME}}' => '5 Jam', '{{VOUCHER_2_PRICE}}' => 'Rp 3K', '{{VOUCHER_2_DURATION}}' => '5 JAM',
         '{{VOUCHER_3_NAME}}' => '24 Jam', '{{VOUCHER_3_PRICE}}' => 'Rp 5K', '{{VOUCHER_3_DURATION}}' => '24 JAM',
     ];
+    // Sembunyikan blok error MikroTik ($(if error)...$(endif)) di preview/editor agar tidak mengganggu
+    $html = preg_replace('/(\$\(if\s+error\)(.*?)\$\(endif\))/is', '<!-- $1 -->', $html);
+
+    // Hapus semua sintaks tag kondisi RouterOS MikroTik ($(if ...), $(else), $(endif)) dari tampilan browser
+    $html = preg_replace('/\$\(if\b[^)]*\)/i', '', $html);
+    $html = preg_replace('/\$\(else\)/i', '', $html);
+    $html = preg_replace('/\$\(endif\)/i', '', $html);
+
+    // Sembunyikan elemen yang mengandung $(error) secara dinamis dengan CSS inline
+    $html = preg_replace_callback('/<(\w+)([^>]*?)>([^<]*?\$\(error\)[^<]*?)<\/\1>/is', function($m) {
+        $tag = $m[1];
+        $attrs = $m[2];
+        $content = $m[3];
+        if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $attrs)) {
+            $attrs = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="display: none !important; $1"', $attrs);
+        } else {
+            $attrs .= ' style="display: none !important;"';
+        }
+        return "<{$tag}{$attrs}>{$content}</{$tag}>";
+    }, $html);
+
+    // Inject CSS global untuk menyembunyikan kontainer/elemen error umum
+    $errorHideCss = '<style id="preview-mode-error-hide">'
+        . ' .error-container, .error-message, #mikrotik-error, .error-box, .error, [id="error"], [class="error"] {'
+        . '   display: none !important;'
+        . ' }'
+        . '</style>';
+    $html = str_replace('</head>', $errorHideCss . '</head>', $html);
+
     $replacements = array_merge($demo, $custom);
     $html = str_replace(array_keys($replacements), array_values($replacements), $html);
 
@@ -487,9 +520,19 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
     $baseHref = url('/templates/' . $t->id . '/preview/');
     $html = file_get_contents($filePath);
 
-    // Inject base tag untuk asset relatif
-    $baseTag = '<base href="' . $baseHref . '/">';
-    $html = str_replace('<head>', "<head>\n" . $baseTag, $html);
+    // Inject base tag untuk asset relatif (gunakan case-insensitive regex agar compatible dengan head bertipe apa pun)
+    $baseHrefNormalized = rtrim($baseHref, '/') . '/';
+    $baseTag = '<base href="' . $baseHrefNormalized . '">';
+    
+    // Hapus base tag lama agar tidak dobel/menumpuk
+    $html = preg_replace('/<base\s+href="[^"]*"\s*\/?>/i', '', $html);
+    
+    if (preg_match('/<head[^>]*>/i', $html, $hm, PREG_OFFSET_CAPTURE)) {
+        $insertAt = $hm[0][1] + strlen($hm[0][0]);
+        $html = substr($html, 0, $insertAt) . "\n  " . $baseTag . substr($html, $insertAt);
+    } else {
+        $html = str_replace('<head>', "<head>\n" . $baseTag, $html);
+    }
 
     // Mode editor: disable interaksi form di dalam iframe supaya user tidak
     // bisa salah ketik di input username/password MikroTik. Cegah focus stealing
@@ -551,6 +594,35 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         '{{VOUCHER_2_NAME}}' => '5 Jam', '{{VOUCHER_2_PRICE}}' => 'Rp 3K', '{{VOUCHER_2_DURATION}}' => '5 JAM',
         '{{VOUCHER_3_NAME}}' => '24 Jam', '{{VOUCHER_3_PRICE}}' => 'Rp 5K', '{{VOUCHER_3_DURATION}}' => '1 HARI',
     ];
+    // Sembunyikan blok error MikroTik ($(if error)...$(endif)) di preview/editor agar tidak mengganggu
+    $html = preg_replace('/(\$\(if\s+error\)(.*?)\$\(endif\))/is', '<!-- $1 -->', $html);
+
+    // Hapus semua sintaks tag kondisi RouterOS MikroTik ($(if ...), $(else), $(endif)) dari tampilan browser
+    $html = preg_replace('/\$\(if\b[^)]*\)/i', '', $html);
+    $html = preg_replace('/\$\(else\)/i', '', $html);
+    $html = preg_replace('/\$\(endif\)/i', '', $html);
+
+    // Sembunyikan elemen yang mengandung $(error) secara dinamis dengan CSS inline
+    $html = preg_replace_callback('/<(\w+)([^>]*?)>([^<]*?\$\(error\)[^<]*?)<\/\1>/is', function($m) {
+        $tag = $m[1];
+        $attrs = $m[2];
+        $content = $m[3];
+        if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $attrs)) {
+            $attrs = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="display: none !important; $1"', $attrs);
+        } else {
+            $attrs .= ' style="display: none !important;"';
+        }
+        return "<{$tag}{$attrs}>{$content}</{$tag}>";
+    }, $html);
+
+    // Inject CSS global untuk menyembunyikan kontainer/elemen error umum
+    $errorHideCss = '<style id="preview-mode-error-hide">'
+        . ' .error-container, .error-message, #mikrotik-error, .error-box, .error, [id="error"], [class="error"] {'
+        . '   display: none !important;'
+        . ' }'
+        . '</style>';
+    $html = str_replace('</head>', $errorHideCss . '</head>', $html);
+
     $replacements = array_merge($demo, $custom);
     $html = str_replace(array_keys($replacements), array_values($replacements), $html);
 
@@ -712,7 +784,9 @@ Route::get('/template/{id}/preview-frame', function ($id) {
     );
 
     // Remove problematic MikroTik conditionals
-    $html = preg_replace('/\$\(if[^)]*\)/', '', $html);
+    $html = preg_replace('/\$\(if\b[^)]*\)/i', '', $html);
+    $html = preg_replace('/\$\(else\)/i', '', $html);
+    $html = preg_replace('/\$\(endif\)/i', '', $html);
 
     // Inject demo JS if ?demo=1
     if (request('demo') === '1') {
@@ -897,7 +971,12 @@ Route::get('/template/{id}/editor/fields', function ($id) {
     $extractInner = function ($html, $name) use ($extractAttr) {
         $pattern = '/<(\w+)([^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*>(.*?)<\/\1>/is';
         if (preg_match($pattern, $html, $m)) {
-            return trim($m[3]);
+            $inner = trim($m[3]);
+            if (preg_match('/<svg\b[^>]*>.*?<\/svg>/is', $inner)) {
+                $cleaned = trim(preg_replace('/<svg\b[^>]*>.*?<\/svg>/is', '', $inner));
+                if (!empty($cleaned)) return $cleaned;
+            }
+            return $inner;
         }
         return '';
     };
@@ -955,7 +1034,7 @@ Route::get('/template/{id}/editor/fields', function ($id) {
     }
 
     // Parse data-edit-link (link href)
-    if (preg_match_all('/<a([^>]*\bdata-edit-link="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (preg_match_all('/<a([^>]*\bdata-edit-(?:link|href)="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
             $name = $m[2];
@@ -967,6 +1046,158 @@ Route::get('/template/{id}/editor/fields', function ($id) {
                 'type' => 'link',
                 'label' => $extractLabel($tag, $name),
                 'default' => $extractAttr($tag, 'href'),
+            ];
+        }
+    }
+
+    // Parse data-edit-color (color)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-color="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $label = '';
+            if (preg_match('/\bdata-label-color="([^"]*)"/i', $tag, $lm) && $lm[1] !== '') {
+                $label = $lm[1];
+            } else {
+                $label = $extractLabel($tag, $name);
+            }
+            $default = '';
+            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                if (preg_match('/\bcolor\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                    $default = trim($cm[1]);
+                }
+            }
+            $fields[] = [
+                'name' => $name,
+                'type' => 'color',
+                'label' => $label,
+                'default' => $default,
+            ];
+        }
+    }
+
+    // Parse data-edit-bg-color (background color)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg-color="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $label = '';
+            if (preg_match('/\bdata-label-bg="([^"]*)"/i', $tag, $lm) && $lm[1] !== '') {
+                $label = $lm[1];
+            } else {
+                $label = $extractLabel($tag, $name);
+            }
+            $default = '';
+            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                if (preg_match('/\bbackground-color\s*:\s*([^;"]+)/i', $sm[1], $bm)) {
+                    $default = trim($bm[1]);
+                }
+            }
+            $fields[] = [
+                'name' => $name,
+                'type' => 'color',
+                'label' => $label,
+                'default' => $default,
+            ];
+        }
+    }
+
+    // Parse data-edit-bg (image background)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $tagName = strtolower($m[1]);
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $default = '';
+            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
+                    $default = $bm[1];
+                }
+            }
+            $fields[] = [
+                'name' => $name,
+                'type' => 'image',
+                'label' => $extractLabel($tag, $name),
+                'default' => $default,
+                'tag' => $tagName,
+            ];
+        }
+    }
+
+    // Parse data-edit-visible (boolean)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-visible="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $default = true;
+            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                if (preg_match('/\bdisplay\s*:\s*none/i', $sm[1])) {
+                    $default = false;
+                }
+            }
+            $fields[] = [
+                'name' => $name,
+                'type' => 'boolean',
+                'label' => $extractLabel($tag, $name),
+                'default' => $default,
+            ];
+        }
+    }
+
+    // Parse data-edit-width (width)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-width="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $default = '';
+            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                if (preg_match('/\bwidth\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                    $default = trim($cm[1]);
+                }
+            }
+            $fields[] = [
+                'name' => $name,
+                'type' => 'text',
+                'label' => $extractLabel($tag, $name),
+                'default' => $default,
+            ];
+        }
+    }
+
+    // Parse data-edit-height (height)
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-height="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $default = '';
+            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                if (preg_match('/\bheight\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                    $default = trim($cm[1]);
+                }
+            }
+            $fields[] = [
+                'name' => $name,
+                'type' => 'text',
+                'label' => $extractLabel($tag, $name),
+                'default' => $default,
             ];
         }
     }
@@ -1004,107 +1235,151 @@ Route::post('/template/{id}/editor/save', function (\Illuminate\Http\Request $re
         return response()->json(['ok' => false, 'error' => 'login.html tidak ditemukan di template.'], 404);
     }
 
-    $html = \Storage::disk('public')->get($loginPath);
-    $values = $request->input('values', []);
-
-    if (!is_array($values)) {
-        $values = [];
+    // Extract master fields & defaults to enable fallback identity sync in other files
+    $masterHtml = '';
+    if (\Storage::disk('public')->exists($loginPath)) {
+        $masterHtml = \Storage::disk('public')->get($loginPath);
     }
 
-    // Apply replacements — preserve MikroTik variables ($, $(if...), $(endif), etc.)
-    foreach ($values as $name => $value) {
-        $escaped = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    $masterDefaults = [];
+    if (!empty($masterHtml)) {
+        // Helper to extract attribute values
+        $extractAttr = function ($tag, $attr) {
+            if (preg_match('/\b' . $attr . '="([^"]*)"/i', $tag, $m)) {
+                return $m[1];
+            }
+            return '';
+        };
 
-        // Text: replace inner content of tag with data-edit="name"
-        // FIX: capture group $m[2] diakhiri `>` (termasuk kurung tutup tag buka).
-        //      Rekonstruksi sebagai: '<' + tag + attrs (TANPA trailing `>`) + escaped + closing.
-        //      Regex lama: $m[2] . $escaped . $m[4] . '>' menghasilkan `>escaped</tag>>` (dobel `>`).
-        //      Regex baru: attrs (group 2) hanya sampai `>` pembuka, lalu di-trim.
-        $html = preg_replace_callback(
-            '/<(\w+)((?:[^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*)>(.*?)(<\/\1>)/is',
-            function ($m) use ($escaped) {
-                return '<' . $m[1] . $m[2] . '>' . $escaped . $m[4];
-            },
-            $html
-        );
+        // Helper to extract inner content of a tag with data-edit="name"
+        $extractInner = function ($html, $name) {
+            $pattern = '/<(\w+)([^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*>(.*?)<\/\1>/is';
+            if (preg_match($pattern, $html, $m)) {
+                $inner = trim($m[3]);
+                if (preg_match('/<svg\b[^>]*>.*?<\/svg>/is', $inner)) {
+                    $cleaned = trim(preg_replace('/<svg\b[^>]*>.*?<\/svg>/is', '', $inner));
+                    if (!empty($cleaned)) return $cleaned;
+                }
+                return $inner;
+            }
+            return '';
+        };
 
-        // Image: replace asset sesuai tag type
-        // - <img>: replace src attribute
-        // - non-<img> (section, div, dll): replace background-image URL di inline style
-        $html = preg_replace_callback(
-            '/<(\w+)((?:[^>]*\bdata-edit-image="' . preg_quote($name, '/') . '")[^>]*)>/i',
-            function ($m) use ($escaped) {
+        // Parse data-edit (text)
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $name = $m[3];
+                $masterDefaults[$name] = [
+                    'type' => 'text',
+                    'default' => $extractInner($masterHtml, $name)
+                ];
+            }
+        }
+
+        // Parse data-edit-image (image)
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-image="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
                 $tagName = strtolower($m[1]);
-                $openTag = '<' . $m[1] . $m[2] . '>';
+                $attrs = $m[2];
+                $name = $m[3];
+                $tag = '<' . $m[1] . $attrs . '>';
+                
+                $default = '';
                 if ($tagName === 'img') {
-                    // Replace src attribute in opening tag
-                    $newOpen = preg_replace('/\bsrc="[^"]*"/', 'src="' . $escaped . '"', $openTag, 1);
-                    return $newOpen ?: $openTag;
-                }
-                // Non-img: replace background-image URL di style attribute
-                // Jika belum ada style, tambahkan; jika ada, replace
-                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
-                    $oldStyle = $sm[1];
-                    if (preg_match('/background-image\s*:\s*url\([^)]*\)/i', $oldStyle)) {
-                        $newStyle = preg_replace(
-                            '/background-image\s*:\s*url\([^)]*\)/i',
-                            'background-image: url("' . $escaped . '")',
-                            $oldStyle
-                        );
-                    } else {
-                        $newStyle = 'background-image: url("' . $escaped . '"); ' . $oldStyle;
+                    $default = $extractAttr($tag, 'src');
+                } else {
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                        if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
+                            $default = $bm[1];
+                        }
                     }
-                    $newOpen = preg_replace('/\bstyle\s*=\s*"[^"]*"/i', 'style="' . $newStyle . '"', $openTag, 1);
-                    return $newOpen ?: $openTag;
                 }
-                // Tidak ada style attribute — tambahkan di posisi yang aman
-                // (sebelum `>` penutup opening tag)
-                return preg_replace(
-                    '/(<\w+(?:\s[^>]*)?)(\s*\/\s*)?>$/i',
-                    '$1 style="background-image: url(\'' . $escaped . '\')">',
-                    $openTag,
-                    1
-                );
-            },
-            $html
-        );
+                $masterDefaults[$name] = [
+                    'type' => 'image',
+                    'default' => $default
+                ];
+            }
+        }
 
-        // Link: replace href attribute on tag with data-edit-link="name"
-        $html = preg_replace_callback(
-            '/<a((?:[^>]*\bdata-edit-link="' . preg_quote($name, '/') . '")[^>]*)>/i',
-            function ($m) use ($escaped) {
-                $openTag = '<a' . $m[1] . '>';
-                $newOpen = preg_replace('/\bhref="[^"]*"/', 'href="' . $escaped . '"', $openTag, 1);
-                return $newOpen ?: $openTag;
-            },
-            $html
-        );
+        // Parse data-edit-bg (background image only)
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $name = $m[3];
+                $attrs = $m[2];
+                $tag = '<' . $m[1] . $attrs . '>';
+                $default = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
+                        $default = $bm[1];
+                    }
+                }
+                $masterDefaults[$name] = [
+                    'type' => 'image',
+                    'default' => $default
+                ];
+            }
+        }
+
+        // Parse data-edit-link (link)
+        if (preg_match_all('/<a([^>]*\bdata-edit-(?:link|href)="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $name = $m[2];
+                $tag = '<a' . $m[1] . '>';
+                $masterDefaults[$name] = [
+                    'type' => 'link',
+                    'default' => $extractAttr($tag, 'href')
+                ];
+            }
+        }
+
+        // Parse data-edit-color (color)
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-color="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $name = $m[3];
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $default = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bcolor\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                        $default = trim($cm[1]);
+                    }
+                }
+                $masterDefaults[$name] = [
+                    'type' => 'color',
+                    'default' => $default
+                ];
+            }
+        }
+
+        // Parse data-edit-bg-color (bg color)
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg-color="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $name = $m[3];
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $default = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bbackground-color\s*:\s*([^;"]+)/i', $sm[1], $bm)) {
+                        $default = trim($bm[1]);
+                    }
+                }
+                $masterDefaults[$name] = [
+                    'type' => 'bg-color',
+                    'default' => $default
+                ];
+            }
+        }
     }
 
-    // Simpan ke salinan: orders/{user_id}/{template_id}/
+    $assetSrcDir = dirname($loginPath);
     $userId = $request->user()?->id ?? 'guest';
     $outDir = "templates/orders/{$userId}/{$id}";
     \Storage::disk('public')->makeDirectory($outDir);
 
-    // ── Copy asset statis (style.css, images/, assets/, status.html, logout.html) ──
-    // PATCH KRITIS #1: save closure SEBELUMNYA hanya tulis login.html, sedangkan
-    // HTML-nya refer ke style.css / images/logo.svg / assets/script.js → 404.
-    // Fix: copy SEMUA file dari folder master (dirname login.html) ke folder
-    // draft, KECUALI login.html (akan ditulis ulang di bawah dengan replaced
-    // values). Recursive copy supaya sub-folder (images/, assets/) ikut.
-    //
-    // Idempotent: kalau file di draft sudah ada (save ulang), overwrite dengan
-    // versi master terbaru — supaya kalau admin update master, draft konsisten.
-    $assetSrcDir = dirname($loginPath);
+    // 1) Copy ALL files from master to draft (overwrite if exists)
     if ($assetSrcDir && \Storage::disk('public')->exists($assetSrcDir)) {
         foreach (\Storage::disk('public')->allFiles($assetSrcDir) as $srcFile) {
-            // Skip login.html — ditulis ulang dengan replaced values di bawah
-            if (basename($srcFile) === 'login.html') continue;
             $rel = substr($srcFile, strlen($assetSrcDir) + 1);
             $dstFile = $outDir . '/' . $rel;
-            // makeDirectory untuk sub-folder (images/, assets/) — no-op kalau sudah ada
             \Storage::disk('public')->makeDirectory(dirname($dstFile));
-            // Copy file dari master ke draft (overwrite kalau ada)
             \Storage::disk('public')->put(
                 $dstFile,
                 \Storage::disk('public')->get($srcFile)
@@ -1112,47 +1387,277 @@ Route::post('/template/{id}/editor/save', function (\Illuminate\Http\Request $re
         }
     }
 
-    // ── Inject <base href> menunjuk ke route handler /templates/{id}/preview/ ──────
-    // FIX FINAL: draft HTML (orders/{u}/{id}/login.html) akan di-load oleh iframe
-    // editor dari URL `/templates/{id}/preview/login.html`. Route handler
-    // `templates.preview` me-render HTML, dan route `templates.preview.asset`
-    // (yang baru) me-serve asset (style.css, images/, assets/) dari folder
-    // master. <base href> menunjuk ke route handler agar semua relative
-    // asset path (style.css, images/logo.svg, assets/script.js) resolve ke
-    // `/templates/{id}/preview/{asset}` dan dilayani oleh route asset.
-    //
-    // Alasan TIDAK pakai `asset('storage/...')` symlink path:
-    //   1) Symlink bisa tidak ada di production (beberapa shared hosting).
-    //   2) Browser bisa cache agresif (private, no-store, dll) sehingga edit
-    //      baru tidak kelihatan.
-    //   3) Single source of truth: route handler konsisten baca dari folder
-    //      master templates/{id}/original/.
-    //
-    // PATCH KRITIS: trailing slash WAJIB ada. Tanpa trailing slash, browser
-    // resolve `<base href="/foo">` + relative `style.css` jadi `/foostyle.css`
-    // (bukan `/foo/style.css`). Lihat HTML5 §4.2.3 — <base href> resolution
-    // algorithm: kalau base href tidak diakhiri `/`, treat as file, replace
-    // last segment. Solusi: paksa trailing `/` agar base jadi direktori.
-    $baseHref = rtrim(url('/templates/' . $id . '/preview'), '/') . '/';
-    $baseTag = '<base href="' . $baseHref . '">';
+    $values = $request->input('values', []);
+    if (!is_array($values)) {
+        $values = [];
+    }
 
-    // Idempotent: kalau <base> sudah ada (save ulang), replace isinya.
-    if (preg_match('/<base\s+href="[^"]*"\s*\/?>/i', $html)) {
-        $html = preg_replace('/<base\s+href="[^"]*"\s*\/?>/i', $baseTag, $html, 1);
-    } elseif (preg_match('/<head[^>]*>/i', $html, $hm, PREG_OFFSET_CAPTURE)) {
-        $insertAt = $hm[0][1] + strlen($hm[0][0]);
-        $html = substr($html, 0, $insertAt) . "\n  " . $baseTag . substr($html, $insertAt);
+    // 2) Parse and apply replacements to ALL HTML files in the draft directory
+    foreach (\Storage::disk('public')->allFiles($outDir) as $draftFile) {
+        if (!preg_match('/\.html$/i', $draftFile)) {
+            continue;
+        }
+
+        $html = \Storage::disk('public')->get($draftFile);
+
+        foreach ($values as $name => $value) {
+            $valStr = (string)$value;
+            $escaped = htmlspecialchars($valStr, ENT_QUOTES, 'UTF-8');
+
+            // Jika value mengandung tag HTML (seperti <span...>, <br>, <svg>, dll), pertahankan HTML asli.
+            if (preg_match('/<[a-z][\s\S]*>/i', $valStr)) {
+                $replacement = htmlspecialchars_decode($valStr, ENT_QUOTES);
+            } else {
+                $replacement = htmlspecialchars($valStr, ENT_NOQUOTES, 'UTF-8');
+            }
+
+            // Text: replace inner content of tag with data-edit="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*)>(.*?)(<\/\1>)/is',
+                function ($m) use ($replacement) {
+                    return '<' . $m[1] . $m[2] . '>' . $replacement . $m[4];
+                },
+                $html
+            );
+
+            // Image: replace asset sesuai tag type (src atau background-image)
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-image="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $tagName = strtolower($m[1]);
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    if ($tagName === 'img') {
+                        $newOpen = preg_replace('/\bsrc="[^"]*"/', 'src="' . $escaped . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        if (preg_match('/background-image\s*:\s*url\([^)]*\)/i', $oldStyle)) {
+                            $newStyle = preg_replace('/background-image\s*:\s*url\([^)]*\)/i', 'background-image: url("' . $escaped . '")', $oldStyle);
+                        } else {
+                            $newStyle = 'background-image: url("' . $escaped . '"); ' . $oldStyle;
+                        }
+                        $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/\s*)?>$/i', '$1 style="background-image: url(\'' . $escaped . '\')">', $openTag, 1);
+                },
+                $html
+            );
+
+            // Link: replace href attribute on tag with data-edit-link="name" or data-edit-href="name"
+            $html = preg_replace_callback(
+                '/<a((?:[^>]*\bdata-edit-(?:link|href)="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $openTag = '<a' . $m[1] . '>';
+                    $newOpen = preg_replace('/\bhref="[^"]*"/', 'href="' . $escaped . '"', $openTag, 1);
+                    return $newOpen ?: $openTag;
+                },
+                $html
+            );
+
+            // Color text: replace or add color to style attribute on tag with data-edit-color="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-color="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        if (preg_match('/\bcolor\s*:\s*[^;]+/i', $oldStyle)) {
+                            $newStyle = preg_replace('/\bcolor\s*:\s*[^;]+/i', 'color: ' . $escaped, $oldStyle);
+                        } else {
+                            $newStyle = 'color: ' . $escaped . '; ' . $oldStyle;
+                        }
+                        $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/)?\s*>$/i', '$1 style="color: ' . $escaped . '">', $openTag, 1);
+                },
+                $html
+            );
+
+            // Background color: replace or add background-color to style attribute on tag with data-edit-bg-color="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-bg-color="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        if (preg_match('/\bbackground-color\s*:\s*[^;]+/i', $oldStyle)) {
+                            $newStyle = preg_replace('/\bbackground-color\s*:\s*[^;]+/i', 'background-color: ' . $escaped, $oldStyle);
+                        } else {
+                            $newStyle = 'background-color: ' . $escaped . '; ' . $oldStyle;
+                        }
+                        $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/)?\s*>$/i', '$1 style="background-color: ' . $escaped . '">', $openTag, 1);
+                },
+                $html
+            );
+
+            // Background image: replace or add background-image URL to style attribute on tag with data-edit-bg="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-bg="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        if (preg_match('/background-image\s*:\s*url\([^)]*\)/i', $oldStyle)) {
+                            $newStyle = preg_replace(
+                                '/background-image\s*:\s*url\([^)]*\)/i',
+                                'background-image: url("' . $escaped . '")',
+                                $oldStyle
+                            );
+                        } else {
+                            $newStyle = 'background-image: url("' . $escaped . '"); ' . $oldStyle;
+                        }
+                        $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/)?\s*>$/i', '$1 style="background-image: url(\'' . $escaped . '\')">', $openTag, 1);
+                },
+                $html
+            );
+
+            // Visibility: replace or add/remove display: none to style attribute on tag with data-edit-visible="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-visible="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($value) {
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    $isVisible = ($value === true || $value === 'true' || $value === '1' || $value === 1);
+                    
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        $newStyle = preg_replace('/\bdisplay\s*:\s*[^;]+;?\s*/i', '', $oldStyle);
+                        if (!$isVisible) {
+                            $newStyle = 'display: none; ' . trim($newStyle);
+                        }
+                        $newStyle = trim($newStyle, ' ;');
+                        if ($newStyle === '') {
+                            $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"\s*/i', '', $openTag, 1);
+                        } else {
+                            $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        }
+                        return $newOpen ?: $openTag;
+                    }
+                    
+                    if (!$isVisible) {
+                        return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/)?\s*>$/i', '$1 style="display: none">', $openTag, 1);
+                    }
+                    
+                    return $openTag;
+                },
+                $html
+            );
+
+            // Width: replace or add width to style attribute on tag with data-edit-width="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-width="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        if (preg_match('/\bwidth\s*:\s*[^;]+/i', $oldStyle)) {
+                            $newStyle = preg_replace('/\bwidth\s*:\s*[^;]+/i', 'width: ' . $escaped, $oldStyle);
+                        } else {
+                            $newStyle = 'width: ' . $escaped . '; ' . $oldStyle;
+                        }
+                        $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/)?\s*>$/i', '$1 style="width: ' . $escaped . '">', $openTag, 1);
+                },
+                $html
+            );
+
+            // Height: replace or add height to style attribute on tag with data-edit-height="name"
+            $html = preg_replace_callback(
+                '/<(\w+)((?:[^>]*\bdata-edit-height="' . preg_quote($name, '/') . '")[^>]*)>/i',
+                function ($m) use ($escaped) {
+                    $openTag = '<' . $m[1] . $m[2] . '>';
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $openTag, $sm)) {
+                        $oldStyle = $sm[1];
+                        if (preg_match('/\bheight\s*:\s*[^;]+/i', $oldStyle)) {
+                            $newStyle = preg_replace('/\bheight\s*:\s*[^;]+/i', 'height: ' . $escaped, $oldStyle);
+                        } else {
+                            $newStyle = 'height: ' . $escaped . '; ' . $oldStyle;
+                        }
+                        $newOpen = preg_replace('/\bstyle\s*=\s*"([^"]*)"/i', 'style="' . $newStyle . '"', $openTag, 1);
+                        return $newOpen ?: $openTag;
+                    }
+                    return preg_replace('/(<\w+(?:\s[^>]*)?)(\s*\/)?\s*>$/i', '$1 style="height: ' . $escaped . '">', $openTag, 1);
+                },
+                $html
+            );
+        }
+
+        // Auto-sync nomor WhatsApp di seluruh link wa.me/XXXXXXXXX atau api.whatsapp.com di semua file HTML draft
+        foreach ($values as $name => $val) {
+            if (preg_match('/phone|whatsapp|wa|contact/i', $name) && !empty($val)) {
+                $cleanDigits = preg_replace('/[^0-9]/', '', (string)$val);
+                if (strlen($cleanDigits) >= 9) {
+                    if (str_starts_with($cleanDigits, '0')) {
+                        $cleanDigits = '62' . substr($cleanDigits, 1);
+                    }
+                    $html = preg_replace('/(wa\.me\/|phone=)[0-9]{9,15}/i', '${1}' . $cleanDigits, $html);
+                }
+            }
+        }
+
+        // Fallback identity/branding synchronization for other files in the draft directory
+        if (basename($draftFile) !== 'login.html') {
+            foreach ($values as $name => $value) {
+                if (!isset($masterDefaults[$name])) {
+                    continue;
+                }
+
+                $defInfo = $masterDefaults[$name];
+                $defaultVal = $defInfo['default'];
+                $type = $defInfo['type'];
+
+                // Check if the field is identity/branding related
+                $isIdentity = preg_match('/brand|logo|title|company|footer|whatsapp|contact|phone|email|sosmed|social|tagline|favicon|about|header|name|copyright/i', $name);
+
+                if (!$isIdentity || empty($defaultVal) || (string)$defaultVal === (string)$value) {
+                    continue;
+                }
+
+                $escapedVal = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+
+                if ($type === 'text') {
+                    $html = str_replace($defaultVal, $escapedVal, $html);
+                } elseif ($type === 'image') {
+                    $html = str_replace($defaultVal, (string)$value, $html);
+                    $baseName = basename($defaultVal);
+                    if (!empty($baseName) && strlen($baseName) > 3) {
+                        $html = preg_replace('/src=["\']([^"\']*\/' . preg_quote($baseName, '/') . '|' . preg_quote($baseName, '/') . ')["\']/i', 'src="' . (string)$value . '"', $html);
+                        $html = preg_replace('/url\(["\']?([^"\')]*\/' . preg_quote($baseName, '/') . '|' . preg_quote($baseName, '/') . ')["\']?\)/i', 'url("' . (string)$value . '")', $html);
+                    }
+                } elseif ($type === 'link') {
+                    $html = str_replace($defaultVal, (string)$value, $html);
+                    $html = preg_replace('/href=["\']' . preg_quote($defaultVal, '/') . '["\']/i', 'href="' . (string)$value . '"', $html);
+                } elseif ($type === 'color' || $type === 'bg-color') {
+                    $html = str_replace($defaultVal, (string)$value, $html);
+                }
+            }
+        }
+
+        // 3) Strip <base href> tag so it is NOT saved in the download file
+        $html = preg_replace('/<base\s+href="[^"]*"\s*\/?>/i', '', $html);
+
+        // Write file back to public disk
+        \Storage::disk('public')->put($draftFile, $html);
     }
 
     $outPath = "{$outDir}/login.html";
-    \Storage::disk('public')->put($outPath, $html);
 
     return response()->json([
         'ok' => true,
         'path' => $outPath,
         'url' => asset('storage/' . $outPath),
     ]);
-})->middleware('auth')->name('template.editor.save');
+})->name('template.editor.save');
 
 // ── Client Routes ───────────────────────
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -135,6 +135,7 @@ class CheckoutController extends Controller
             'discountPrice' => $t->discount_price,
             'shortDesc' => $t->short_desc,
             'imageUrl' => $t->preview_image ? asset('storage/' . $t->preview_image) : null,
+            'showcaseImageUrl' => $t->showcase_image ? asset('storage/' . $t->showcase_image) : null,
             'rating' => (float) $t->rating,
             'sold' => $t->sold_count,
         ];

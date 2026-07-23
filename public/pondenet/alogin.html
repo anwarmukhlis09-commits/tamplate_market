@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PondeNet - Login Successful</title>
+    <!-- HAPUS META REFRESH OTOMATIS AGAR TIDAK PINDAH SENDIRI -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        function goToStatus() {
+            var statusUrl = '$(link-status)';
+            if (statusUrl.indexOf('$(') !== -1 || window.location.protocol === 'file:') {
+                statusUrl = 'status.html';
+            }
+            // Pindahkan halaman aktif ke halaman status saat tombol diklik
+            window.location.href = statusUrl;
+        }
+    </script>
+</head>
+
+<body data-edit-bg="body_bg" data-label="Latar Belakang Halaman">
+    <div class="page-wrapper">
+        <!-- Top Banner Header -->
+        <header class="top-banner" data-edit-bg="banner_background" data-label="Banner Atas Background">
+            <div class="nav-container">
+                <div class="logo-container">
+                    <img src="logo.svg" alt="PondeNet Logo" class="brand-logo">
+                </div>
+            </div>
+
+            <!-- City Skyline -->
+            <div class="city-illustration-wrapper">
+                <img src="city_banner.svg" alt="City Skyline" class="city-skyline-img">
+            </div>
+        </header>
+
+        <!-- Main Redirect Area -->
+        <main class="bottom-section">
+            <div class="auth-card-container">
+                <div class="auth-card" style="text-align: center;">
+                    <h2 class="auth-title" data-edit="alogin_title" data-label="Judul Login Sukses">
+                        Login Berhasil!
+                    </h2>
+                    <p class="auth-subtitle" data-edit="alogin_subtitle" data-label="Subjudul Login Sukses"
+                        style="margin-bottom: 25px;">
+                        Koneksi internet Anda sudah aktif. Silakan klik tombol di bawah untuk melihat status jaringan
+                        dan sisa kuota Anda.
+                    </p>
+
+                    <!-- Tombol Manual untuk Menuju Halaman Status -->
+                    <div style="margin-bottom: 25px;">
+                        <button onclick="goToStatus()"
+                            style="background-color: var(--primary, #007bff); color: white; border: none; padding: 12px 30px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            Lihat Status Internet
+                        </button>
+                    </div>
+
+                    <div>
+                        <a href="$(link-redirect)" target="_blank" class="link-trial" data-edit="alogin_backup_link"
+                            data-label="Teks Link Redirect Sukses" style="font-size: 13px; color: #666;">
+                            Atau langsung berselancar ke internet
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p class="footer-text">
+                    © Copyright 2022. All rights reserved. Made with love by pondenet
+                </p>
+            </footer>
+        </main>
+    </div>
+</body>
+
+</html>

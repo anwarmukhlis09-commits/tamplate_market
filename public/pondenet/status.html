@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PondeNet - Connection Status</title>
+    $(if refresh-timeout)
+    <meta http-equiv="refresh" content="$(refresh-timeout-secs)">
+    $(endif)
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // MikroTik status scripts
+        $(if advert-pending == 'yes')
+            var popup = '';
+            function advert() {
+                open('$(link-advert)', 'advert', 'width=320,height=240,status=no,resizable=yes');
+            }
+        $(endif)
+
+        // Real-time AJAX Update without reloading the page
+        document.addEventListener("DOMContentLoaded", () => {
+            var refreshInterval = parseInt('$(refresh-timeout-secs)') || 5;
+            if (refreshInterval < 2) refreshInterval = 2; // minimum 2s to protect router CPU
+            
+            var isSimulated = '$(ip)'.indexOf('$(') !== -1 || window.location.protocol === 'file:';
+            if (isSimulated) {
+                // local simulation countdown & traffic simulator
+                var uptimeSecs = 0;
+                var bytesIn = 1048576 * 14.2;
+                var bytesOut = 1048576 * 84.7;
+                
+                function formatBytes(bytes) {
+                    if (bytes < 1024) return bytes + " B";
+                    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KiB";
+                    else return (bytes / 1048576).toFixed(1) + " MiB";
+                }
+                function formatUptime(secs) {
+                    var h = Math.floor(secs / 3600);
+                    var m = Math.floor((secs % 3600) / 60);
+                    var s = secs % 60;
+                    return (h > 0 ? h + "h " : "") + (m > 0 ? m + "m " : "") + s + "s";
+                }
+                setInterval(() => {
+                    uptimeSecs++;
+                    bytesIn += Math.floor(Math.random() * 40960);
+                    bytesOut += Math.floor(Math.random() * 153600);
+                    
+                    const uptimeEl = document.getElementById("stat-uptime");
+                    const uploadEl = document.getElementById("stat-upload");
+                    const downloadEl = document.getElementById("stat-download");
+                    
+                    if (uptimeEl) uptimeEl.textContent = formatUptime(uptimeSecs);
+                    if (uploadEl) uploadEl.textContent = formatBytes(bytesIn);
+                    if (downloadEl) downloadEl.textContent = formatBytes(bytesOut);
+                }, 1000);
+                return;
+            }
+            
+            // AJAX polling to fetch /status HTML in background
+            setInterval(() => {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'status', true);
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var parser = new DOMParser();
+                        var doc = parser.parseFromString(xhr.responseText, 'text/html');
+                        var ids = ["stat-ip", "stat-mac", "stat-upload", "stat-download", "stat-uptime", "stat-session-left"];
+                        ids.forEach(id => {
+                            var src = doc.getElementById(id);
+                            var dest = document.getElementById(id);
+                            if (src && dest && src.textContent !== dest.textContent) {
+                                dest.textContent = src.textContent;
+                            }
+                        });
+                    }
+                };
+                xhr.send();
+            }, refreshInterval * 1000);
+        });
+    </script>
+</head>
+<body data-edit-bg="body_bg" data-label="Latar Belakang Halaman" $(if advert-pending == 'yes') onLoad="advert()" $(endif)>
+    <div class="page-wrapper">
+        <!-- Top Banner Header -->
+        <header class="top-banner" data-edit-bg="banner_background" data-label="Banner Atas Background">
+            <div class="nav-container" data-edit-visible="show_navigation" data-label="Tampilkan Navigasi Header">
+                <div class="logo-container">
+                    <img src="logo.svg" alt="PondeNet Logo" class="brand-logo" data-edit-image="brand_logo" data-label="Logo Brand" data-edit-height="brand_logo_height" data-label-height="Tinggi Logo" style="height: 32px;">
+                </div>
+                <div class="nav-actions">
+                    <span class="nav-link" style="color: #ffffff; font-weight: 600;">Welcome, $(username)!</span>
+                </div>
+            </div>
+
+            <!-- City Skyline -->
+            <div class="city-illustration-wrapper">
+                <img src="city_banner.svg" alt="City Skyline" class="city-skyline-img">
+            </div>
+        </header>
+
+        <!-- Main Status Area -->
+        <main class="bottom-section">
+            <div class="auth-card-container">
+                <div class="auth-card">
+                    <h2 class="auth-title" data-edit="status_title" data-label="Judul Status" data-edit-color="status_title_color" data-label-color="Warna Judul Status">
+                        Connected
+                    </h2>
+                    <p class="auth-subtitle" data-edit="status_subtitle" data-label="Subjudul Status" data-edit-color="status_subtitle_color" data-label-color="Warna Subjudul Status">
+                        You are successfully authenticated
+                    </p>
+
+                    <!-- Connection Details Table -->
+                    <div class="fields-container" style="margin-bottom: 20px;">
+                        <div class="status-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <!-- IP Address Row -->
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">IP Address</span>
+                                <span id="stat-ip" style="font-weight: 600; color: var(--text-main);">$(ip)</span>
+                            </div>
+                            <!-- MAC Address Row -->
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">MAC Address</span>
+                                <span id="stat-mac" style="font-weight: 600; color: var(--text-main);">$(mac)</span>
+                            </div>
+                            <!-- Upload Row -->
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Bytes Upload</span>
+                                <span id="stat-upload" style="font-weight: 600; color: var(--text-main);">$(bytes-in-nice)</span>
+                            </div>
+                            <!-- Download Row -->
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Bytes Download</span>
+                                <span id="stat-download" style="font-weight: 600; color: var(--text-main);">$(bytes-out-nice)</span>
+                            </div>
+                            <!-- Connected Time Row -->
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Connected Time</span>
+                                <span id="stat-uptime" style="font-weight: 600; color: var(--text-main);">$(uptime)</span>
+                            </div>
+                            
+                            <!-- Remaining Session (If applicable) -->
+                            $(if session-time-left)
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Remaining Time</span>
+                                <span id="stat-session-left" style="font-weight: 600; color: #dc2626;">$(session-time-left)</span>
+                            </div>
+                            $(endif)
+                        </div>
+                    </div>
+
+                    <!-- Disconnect / Logout Action Button -->
+                    <form action="$(link-logout)" name="logout">
+                        <button type="submit" class="btn-submit" style="background-color: #dc2626; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);" data-edit-bg-color="status_logout_btn_bg" data-label="Warna Tombol Disconnect" data-edit-color="status_logout_btn_text" data-label-color="Warna Teks Disconnect">
+                            Disconnect
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p class="footer-text" data-edit="footer_text" data-label="Teks Footer">
+                    © Copyright 2022. All rights reserved. Made with love by pondenet
+                </p>
+            </footer>
+        </main>
+    </div>
+</body>
+</html>

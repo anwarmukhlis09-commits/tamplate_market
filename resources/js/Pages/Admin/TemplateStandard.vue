@@ -44,6 +44,24 @@ const placeholderExample = `<input
     data-edit-placeholder="username_placeholder"
     data-label="Placeholder Username">`;
 
+const colorExample = `<h1
+    data-edit-color="text_color"
+    data-label="Warna Teks Judul">
+    Teks Berwarna
+</h1>`;
+
+const bgColorExample = `<button
+    data-edit-bg-color="button_color"
+    data-label="Warna Tombol Login">
+    Login
+</button>`;
+
+const visibleExample = `<div
+    data-edit-visible="show_banner"
+    data-label="Tampilkan Banner Promo">
+    ... (konten banner) ...
+</div>`;
+
 const mikrotikFormExample = `<form action="$(link-login-only)" method="post">
     <input type="hidden" name="dst" value="$(link-orig)">
 </form>`;
@@ -54,6 +72,9 @@ const supportedMarkers = [
     { name: 'data-edit-bg',      desc: 'Untuk background section — replace background-image CSS', type: 'image' },
     { name: 'data-edit-link',    desc: 'Untuk link di tag <a> — replace href',   type: 'link' },
     { name: 'data-edit-placeholder', desc: 'Untuk input placeholder — replace attribute', type: 'text' },
+    { name: 'data-edit-color',   desc: 'Untuk warna teks — replace color CSS', type: 'color' },
+    { name: 'data-edit-bg-color',desc: 'Untuk warna solid background — replace background-color CSS', type: 'color' },
+    { name: 'data-edit-visible', desc: 'Untuk show/hide elemen — set display: none/block', type: 'boolean' },
 ];
 
 const requiredFiles = [
@@ -193,6 +214,33 @@ const prohibitions = [
                     <code class="text-xs font-mono text-slate-700">data-edit-placeholder</code>
                 </div>
                 <pre class="bg-slate-900 text-slate-100 p-5 text-xs font-mono leading-relaxed overflow-x-auto">{{ placeholderExample }}</pre>
+            </div>
+
+            <!-- Color -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-pink-100 text-pink-700 rounded">WARNA TEKS</span>
+                    <code class="text-xs font-mono text-slate-700">data-edit-color</code>
+                </div>
+                <pre class="bg-slate-900 text-slate-100 p-5 text-xs font-mono leading-relaxed overflow-x-auto">{{ colorExample }}</pre>
+            </div>
+
+            <!-- BG Color -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded">WARNA SOLID</span>
+                    <code class="text-xs font-mono text-slate-700">data-edit-bg-color</code>
+                </div>
+                <pre class="bg-slate-900 text-slate-100 p-5 text-xs font-mono leading-relaxed overflow-x-auto">{{ bgColorExample }}</pre>
+            </div>
+
+            <!-- Visible -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-200 text-slate-700 rounded">TAMPILKAN/SEMBUNYIKAN</span>
+                    <code class="text-xs font-mono text-slate-700">data-edit-visible</code>
+                </div>
+                <pre class="bg-slate-900 text-slate-100 p-5 text-xs font-mono leading-relaxed overflow-x-auto">{{ visibleExample }}</pre>
             </div>
         </div>
     </section>

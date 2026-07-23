@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PondeNet - Redirecting</title>
+    <meta http-equiv="refresh" content="2; url=$(link-redirect)">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        window.location.href = "$(link-redirect)";
+    </script>
+</head>
+<body data-edit-bg="body_bg" data-label="Latar Belakang Halaman">
+    <div class="page-wrapper">
+        <!-- Top Banner Header -->
+        <header class="top-banner" data-edit-bg="banner_background" data-label="Banner Atas Background">
+            <div class="nav-container">
+                <div class="logo-container">
+                    <img src="logo.svg" alt="PondeNet Logo" class="brand-logo">
+                </div>
+            </div>
+
+            <!-- City Skyline -->
+            <div class="city-illustration-wrapper">
+                <img src="city_banner.svg" alt="City Skyline" class="city-skyline-img">
+            </div>
+        </header>
+
+        <!-- Main Redirect Area -->
+        <main class="bottom-section">
+            <div class="auth-card-container">
+                <div class="auth-card" style="text-align: center;">
+                    <h2 class="auth-title" data-edit="redirect_title" data-label="Judul Redirect">
+                        Redirecting...
+                    </h2>
+                    <p class="auth-subtitle" data-edit="redirect_subtitle" data-label="Subjudul Redirect" style="margin-bottom: 20px;">
+                        Please wait, we are redirecting you to your destination.
+                    </p>
+
+                    <!-- Loading Spinner -->
+                    <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+                    
+                    <div>
+                        <a href="$(link-redirect)" class="link-trial" data-edit="redirect_backup_link" data-label="Teks Link Redirect">
+                            If you are not redirected automatically, click here.
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p class="footer-text">
+                    © Copyright 2022. All rights reserved. Made with love by pondenet
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>

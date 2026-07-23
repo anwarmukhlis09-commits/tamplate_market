@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout.vue';
 
 const props = defineProps({
@@ -11,6 +11,41 @@ const props = defineProps({
 
 const t = computed(() => props.template);
 const previewMode = ref('desktop'); // 'desktop' | 'mobile'
+
+const previewContainerRef = ref(null);
+const containerWidth = ref(800);
+const containerHeight = ref(600);
+let resizeObserver = null;
+
+onMounted(() => {
+    if (previewContainerRef.value) {
+        containerWidth.value = previewContainerRef.value.clientWidth || 800;
+        containerHeight.value = previewContainerRef.value.clientHeight || 600;
+        if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    if (entry.contentRect) {
+                        if (entry.contentRect.width > 0) containerWidth.value = entry.contentRect.width;
+                        if (entry.contentRect.height > 0) containerHeight.value = entry.contentRect.height;
+                    }
+                }
+            });
+            resizeObserver.observe(previewContainerRef.value);
+        }
+    }
+});
+
+onUnmounted(() => {
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+    }
+});
+
+const TARGET_DESKTOP_WIDTH = 1200;
+const desktopScale = computed(() => {
+    if (!containerWidth.value || containerWidth.value >= TARGET_DESKTOP_WIDTH) return 1;
+    return containerWidth.value / TARGET_DESKTOP_WIDTH;
+});
 
 // Cek apakah user sudah bayar untuk template ini.
 // Sumber: $page.props.paidTemplates (dari HandleInertiaRequests middleware).
@@ -60,6 +95,47 @@ const licenseItems = [
 
 // "Baru Dirilis" fallback badges
 const newReleaseBadges = ['Baru Dirilis', 'Template Premium', 'Siap Digunakan'];
+
+function onIframeLoad(e) {
+    try {
+        const el = e.target;
+        const doc = el.contentDocument || el.contentWindow?.document;
+        if (doc && doc.head) {
+            let style = doc.getElementById('editor-slim-scrollbar');
+            if (!style) {
+                style = doc.createElement('style');
+                style.id = 'editor-slim-scrollbar';
+                style.textContent = `
+                    /* Custom slim scrollbar for editor preview */
+                    ::-webkit-scrollbar {
+                        width: 6px !important;
+                        height: 6px !important;
+                    }
+                    ::-webkit-scrollbar-track {
+                        background: rgba(255, 255, 255, 0.02) !important;
+                    }
+                    ::-webkit-scrollbar-thumb {
+                        background: rgba(148, 163, 184, 0.3) !important;
+                        border-radius: 10px !important;
+                    }
+                    ::-webkit-scrollbar-thumb:hover {
+                        background: rgba(148, 163, 184, 0.5) !important;
+                    }
+                    /* Firefox */
+                    * {
+                        scrollbar-width: thin !important;
+                        scrollbar-color: rgba(148, 163, 184, 0.3) rgba(255, 255, 255, 0.02) !important;
+                    }
+                `;
+                doc.head.appendChild(style);
+            }
+        }
+    } catch (err) {
+        if (window.console && console.warn) {
+            console.warn('[TemplateDetail] Gagal inject scrollbar:', err.message);
+        }
+    }
+}
 </script>
 
 <template>
@@ -94,7 +170,7 @@ const newReleaseBadges = ['Baru Dirilis', 'Template Premium', 'Siap Digunakan'];
             <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 lg:gap-8">
 
                 <!-- ════ LEFT: PREVIEW (65-70% lebar) ════ -->
-                <div>
+                <div class="min-w-0">
                     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                         <!-- Browser-style chrome -->
                         <div class="bg-slate-50 border-b border-slate-200 px-3 py-2.5 flex items-center gap-2">
@@ -110,17 +186,34 @@ const newReleaseBadges = ['Baru Dirilis', 'Template Premium', 'Siap Digunakan'];
                         </div>
 
                         <!-- Iframe preview (langsung ke file asli) -->
-                        <!-- Wrapper: tinggi fix tapi scrollable supaya template panjang
-                             (biasanya min-height:100vh di template MikroTik) bisa
-                             di-scroll dalam container, tidak terpotong -->
-                        <div class="relative bg-slate-100 overflow-auto"
-                             :class="previewMode === 'mobile' ? 'flex justify-center py-6' : ''"
-                             :style="previewMode === 'mobile' ? '' : 'height: 70vh; min-height: 500px; max-height: 800px;'">
+                        <div ref="previewContainerRef"
+                             class="relative bg-slate-100 overflow-hidden h-[70vh] min-h-[500px] max-h-[800px]"
+                             :class="[
+                                 previewMode === 'mobile' ? 'flex justify-center items-center py-6 overflow-auto' : ''
+                             ]">
+                            <!-- Desktop mode: Scale 1200px desktop iframe to fit container width -->
+                            <div v-if="previewMode === 'desktop'" class="w-full h-full overflow-hidden relative">
+                                <iframe
+                                    :src="`/templates/${t.id}/preview/login.html`"
+                                    class="absolute top-0 left-0"
+                                    style="border: 0;"
+                                    :style="{
+                                        width: `${TARGET_DESKTOP_WIDTH}px`,
+                                        height: `${Math.round(containerHeight / desktopScale)}px`,
+                                        transform: `scale(${desktopScale})`,
+                                        transformOrigin: 'top left',
+                                    }"
+                                    @load="onIframeLoad"
+                                ></iframe>
+                            </div>
+
+                            <!-- Mobile mode -->
                             <iframe
+                                v-else
                                 :src="`/templates/${t.id}/preview/login.html`"
-                                :class="previewMode === 'mobile' ? 'w-[375px] h-[812px] border-8 border-slate-800 rounded-3xl shadow-2xl' : 'w-full'"
-                                style="border: 0; min-height: 100%; overflow: auto;"
-                                :style="previewMode === 'desktop' ? 'min-height: 700px; height: auto;' : ''"
+                                class="w-[375px] h-[812px] border-8 border-slate-800 rounded-3xl shadow-2xl shrink-0"
+                                style="border: 0;"
+                                @load="onIframeLoad"
                             ></iframe>
                         </div>
 

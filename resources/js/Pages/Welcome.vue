@@ -81,12 +81,12 @@ const topCreators = [
 
 // ── Advantages
 const advantages = [
-    { title: 'Responsive', desc: 'Tampil sempurna di semua ukuran layar.', icon: 'M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
-    { title: 'Mudah Diedit', desc: 'Edit warna, teks, dan logo tanpa coding.', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
-    { title: 'Kompatibel RouterOS', desc: 'Berjalan di MikroTik v6 dan v7.', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-    { title: 'Aman', desc: 'Dukungan CHAP, MAC binding, HTTPS.', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
-    { title: 'Dukungan Penuh', desc: 'Tim support siap membantu 24/7.', icon: 'M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z' },
-    { title: 'Update Berkala', desc: 'Template selalu diperbarui dan ditingkatkan.', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+    { title: 'Visual Editor', desc: 'Kustomisasi tampilan sesuka hati tanpa menulis baris kode.', icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
+    { title: 'Live Preview', desc: 'Lihat perubahan real-time di berbagai perangkat sebelum live.', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' },
+    { title: 'Responsive Design', desc: 'Tampil sempurna dan proporsional di semua ukuran layar.', icon: 'M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
+    { title: 'Kompatibel MikroTik', desc: 'Berjalan mulus di RouterOS v6 maupun v7 tanpa kendala.', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { title: 'Siap Deploy', desc: 'File siap di-upload ke MikroTik dalam hitungan detik.', icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
+    { title: 'Update Berkala', desc: 'Dapatkan pembaruan fitur dan perbaikan secara berkesinambungan.', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
 ];
 
 // ── Stats
@@ -99,12 +99,12 @@ const stats = [
 
 // ── Cara Kerja steps
 const steps = [
-    { title: 'Pilih Template', desc: 'Browse katalog, filter berdasarkan kategori, dan pilih template yang paling cocok untuk bisnis Anda.', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-    { title: 'Preview Demo', desc: 'Lihat live preview di device mobile maupun desktop sebelum membeli. Tidak ada kejutan.', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' },
-    { title: 'Checkout', desc: 'Pembayaran aman via Midtrans, DANA, OVO, GoPay, dan transfer bank.', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
-    { title: 'Download File ZIP', desc: 'Setelah pembayaran dikonfirmasi, file template langsung tersedia untuk didownload.', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
-    { title: 'Upload ke MikroTik', desc: 'Extract file, upload ke MikroTik via Winbox atau Files menu. Selesai dalam 5 menit.', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
-    { title: 'Template Siap Digunakan', desc: 'Login hotspot Anda langsung tampil premium dan profesional. Pelanggan terkesan!', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { title: 'Pilih Template', desc: 'Jelajahi katalog template berdasarkan kategori dan pilih desain yang paling sesuai.', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+    { title: 'Edit di Visual Editor', desc: 'Ubah logo, banner, gambar, warna, teks, tombol, dan link secara visual tanpa menyentuh kode HTML maupun CSS.', icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' },
+    { title: 'Preview Real-time', desc: 'Lihat hasil perubahan secara langsung dalam tampilan desktop dan mobile sebelum melanjutkan.', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+    { title: 'Checkout', desc: 'Selesaikan pembayaran dengan metode pembayaran yang tersedia.', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+    { title: 'Download & Upload', desc: 'Download file ZIP, kemudian upload ke MikroTik melalui Winbox atau menu Files.', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+    { title: 'Hotspot Siap Digunakan', desc: 'Template yang telah dikustomisasi siap digunakan dengan tampilan profesional.', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
 
 // ── Helpers
@@ -180,10 +180,10 @@ function getGradient(seed) {
                             Lihat Template
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                         </Link>
-                        <a href="/template/1" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm">
+                        <Link :href="templates && templates.length ? `/template/${templates[0].id}` : '/katalog'" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm">
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Preview Demo
-                        </a>
+                        </Link>
                     </div>
 
                     <!-- Trust indicators -->
@@ -236,13 +236,11 @@ function getGradient(seed) {
                         <Transition name="mockup-fade" mode="out-in">
                             <div :key="activeIndex" class="bg-slate-900 rounded-[2.2rem] p-2.5 shadow-2xl ring-1 ring-white/10">
                                 <div class="relative rounded-[1.8rem] aspect-[9/16] overflow-hidden flex flex-col"
-                                     :class="activeTemplate?.imageUrl ? 'bg-slate-900' : `bg-gradient-to-br ${getGradient(activeTemplate?.name || '')}`">
-                                    <!-- Image layer (kalau admin upload preview_image) -->
-                                    <img v-if="activeTemplate?.imageUrl" :src="activeTemplate.imageUrl" :alt="activeTemplate.name" class="absolute inset-0 w-full h-full object-cover" />
-                                    <!-- Gradient overlay supaya text tetap kebaca di atas image -->
-                                    <div v-if="activeTemplate?.imageUrl" class="absolute inset-0 bg-gradient-to-b from-slate-900/30 via-slate-900/55 to-slate-900/85"></div>
-
-                                    <div class="relative flex-1 flex flex-col">
+                                     :class="(activeTemplate?.showcaseImageUrl || activeTemplate?.imageUrl) ? 'bg-slate-900' : `bg-gradient-to-br ${getGradient(activeTemplate?.name || '')}`">
+                                    <!-- Image layer (kalau admin upload showcase_image atau preview_image) -->
+                                    <img v-if="activeTemplate?.showcaseImageUrl || activeTemplate?.imageUrl" :src="activeTemplate.showcaseImageUrl || activeTemplate.imageUrl" :alt="activeTemplate.name" class="absolute inset-0 w-full h-full object-cover" />
+                                    
+                                    <div v-if="!(activeTemplate?.showcaseImageUrl || activeTemplate?.imageUrl)" class="relative flex-1 flex flex-col">
                                         <!-- Badge dinamis dari template.badge -->
                                         <div v-if="activeTemplate?.badge" class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/95 backdrop-blur rounded-md text-[9px] font-bold uppercase tracking-wider text-white z-10">{{ activeTemplate.badge }}</div>
                                         <!-- Mini status bar (static) -->
@@ -285,7 +283,7 @@ function getGradient(seed) {
                              ]">
                             <div class="bg-slate-900 rounded-[1.5rem] p-2 shadow-xl ring-1 ring-white/10">
                                 <div class="relative rounded-[1.1rem] aspect-[9/16] overflow-hidden flex flex-col items-center justify-center p-3 text-white"
-                                     :class="t?.imageUrl
+                                     :class="(t?.showcaseImageUrl || t?.imageUrl)
                                          ? ''
                                          : `bg-gradient-to-br ${
                                              idx === 0 ? 'from-emerald-400 via-teal-500 to-cyan-600' :
@@ -294,10 +292,9 @@ function getGradient(seed) {
                                              'from-violet-500 via-purple-600 to-indigo-700'
                                            }`">
                                     <!-- Image layer (kalau ada) -->
-                                    <img v-if="t?.imageUrl" :src="t.imageUrl" :alt="t.name" class="absolute inset-0 w-full h-full object-cover" />
-                                    <div v-if="t?.imageUrl" class="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/70"></div>
-
-                                    <div class="relative">
+                                    <img v-if="t?.showcaseImageUrl || t?.imageUrl" :src="t.showcaseImageUrl || t.imageUrl" :alt="t.name" class="absolute inset-0 w-full h-full object-cover" />
+                                    
+                                    <div v-if="!(t?.showcaseImageUrl || t?.imageUrl)" class="relative">
                                         <div v-if="idx === 0" class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">PRO</div>
                                         <div v-else-if="idx === 1" class="absolute top-2 right-2 px-1.5 py-0.5 bg-white/25 backdrop-blur rounded text-[8px] font-bold tracking-wider">NEW</div>
                                         <!-- Avatar/icon per position -->
@@ -328,18 +325,18 @@ function getGradient(seed) {
                     <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Kategori Populer</p>
                     <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">Jelajahi berdasarkan kebutuhan</h2>
                 </div>
-                <a href="/katalog" class="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                <Link href="/katalog" class="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
                     Lihat semua
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                </a>
+                </Link>
             </div>
 
             <div class="flex flex-wrap gap-2.5">
-                <a v-for="cat in categories" :key="cat.name" href="/katalog" class="group inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-all shadow-sm">
+                <Link v-for="cat in categories" :key="cat.name" :href="`/katalog?category=${cat.name.toLowerCase()}`" class="group inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-all shadow-sm">
                     <svg class="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="cat.icon"/></svg>
                     {{ cat.name }}
                     <span class="text-xs text-slate-400 group-hover:text-indigo-500">({{ cat.count }})</span>
-                </a>
+                </Link>
             </div>
         </div>
     </section>
@@ -488,49 +485,193 @@ function getGradient(seed) {
     </section>
 
     <!-- ═══════════════ CARA KERJA ═══════════════ -->
-    <section id="cara-kerja" class="py-16 sm:py-24 bg-white">
+    <section id="cara-kerja" class="py-16 sm:py-24 bg-white relative overflow-hidden">
+        <!-- Decorative bg -->
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoOTksIDEwMiwgMjQxLCAwLjA3KSIvPjwvc3ZnPg==')] [mask-image:linear-gradient(to_bottom,white,transparent)] -z-10"></div>
+        
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-                <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Cara Kerja</p>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Dari Pilih Template sampai Live, 6 Langkah Mudah</h2>
-                <p class="text-slate-500 text-lg">Tidak perlu coding. Tidak perlu pusing. Semua sudah kami siapkan.</p>
+            <div class="text-center max-w-2xl mx-auto mb-16 sm:mb-20 relative">
+                <div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 mb-6">
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        Cara Kerja
+                    </span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
+                    Dari Pilih Template hingga <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-pink-500">Hotspot Live</span><br class="hidden sm:block"/> dalam 6 Langkah
+                </h2>
+                <p class="text-slate-500 text-lg md:text-xl leading-relaxed">
+                    Pilih template, edit sesuai kebutuhan tanpa coding, lalu deploy ke MikroTik hanya dalam beberapa menit.
+                </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
-                <!-- Connector line (desktop only) -->
-                <div class="hidden lg:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-indigo-200 via-violet-200 to-pink-200 -z-0"></div>
-
-                <div v-for="(step, i) in steps" :key="step.title" class="relative bg-white border border-slate-200 rounded-2xl p-6 hover:border-indigo-200 hover:shadow-xl transition-all group">
-                    <!-- Step number -->
-                    <div class="absolute -top-4 -left-2 w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-extrabold text-sm shadow-lg shadow-indigo-200 ring-4 ring-white">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 relative">
+                <!-- Connector lines -->
+                <div class="hidden lg:block absolute top-[44px] left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-indigo-200 via-pink-200 to-indigo-200 -z-0 opacity-70"></div>
+                
+                <div v-for="(step, i) in steps" :key="step.title" class="relative bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-8 hover:border-indigo-300 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group z-10 hover:-translate-y-1">
+                    <div class="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-400 text-sm shadow-sm group-hover:text-indigo-600 group-hover:border-indigo-200 transition-colors">
                         {{ i + 1 }}
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition-colors">
-                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="step.icon"/></svg>
+                    
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:from-indigo-600 group-hover:to-violet-600 group-hover:border-transparent transition-all duration-300 shadow-sm group-hover:shadow-indigo-200">
+                        <svg class="w-8 h-8 text-indigo-600 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" :d="step.icon"/></svg>
                     </div>
-                    <h3 class="font-bold text-slate-900 text-lg mb-1.5">{{ step.title }}</h3>
-                    <p class="text-sm text-slate-500 leading-relaxed">{{ step.desc }}</p>
+                    
+                    <h3 class="font-bold text-slate-900 text-xl mb-3 group-hover:text-indigo-700 transition-colors">{{ step.title }}</h3>
+                    <p class="text-base text-slate-500 leading-relaxed">{{ step.desc }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ SHOWCASE VISUAL EDITOR ═══════════════ -->
+    <section id="visual-editor" class="py-24 bg-slate-900 relative overflow-hidden">
+        <!-- Abstract glowing orbs for dark theme -->
+        <div class="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 rounded-full bg-indigo-600 opacity-20 blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 -ml-40 -mb-40 w-96 h-96 rounded-full bg-pink-600 opacity-20 blur-[100px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                
+                <!-- Text Content -->
+                <div>
+                    <div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-6">
+                        <span class="text-xs font-bold text-indigo-300 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            Fitur Unggulan
+                        </span>
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+                        Kustomisasi Template <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">Semudah Drag & Drop</span>
+                    </h2>
+                    <p class="text-slate-400 text-lg md:text-xl leading-relaxed mb-8">
+                        Lupakan mengedit kode HTML yang rumit. Visual Editor eksklusif kami memungkinkan Anda mendesain halaman login yang sempurna dalam hitungan menit.
+                    </p>
+                    
+                    <ul class="space-y-6">
+                        <li class="flex gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg mb-1">Ubah Gambar & Logo</h4>
+                                <p class="text-slate-400 text-sm">Ganti background, banner promo, dan logo bisnis Anda hanya dengan sekali klik.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0 border border-pink-500/20">
+                                <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg mb-1">Sesuaikan Warna & Teks</h4>
+                                <p class="text-slate-400 text-sm">Pilih palet warna yang sesuai branding Anda dan edit setiap teks promosi secara real-time.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0 border border-violet-500/20">
+                                <svg class="w-6 h-6 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg mb-1">Live Preview 2 Layar</h4>
+                                <p class="text-slate-400 text-sm">Lihat langsung bagaimana tampilan login page Anda di HP maupun Desktop secara simultan.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Image / Mockup -->
+                <div class="relative">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-2xl transform rotate-3 scale-105 opacity-20 blur-xl"></div>
+                    <div class="relative rounded-2xl bg-slate-800 border border-slate-700/50 shadow-2xl overflow-hidden">
+                        <!-- Mac window header -->
+                        <div class="px-4 py-3 bg-slate-800/80 border-b border-slate-700/50 flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <div class="ml-2 text-xs font-medium text-slate-500 flex-1 text-center pr-10">MarketTemplate Visual Editor</div>
+                        </div>
+                        <!-- Editor Mockup UI -->
+                        <div class="flex h-[400px]">
+                            <!-- Sidebar -->
+                            <div class="w-1/3 bg-slate-900 border-r border-slate-800 p-4 space-y-4">
+                                <div class="h-6 w-1/2 bg-slate-800 rounded"></div>
+                                <div class="space-y-3 pt-2">
+                                    <div class="flex gap-2">
+                                        <div class="w-8 h-8 rounded bg-indigo-500/20 border border-indigo-500/30"></div>
+                                        <div class="w-8 h-8 rounded bg-rose-500/20 border border-rose-500/30"></div>
+                                        <div class="w-8 h-8 rounded bg-emerald-500/20 border border-emerald-500/30"></div>
+                                    </div>
+                                    <div class="h-4 w-full bg-slate-800 rounded"></div>
+                                    <div class="h-4 w-3/4 bg-slate-800 rounded"></div>
+                                    <div class="h-10 w-full bg-slate-800 rounded mt-4 border border-slate-700 border-dashed flex items-center justify-center">
+                                        <span class="text-[10px] text-slate-500">Upload Image</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Preview Area -->
+                            <div class="w-2/3 bg-slate-950 p-6 flex items-center justify-center relative overflow-hidden">
+                                <!-- Mobile mockup -->
+                                <div class="w-[160px] h-[320px] bg-slate-100 rounded-[24px] border-4 border-slate-800 shadow-2xl relative overflow-hidden z-10 transition-transform hover:scale-105 duration-500">
+                                    <div class="absolute top-0 inset-x-0 h-4 bg-slate-800 rounded-b-xl mx-8"></div>
+                                    <div class="h-1/3 bg-gradient-to-br from-indigo-500 to-purple-600"></div>
+                                    <div class="p-3 text-center">
+                                        <div class="w-10 h-10 rounded-full bg-white -mt-8 mx-auto shadow-md mb-2 flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        </div>
+                                        <div class="h-2 w-16 bg-slate-200 rounded mx-auto mb-3"></div>
+                                        <div class="space-y-1.5">
+                                            <div class="h-6 bg-slate-200 rounded w-full"></div>
+                                            <div class="h-6 bg-slate-200 rounded w-full"></div>
+                                            <div class="h-8 bg-indigo-500 rounded w-full mt-3"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Floating edit tooltip -->
+                                <div class="absolute top-1/2 left-1/2 -translate-y-12 translate-x-12 bg-white rounded-lg shadow-xl p-2 z-20 animate-bounce flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded bg-pink-100 flex items-center justify-center">
+                                        <svg class="w-3 h-3 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-slate-800">Edit Warna</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- ═══════════════ ADVANTAGES ═══════════════ -->
-    <section id="keunggulan" class="py-16 sm:py-20 bg-slate-50/50 border-y border-slate-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center max-w-2xl mx-auto mb-12">
-                <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Keunggulan</p>
-                <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Mengapa MarketTemplate?</h2>
-                <p class="text-slate-500">Template berkualitas premium dengan dukungan terbaik untuk bisnis Anda.</p>
+    <section id="keunggulan" class="py-20 sm:py-28 bg-slate-50 relative overflow-hidden border-y border-slate-200/50">
+        <!-- Elegant background elements -->
+        <div class="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-white to-transparent"></div>
+        <div class="absolute top-1/4 -left-64 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute bottom-1/4 -right-64 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+                <div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-indigo-100 border border-indigo-200 mb-6">
+                    <span class="text-xs font-bold text-indigo-700 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Keunggulan
+                    </span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
+                    Lebih dari Sekadar <br class="hidden sm:block"/> <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Marketplace Template</span>
+                </h2>
+                <p class="text-slate-500 text-lg md:text-xl leading-relaxed">
+                    Pilih, edit, preview, dan deploy template hotspot MikroTik tanpa coding.
+                </p>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-5">
-                <div v-for="a in advantages" :key="a.title" class="bg-white rounded-2xl p-6 border border-slate-200 hover:border-indigo-200 hover:shadow-lg transition-all group">
-                    <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition-colors">
-                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="a.icon"/></svg>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                <div v-for="(a, index) in advantages" :key="a.title" class="group bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all duration-500 hover:-translate-y-2">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-50 to-slate-50 border border-indigo-100 flex items-center justify-center mb-6 group-hover:bg-gradient-to-br group-hover:from-indigo-600 group-hover:to-violet-600 transition-all duration-500 group-hover:scale-110 shadow-sm">
+                        <svg class="w-7 h-7 text-indigo-600 group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" :d="a.icon"/></svg>
                     </div>
-                    <h3 class="font-bold text-slate-900 mb-1.5">{{ a.title }}</h3>
-                    <p class="text-sm text-slate-500">{{ a.desc }}</p>
+                    <h3 class="font-bold text-slate-900 text-xl mb-3 group-hover:text-indigo-700 transition-colors">{{ a.title }}</h3>
+                    <p class="text-slate-500 leading-relaxed">{{ a.desc }}</p>
                 </div>
             </div>
         </div>
@@ -543,7 +684,11 @@ function getGradient(seed) {
                 <!-- Newsletter -->
                 <div>
                     <div class="flex items-center gap-2.5 mb-4">
-                        <img src="/images/logo.png" alt="MarketTemplate" class="h-10 w-auto brightness-0 invert" />
+                        <img src="/images/logo.png" alt="MarketTemplate" class="h-9 w-auto brightness-0 invert" />
+                        <div class="flex flex-col leading-none text-white font-black tracking-tight select-none">
+                            <span class="text-sm tracking-widest uppercase">MARKET</span>
+                            <span class="text-sm tracking-widest uppercase">TEMPLATE</span>
+                        </div>
                     </div>
                     <h3 class="text-white font-bold text-xl mb-2">Dapatkan update & promo</h3>
                     <p class="text-slate-400 text-sm mb-4 max-w-md">Template baru, diskon eksklusif, dan tips MikroTik langsung ke email Anda.</p>

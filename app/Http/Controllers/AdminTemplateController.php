@@ -69,6 +69,7 @@ class AdminTemplateController extends Controller
         // 1) Create DB record dulu untuk dapat ID unik
         $data['zip_file'] = null;
         $data['preview_image'] = null;
+        $data['showcase_image'] = null;
         $template = Template::create($data);
 
         // 2) Simpan SEMUA file upload ke templates/{id}/original/ — apa adanya
@@ -112,6 +113,12 @@ class AdminTemplateController extends Controller
             $template->preview_image = $manualPath;
         } elseif ($autoThumbnail) {
             $template->preview_image = $autoThumbnail;
+        }
+
+        // Save showcase_image if uploaded
+        if ($request->hasFile('showcase_image')) {
+            $showcasePath = $request->file('showcase_image')->store('templates/' . $template->id, 'public');
+            $template->showcase_image = $showcasePath;
         }
 
         // 5) Update template dengan zip_file path + preview_image
@@ -192,6 +199,15 @@ class AdminTemplateController extends Controller
             $data['preview_image'] = $request->file('preview_image')->store('templates/' . $template->id, 'public');
         }
 
+        // Handle manual showcase_image upload
+        if ($request->hasFile('showcase_image')) {
+            // Hapus showcase lama kalau ada
+            if ($template->showcase_image && Storage::disk('public')->exists($template->showcase_image)) {
+                Storage::disk('public')->delete($template->showcase_image);
+            }
+            $data['showcase_image'] = $request->file('showcase_image')->store('templates/' . $template->id, 'public');
+        }
+
         $template->update($data);
 
         return redirect()->route('admin.templates.index')->with('success', 'Template berhasil diupdate!');
@@ -227,6 +243,10 @@ class AdminTemplateController extends Controller
         // Validasi: path harus di dalam storage root & berawal "templates/".
         if ($template->preview_image) {
             $this->safeDeleteFile($template->preview_image, $storageRoot);
+        }
+
+        if ($template->showcase_image) {
+            $this->safeDeleteFile($template->showcase_image, $storageRoot);
         }
 
         // Hapus cache/preview orphan di templates/previews (path ini dipakai oleh
@@ -314,9 +334,6 @@ class AdminTemplateController extends Controller
     // Whitelist: file yang relevan untuk template MikroTik hotspot + asset web standar.
     private function templateRules(bool $requireFiles = true): array
     {
-        $allowedExt = 'html,htm,css,js,svg,png,jpg,jpeg,gif,webp,ico,'
-                   . 'woff,woff2,ttf,otf,eot,json,txt,md,xml';
-
         return [
             'name' => 'required|string|max:255',
             'category' => 'required|string|in:modern,classic,minimalis,pro',
@@ -326,12 +343,42 @@ class AdminTemplateController extends Controller
             'features' => 'nullable|array',
             'features.*' => 'string',
             'template_files' => ($requireFiles ? 'required|' : '') . 'array|min:1',
-            'template_files.*' => "file|max:10240|mimes:{$allowedExt}",
+            'template_files.*' => [
+                'file',
+                'max:10240',
+                function ($attribute, $value, $fail) {
+                    if (!$value || !method_exists($value, 'getClientOriginalName')) return;
+
+                    $clientName = strtolower($value->getClientOriginalName());
+                    $ext = strtolower($value->getClientOriginalExtension());
+
+                    // Abaikan file metadata OS sampah
+                    if (in_array($clientName, ['.ds_store', 'thumbs.db', 'desktop.ini']) || str_starts_with($clientName, '._')) {
+                        return;
+                    }
+
+                    // Blacklist file berbahaya / executable
+                    $forbiddenExt = ['php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps', 'phar', 'inc', 'exe', 'pl', 'py', 'sh', 'bat', 'cmd', 'cgi', 'dll'];
+                    if (in_array($ext, $forbiddenExt, true)) {
+                        $fail("File '.{$ext}' (executable/script server) tidak diizinkan demi keamanan.");
+                        return;
+                    }
+
+                    // Whitelist tipe file template web & RouterOS MikroTik
+                    $allowedExt = [
+                        'html', 'htm', 'css', 'js', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico',
+                        'woff', 'woff2', 'ttf', 'otf', 'eot', 'json', 'txt', 'md', 'xml', 'rsc', 'map', 'pdf'
+                    ];
+
+                    if ($ext !== '' && !in_array($ext, $allowedExt, true)) {
+                        $fail("Tipe file '.{$ext}' tidak diizinkan. Hanya file HTML/CSS/JS/gambar/font/teks/rsc yang boleh diupload.");
+                    }
+                }
+            ],
             'relative_paths' => 'nullable|array',
-            // Allow alphanumeric, dot, underscore, dash, slash, dan spasi (untuk nama folder).
-            // Block: '..' (path traversal), leading '/' (path absolut), backslash (Windows path).
             'relative_paths.*' => ['string', 'regex:#^(?!.*\.\.)(?!/)(?!.*\\\\)[A-Za-z0-9._\-/ ]+$#'],
             'preview_image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'showcase_image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
         ];
     }
 

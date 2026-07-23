@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout.vue';
 
 const props = defineProps({
@@ -210,6 +210,22 @@ function updatePriceRange() {
 function openDrawer() { drawerOpen.value = true; }
 function closeDrawer() { drawerOpen.value = false; }
 function applyFilters() { closeDrawer(); }
+
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get('category');
+    const search = params.get('search');
+    
+    if (category) {
+        const match = categories.find(c => c.value === category.toLowerCase());
+        if (match) {
+            selectedCategory.value = match.value;
+        }
+    }
+    if (search) {
+        searchQuery.value = search;
+    }
+});
 </script>
 
 <template>
@@ -386,16 +402,18 @@ function applyFilters() { closeDrawer(); }
                                      kelihatan berubah jadi kotak sesaat.
                                      aspect-[4/3] FIX ratio = tinggi card image konsisten -->
                                 <div class="relative aspect-[4/3] overflow-hidden bg-slate-100 rounded-t-2xl">
-                                    <img v-if="isValidImageUrl(tpl.imageUrl)" :src="tpl.imageUrl" :alt="tpl.name"
-                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        loading="lazy" />
-                                    <div v-else class="absolute inset-0 flex items-center justify-center bg-slate-100">
-                                        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
+                                    <Link :href="'/template/' + tpl.id" class="block w-full h-full">
+                                        <img v-if="isValidImageUrl(tpl.imageUrl)" :src="tpl.imageUrl" :alt="tpl.name"
+                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            loading="lazy" />
+                                        <div v-else class="absolute inset-0 flex items-center justify-center bg-slate-100">
+                                            <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                    </Link>
                                     <!-- MikroTik compatibility badge -->
                                     <div
                                         class="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-1 bg-slate-900/85 backdrop-blur rounded-md text-[9px] font-bold text-white">
@@ -441,9 +459,11 @@ function applyFilters() { closeDrawer(); }
                                 <div class="p-5 flex flex-col flex-1">
                                     <!-- Header: nama + kategori (fixed height) -->
                                     <div class="mb-2 min-h-[3.25rem]">
-                                        <h3
-                                            class="font-bold text-slate-900 leading-snug truncate group-hover:text-indigo-600 transition-colors">
-                                            {{ tpl.name }}</h3>
+                                        <Link :href="'/template/' + tpl.id">
+                                            <h3
+                                                class="font-bold text-slate-900 leading-snug truncate group-hover:text-indigo-600 transition-colors">
+                                                {{ tpl.name }}</h3>
+                                        </Link>
                                         <p class="text-xs text-slate-500 mt-0.5 capitalize truncate">{{ tpl.category }}</p>
                                     </div>
 

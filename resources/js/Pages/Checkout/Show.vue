@@ -34,7 +34,11 @@ function submit() {
     <header class="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
             <Link href="/" class="flex items-center gap-2.5">
-                <img src="/images/logo.png" alt="MarketTemplate" class="h-10 w-auto" />
+                <img src="/images/logo.png" alt="MarketTemplate" class="h-9 w-auto" />
+                <div class="flex flex-col leading-none text-[#3448ae] font-black tracking-tight select-none">
+                    <span class="text-sm tracking-widest uppercase">MARKET</span>
+                    <span class="text-sm tracking-widest uppercase">TEMPLATE</span>
+                </div>
             </Link>
             <div class="text-sm text-slate-500">
                 <Link href="/katalog" class="hover:text-indigo-600">Katalog</Link>

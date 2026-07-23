@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-edit="page_title" data-label="Judul Halaman">DevOffice - Network Solution Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-container">
+      <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#logoGrad)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6366f1" />
+            <stop offset="1" stop-color="#06b6d4" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="brand-info">
+        <span class="brand-name" data-edit="brand_name" data-label="Nama Bisnis">DevOffice</span>
+        <span class="brand-sub" data-edit="brand_sub" data-label="Sub Nama Bisnis">Network Solution</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="lang-selector">
+        <span>ID</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="user-avatar">DO</div>
+    </div>
+  </header>
+
+  <!-- Main Content Grid -->
+  <main class="main-container">
+    
+    <!-- Hero Left Column -->
+    <section class="hero-content">
+      <span class="hero-tag" data-edit="hero_badge" data-label="Badge Hero">DEV OFFICE</span>
+      <h1 class="hero-title">
+        <span data-edit="hero_title_1" data-label="Judul Hero 1">Connect to </span><br>
+        <span class="gradient-text" data-edit="hero_title_2" data-label="Judul Hero 2 (Gradient)">Productivity</span>
+      </h1>
+      <p class="hero-desc" data-edit="hero_desc" data-label="Deskripsi Hero">
+        Internet cepat dan stabil untuk mendukung kinerja tim terbaik Anda.
+      </p>
+    </section>
+
+    <!-- Login Panel Right Column -->
+    <section class="login-section">
+      <div class="login-card">
+        <h2 class="card-title" data-edit="card_title" data-label="Judul Card Login">Login Akses Internet</h2>
+        
+        <!-- Tab Switcher -->
+        <div class="tab-container">
+          <button type="button" class="tab-btn active" id="tab-voucher" onclick="switchTab('voucher')">Voucher</button>
+          <button type="button" class="tab-btn" id="tab-username" onclick="switchTab('username')">Username</button>
+        </div>
+
+        <!-- MikroTik Form -->
+        <form name="login" action="$(link-login-only)" method="post" onsubmit="return validateForm()">
+          <input type="hidden" name="dst" value="$(link-orig)">
+          <input type="hidden" name="popup" value="true">
+
+          <!-- Error Alert Banner -->
+          <div class="error-banner" id="error-banner">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span id="error-text">$(error)</span>
+          </div>
+
+          <!-- Input Username / Voucher -->
+          <div class="form-field">
+            <div class="input-container">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </span>
+              <input class="input-field" id="username" name="username" type="text" placeholder="Masukkan kode voucher" required autofocus autocomplete="off">
+            </div>
+          </div>
+
+          <!-- Input Password -->
+          <div class="form-field" id="password-field" style="display: none;">
+            <div class="input-container">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+              <input class="input-field" id="password" name="password" type="password" placeholder="Masukkan password" autocomplete="off">
+              <button type="button" class="password-toggle" onclick="togglePassword()">
+                <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Options -->
+          <div class="options-row">
+            <label class="checkbox-container">
+              <input type="checkbox" name="remember" checked>
+              <span class="custom-checkbox"></span>
+              <span data-edit="remember_text" data-label="Teks Ingat Perangkat">Ingat perangkat saya</span>
+            </label>
+            <a href="https://wa.me/6281234567890" target="_blank" class="help-link" data-edit="help_link_text" data-label="Teks Link Lupa Password">Lupa password?</a>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="submit-btn" id="login-btn">
+            <span id="btn-text" data-edit="login_btn_text" data-label="Teks Tombol Login">Login</span>
+            <div class="spinner" id="btn-spinner"></div>
+          </button>
+        </form>
+
+        <div class="divider" data-edit="divider_text" data-label="Teks Pembatas">atau</div>
+
+        <!-- Alternative actions -->
+        <div class="alt-login-row">
+          <button class="alt-btn" onclick="loginFree()">
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span data-edit="free_btn_text" data-label="Teks Tombol Free Trial">Free 15 Menit</span>
+          </button>
+          <button class="alt-btn" onclick="scanQR()">
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span data-edit="qr_btn_text" data-label="Teks Tombol QR Code">QR Code</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Stats Panel -->
+  <section class="stats-container">
+    <div class="stats-grid">
+      
+      <!-- Network Status -->
+      <div class="stat-item">
+        <div class="stat-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label" data-edit="stat_network_label" data-label="Label Status Jaringan">Status Jaringan</span>
+          <span class="stat-value online" data-edit="stat_network_value" data-label="Nilai Status Jaringan">Online</span>
+        </div>
+      </div>
+
+      <!-- Speed -->
+      <div class="stat-item">
+        <div class="stat-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label" data-edit="stat_speed_label" data-label="Label Kecepatan">Kecepatan</span>
+          <span class="stat-value" data-edit="stat_speed_value" data-label="Nilai Kecepatan">300 Mbps</span>
+        </div>
+      </div>
+
+      <!-- Devices Connected -->
+      <div class="stat-item">
+        <div class="stat-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label" data-edit="stat_devices_label" data-label="Label Perangkat">Perangkat</span>
+          <span class="stat-value" data-edit="stat_devices_value" data-label="Nilai Perangkat">42 Terhubung</span>
+        </div>
+      </div>
+
+      <!-- Uptime -->
+      <div class="stat-item">
+        <div class="stat-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 14 14"></polyline>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label" data-edit="stat_uptime_label" data-label="Label Uptime">Uptime</span>
+          <span class="stat-value" data-edit="stat_uptime_value" data-label="Nilai Uptime">99.9%</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Script for interactivity and tab switching -->
+  <script>
+    let activeTab = 'voucher';
+
+    // Show/hide error banner based on MikroTik variable $(error)
+    window.onload = function() {
+      const errorText = document.getElementById('error-text');
+      const errorBanner = document.getElementById('error-banner');
+      
+      // If error exists from MikroTik (not raw placeholder string)
+      if (errorText && errorText.textContent.trim() !== '' && errorText.textContent.indexOf('$') === -1) {
+        errorBanner.style.display = 'flex';
+      }
+    };
+
+    function switchTab(tab) {
+      if (activeTab === tab) return;
+      activeTab = tab;
+      
+      const tabVoucher = document.getElementById('tab-voucher');
+      const tabUsername = document.getElementById('tab-username');
+      const usernameInput = document.getElementById('username');
+      const passwordField = document.getElementById('password-field');
+      const passwordInput = document.getElementById('password');
+
+      if (tab === 'voucher') {
+        tabVoucher.classList.add('active');
+        tabUsername.classList.remove('active');
+        usernameInput.placeholder = 'Masukkan kode voucher';
+        passwordField.style.display = 'none';
+        passwordInput.required = false;
+        passwordInput.value = '';
+      } else {
+        tabUsername.classList.add('active');
+        tabVoucher.classList.remove('active');
+        usernameInput.placeholder = 'Masukkan username';
+        passwordField.style.display = 'block';
+        passwordInput.required = true;
+      }
+      
+      usernameInput.focus();
+    }
+
+    function togglePassword() {
+      const passwordInput = document.getElementById('password');
+      const eyeIcon = document.getElementById('eye-icon');
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        // Eye off icon
+        eyeIcon.innerHTML = `
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        `;
+      } else {
+        passwordInput.type = 'password';
+        // Eye open icon
+        eyeIcon.innerHTML = `
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        `;
+      }
+    }
+
+    function validateForm() {
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const loginBtn = document.getElementById('login-btn');
+      const btnText = document.getElementById('btn-text');
+      const spinner = document.getElementById('btn-spinner');
+
+      // For voucher mode, password is the same as username in MikroTik standard hotspot
+      if (activeTab === 'voucher') {
+        passwordInput.value = usernameInput.value;
+      }
+
+      // Smooth loading state
+      btnText.style.display = 'none';
+      spinner.style.display = 'block';
+      loginBtn.disabled = true;
+      
+      return true;
+    }
+
+    // Free access trial placeholder action
+    function loginFree() {
+      const errorBanner = document.getElementById('error-banner');
+      const errorText = document.getElementById('error-text');
+      
+      // Simulate free access submit or redirect
+      alert('Mencoba menghubungkan sesi Free 15 Menit...');
+      // In MikroTik, typically redirect to a status page or login via a direct link.
+    }
+
+    // QR Code scanner placeholder action
+    function scanQR() {
+      alert('Membuka kamera untuk scan QR Code...');
+    }
+  </script>
+</body>
+</html>

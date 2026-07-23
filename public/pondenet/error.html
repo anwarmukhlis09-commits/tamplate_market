@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PondeNet - Error</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body data-edit-bg="body_bg" data-label="Latar Belakang Halaman">
+    <div class="page-wrapper">
+        <!-- Top Banner Header -->
+        <header class="top-banner" data-edit-bg="banner_background" data-label="Banner Atas Background">
+            <div class="nav-container">
+                <div class="logo-container">
+                    <img src="logo.svg" alt="PondeNet Logo" class="brand-logo">
+                </div>
+            </div>
+
+            <!-- City Skyline -->
+            <div class="city-illustration-wrapper">
+                <img src="city_banner.svg" alt="City Skyline" class="city-skyline-img">
+            </div>
+        </header>
+
+        <!-- Main Error Area -->
+        <main class="bottom-section">
+            <div class="auth-card-container">
+                <div class="auth-card" style="text-align: center;">
+                    <!-- Error Icon -->
+                    <div style="margin: 0 auto 16px auto; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; background-color: #fef2f2; border-radius: 50%; border: 2px solid #fecaca; color: #dc2626;">
+                        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+
+                    <h2 class="auth-title" data-edit="error_page_title" data-label="Judul Error Halaman" style="color: #dc2626;">
+                        Hotspot Error
+                    </h2>
+                    <p class="auth-subtitle" data-edit="error_page_subtitle" data-label="Subjudul Error Halaman" style="margin-bottom: 20px;">
+                        Terjadi kesalahan pada sistem hotspot.
+                    </p>
+
+                    <!-- MikroTik Error Message -->
+                    <div class="error-message" style="margin-bottom: 24px; animation: none;">
+                        $(error-message)
+                    </div>
+
+                    <!-- Return to Login Button -->
+                    <form action="$(link-login)" name="login">
+                        <button type="submit" class="btn-submit" data-edit-bg-color="error_back_btn_bg" data-label="Warna Tombol Kembali Error">
+                            Kembali ke Login
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p class="footer-text">
+                    © Copyright 2022. All rights reserved. Made with love by pondenet
+                </p>
+            </footer>
+        </main>
+    </div>
+</body>
+</html>

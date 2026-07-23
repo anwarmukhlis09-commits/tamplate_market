@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point Coffee - Premium Hotspot Portal</title>
+    <!-- Menghubungkan ke Stylesheet Lokal untuk Kemampuan Offline 100% -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- BAGIAN ATAS: BRANDING & LOGO -->
+    <header>
+        <div class="logo-wrapper">
+            <div class="logo-container">
+                <!-- Ikon Biji Kopi SVG Murni -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.25 8.25 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="brand-title">Point Coffee</h1>
+                <p class="brand-subtitle">Premium Hotspot Portal</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- BAGIAN TENGAH: LOGIN CARD -->
+    <main class="main-card">
+        
+        <!-- Pesan Selamat Datang -->
+        <div class="card-header">
+            <span class="badge">WiFi Hotspot Cafe</span>
+            <h2 class="card-title">Selamat Datang</h2>
+            <p class="card-desc">Koneksi internet cepat pendamping kopi terbaikmu</p>
+        </div>
+
+        <!-- Tampilan Pesan Error MikroTik (Diletakkan di kartu utama agar langsung terlihat) -->
+        $(if error)
+        <div class="error-box">
+            <span class="error-icon">⚠️</span>
+            <div>$(error)</div>
+        </div>
+        $(endif)
+
+        <!-- Pemilih Tab: Voucher vs Member -->
+        <div class="tab-container">
+            <button type="button" id="tab-voucher" onclick="switchTab('voucher')" class="tab-btn active">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-3-12v.75m0 3v.75m0 3v.75m0 3V18M3 6.75A2.25 2.25 0 0 1 5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 17.25V6.75Z" />
+                </svg>
+                Voucher
+            </button>
+            <button type="button" id="tab-member" onclick="switchTab('member')" class="tab-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg>
+                Member
+            </button>
+        </div>
+
+        <!-- Form Login Hotspot -->
+        <form id="login-form" action="$(link-login-only)" method="post" onsubmit="return handleFormSubmit(event)">
+            <input type="hidden" name="dst" value="$(link-orig)" />
+            <input type="hidden" name="popup" value="true" />
+            
+            <!-- Kolom Input Utama (Protokol Asli MikroTik) -->
+            <!-- Kolom Username / Voucher -->
+            <div class="form-group">
+                <label id="input-label-username">Kode Voucher</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+                        </svg>
+                    </span>
+                    <input type="text" id="username" name="username" placeholder="Masukkan kode voucher" required autofocus
+                        autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+                        oninput="handleUsernameInput(this)" class="input-field uppercase-input">
+                </div>
+            </div>
+
+            <!-- Kolom Password (Disembunyikan saat mode voucher via JS) -->
+            <div id="password-container" class="form-group">
+                <label>Password Member</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                        </svg>
+                    </span>
+                    <input type="password" id="password" name="password" placeholder="Password akun member"
+                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="input-field">
+                </div>
+            </div>
+
+            <!-- Tombol Kirim -->
+            <button type="submit" class="btn-primary">
+                HUBUNGKAN INTERNET
+            </button>
+
+            <!-- Tautan Free Trial -->
+            <div class="links-wrapper">
+                <a href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=TRIAL" class="link-trial">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    Trial WiFi (Free 15 Menit)
+                </a>
+            </div>
+        </form>
+    </main>
+
+    <!-- BAGIAN BAWAH: DAFTAR TARIF WiFi -->
+    <section class="pricing-section">
+        <div class="pricing-header">
+            <span class="pricing-title">Daftar Paket WiFi</span>
+            <span class="pricing-badge">Speedy</span>
+        </div>
+        
+        <div class="price-list">
+            <!-- Paket 1 -->
+            <div class="price-item">
+                <div class="item-info">
+                    <div class="item-name">Paket Data Super</div>
+                    <div class="item-meta">
+                        <span>⏱️ 3 Jam</span>
+                        <span>•</span>
+                        <span>🚀 5 Mbps</span>
+                    </div>
+                </div>
+                <div class="item-price">Rp 3.000</div>
+            </div>
+
+            <!-- Paket 2 -->
+            <div class="price-item">
+                <div class="item-info">
+                    <div class="item-name">Paket Data Premium</div>
+                    <div class="item-meta">
+                        <span>⏱️ 12 Jam</span>
+                        <span>•</span>
+                        <span>🚀 10 Mbps</span>
+                    </div>
+                </div>
+                <div class="item-price">Rp 6.000</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER COPYRIGHT -->
+    <footer>
+        &copy; 2026 Point Coffee Hotspot. All Rights Reserved.
+    </footer>
+
+    <!-- JAVASCRIPT UNTUK TAB SWITCHING & LOGIKA FORM MIKROTIK -->
+    <script>
+        let currentTab = 'voucher';
+
+        // Fungsi inisialisasi awal saat halaman selesai dimuat
+        window.addEventListener('DOMContentLoaded', () => {
+            // Sembunyikan kolom password secara dinamis lewat JS agar
+            // jika JS perangkat mati/blokir, kolom password tetap tampil otomatis
+            switchTab('voucher');
+        });
+
+        // Handler perubahan input username
+        function handleUsernameInput(el) {
+            if (currentTab === 'voucher') {
+                // Paksa huruf besar kapital pada voucher
+                el.value = el.value.toUpperCase();
+            }
+        }
+
+        // Fungsi perpindahan tab Voucher & Member
+        function switchTab(tabType) {
+            currentTab = tabType;
+            
+            const btnVoucher = document.getElementById('tab-voucher');
+            const btnMember = document.getElementById('tab-member');
+            
+            const inputLabel = document.getElementById('input-label-username');
+            const inputUsername = document.getElementById('username');
+            const inputPassword = document.getElementById('password');
+            const passContainer = document.getElementById('password-container');
+            
+            if (tabType === 'voucher') {
+                // Tampilan Tombol Aktif
+                btnVoucher.className = "tab-btn active";
+                btnMember.className = "tab-btn";
+                
+                // Konfigurasi Input Voucher
+                inputLabel.innerText = "Kode Voucher";
+                inputUsername.placeholder = "Masukkan kode voucher";
+                inputUsername.setAttribute('autocapitalize', 'characters');
+                inputUsername.classList.add('uppercase-input');
+                
+                // Sembunyikan kolom Password
+                passContainer.style.display = 'none';
+                inputPassword.required = false;
+                inputPassword.value = '';
+            } else {
+                // Tampilan Tombol Aktif
+                btnVoucher.className = "tab-btn";
+                btnMember.className = "tab-btn active";
+                
+                // Konfigurasi Input Member
+                inputLabel.innerText = "Username Member";
+                inputUsername.placeholder = "Masukkan username member";
+                inputUsername.setAttribute('autocapitalize', 'none');
+                inputUsername.classList.remove('uppercase-input');
+                
+                // Tampilkan kolom Password
+                passContainer.style.display = 'block';
+                inputPassword.required = true;
+            }
+            
+            inputUsername.focus();
+        }
+
+        // Validasi dan pemrosesan akhir sebelum formulir dikirim ke router
+        function handleFormSubmit(event) {
+            const inputUsername = document.getElementById('username');
+            const inputPassword = document.getElementById('password');
+            
+            const uVal = inputUsername.value.trim();
+            
+            if (currentTab === 'voucher') {
+                if (!uVal) {
+                    alert('Silakan masukkan kode voucher Anda!');
+                    event.preventDefault();
+                    return false;
+                }
+                // Protokol MikroTik Voucher: password disamakan dengan username voucher
+                inputPassword.value = uVal;
+            } else {
+                const pVal = inputPassword.value.trim();
+                if (!uVal || !pVal) {
+                    alert('Silakan lengkapi username dan password member Anda!');
+                    event.preventDefault();
+                    return false;
+                }
+            }
+            return true;
+        }
+    </script>
+</body>
+</html>

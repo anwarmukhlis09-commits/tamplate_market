@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PondeNet - Logged Out</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body data-edit-bg="body_bg" data-label="Latar Belakang Halaman">
+    <div class="page-wrapper">
+        <!-- Top Banner Header -->
+        <header class="top-banner" data-edit-bg="banner_background" data-label="Banner Atas Background">
+            <div class="nav-container" data-edit-visible="show_navigation" data-label="Tampilkan Navigasi Header">
+                <div class="logo-container">
+                    <img src="logo.svg" alt="PondeNet Logo" class="brand-logo" data-edit-image="brand_logo" data-label="Logo Brand" data-edit-height="brand_logo_height" data-label-height="Tinggi Logo" style="height: 32px;">
+                </div>
+            </div>
+
+            <!-- City Skyline -->
+            <div class="city-illustration-wrapper">
+                <img src="city_banner.svg" alt="City Skyline" class="city-skyline-img">
+            </div>
+        </header>
+
+        <!-- Main Logout Area -->
+        <main class="bottom-section">
+            <div class="auth-card-container">
+                <div class="auth-card">
+                    <h2 class="auth-title" data-edit="logout_title" data-label="Judul Logout" data-edit-color="logout_title_color" data-label-color="Warna Judul Logout">
+                        Logged Out
+                    </h2>
+                    <p class="auth-subtitle" data-edit="logout_subtitle" data-label="Subjudul Logout" data-edit-color="logout_subtitle_color" data-label-color="Warna Subjudul Logout">
+                        You have disconnected from the network
+                    </p>
+
+                    <!-- Summary details -->
+                    <div class="fields-container" style="margin-bottom: 20px;">
+                        <div class="status-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">User name</span>
+                                <span style="font-weight: 600; color: var(--text-main);">$(username)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Active Time</span>
+                                <span style="font-weight: 600; color: var(--text-main);">$(uptime)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Uploaded</span>
+                                <span style="font-weight: 600; color: var(--text-main);">$(bytes-in-nice)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Downloaded</span>
+                                <span style="font-weight: 600; color: var(--text-main);">$(bytes-out-nice)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connect again action -->
+                    <form action="$(link-login)" name="login">
+                        <button type="submit" class="btn-submit" data-edit-bg-color="logout_reconnect_btn_bg" data-label="Warna Tombol Login Kembali" data-edit-color="logout_reconnect_btn_text" data-label-color="Warna Teks Login Kembali">
+                            Login Again
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p class="footer-text" data-edit="footer_text" data-label="Teks Footer">
+                    © Copyright 2022. All rights reserved. Made with love by pondenet
+                </p>
+            </footer>
+        </main>
+    </div>
+</body>
+</html>
