@@ -25,6 +25,8 @@ let lastSavedTimer = null;  // timer untuk auto-hide "Tersimpan pukul ..." indic
 const errorMsg = ref(null);
 const previewKey = ref(0);     // increment untuk force re-render iframe (initial load, reset, manual refresh saja)
 const previewSrc = ref('');    // URL iframe src — di-set SEKALI saat load, TIDAK berubah tiap keystroke
+const iframeReady = ref(false); // Flag untuk mengetahui apakah iframe sudah selesai load
+
 const previewMode = ref('desktop'); // 'desktop' | 'tablet' | 'mobile'
 const activePage = ref('login');   // 'login' | 'status' | 'logout'
 

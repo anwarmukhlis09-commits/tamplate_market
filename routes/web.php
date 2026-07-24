@@ -513,11 +513,21 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         return strlen($b['path']) - strlen($a['path']);
     });
     $filePath = \Storage::disk('public')->path($matches[0]['path']);
-    // FIX: <base> menunjuk ke ROUTE HANDLER /templates/{id}/preview/, BUKAN storage symlink.
-    // Alasan: storage symlink bisa tidak ada di production; route handler konsisten
-    // baca dari folder master, dan <base> akan resolve relative path (style.css,
-    // images/logo.svg) ke route templates.preview.asset yang baru.
-    $baseHref = url('/templates/' . $t->id . '/preview/');
+    // FIX UNTUK NGINX aaPanel:
+    // Nginx di aaPanel mencegat request statis (.css, .js) dan me-return 404
+    // jika kita menggunakan route handler. Kita HARUS menggunakan storage symlink.
+    // Base href harus selalu mengarah ke folder MASTER, karena draft hanya
+    // berisi file HTML yang diedit.
+    $masterDir = "templates/{$t->id}/original";
+    if (\Storage::disk('public')->exists($masterDir)) {
+        foreach (\Storage::disk('public')->allFiles($masterDir) as $candidate) {
+            if (basename($candidate) === $file) {
+                $masterDir = dirname($candidate);
+                break;
+            }
+        }
+    }
+    $baseHref = asset('storage/' . $masterDir);
     $html = file_get_contents($filePath);
 
     // Inject base tag untuk asset relatif (gunakan case-insensitive regex agar compatible dengan head bertipe apa pun)
