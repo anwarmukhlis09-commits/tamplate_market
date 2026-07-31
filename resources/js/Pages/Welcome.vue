@@ -9,6 +9,8 @@ const props = defineProps({
     laravelVersion: String,
     phpVersion: String,
     templates: { type: Array, default: () => [] },
+    categories: { type: Array, default: () => [] },
+    stats: { type: Array, default: () => [] },
 });
 
 // ── Showcase mockup: auto-rotate state ──
@@ -41,6 +43,21 @@ function onVisibilityChange() {
 
 const activeTemplate = computed(() => props.templates?.[activeIndex.value] || null);
 
+const activeSort = ref('newest'); // 'newest' | 'popular' | 'price'
+
+const sortedTemplates = computed(() => {
+    if (!props.templates || !props.templates.length) return [];
+    let result = [...props.templates];
+    if (activeSort.value === 'newest') {
+        result.sort((a, b) => b.id - a.id);
+    } else if (activeSort.value === 'popular') {
+        result.sort((a, b) => (b.sold || 0) - (a.sold || 0));
+    } else if (activeSort.value === 'price') {
+        result.sort((a, b) => (a.price || 0) - (b.price || 0));
+    }
+    return result;
+});
+
 // Floating cards: 4 next templates setelah main (no overlap dengan main kalau length >= 5)
 const floatingTemplates = computed(() => {
     if (!props.templates?.length) return [];
@@ -60,7 +77,7 @@ onUnmounted(() => {
 });
 
 // ── Category pills
-const categories = [
+const defaultCategories = [
     { name: 'Minimalis', icon: 'M4 6h16M4 12h10M4 18h7', count: 24 },
     { name: 'Modern', icon: 'M13 10V3L4 14h7v7l9-11h-7z', count: 38 },
     { name: 'Gaming', icon: 'M15 7h2a4 4 0 014 4v2a4 4 0 01-4 4h-2v-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V7zM9 7H7a4 4 0 00-4 4v2a4 4 0 004 4h2v-2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2V7z', count: 18 },
@@ -70,6 +87,7 @@ const categories = [
     { name: 'Cafe', icon: 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3', count: 15 },
     { name: 'ISP', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0', count: 9 },
 ];
+const categories = computed(() => props.categories?.length ? props.categories : defaultCategories);
 
 // ── Top creators
 const topCreators = [
@@ -90,12 +108,13 @@ const advantages = [
 ];
 
 // ── Stats
-const stats = [
+const defaultStats = [
     { value: '500+', label: 'Template' },
     { value: '12K+', label: 'Pelanggan' },
     { value: '4.9/5', label: 'Rating' },
     { value: '24/7', label: 'Support' },
 ];
+const stats = computed(() => props.stats?.length ? props.stats : defaultStats);
 
 // ── Cara Kerja steps
 const steps = [
@@ -354,14 +373,14 @@ function getGradient(seed) {
                             <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">Pilihan terbaik minggu ini</h2>
                         </div>
                         <div class="hidden sm:flex items-center gap-2">
-                            <button class="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:border-slate-300">Terbaru</button>
-                            <button class="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg">Populer</button>
-                            <button class="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg">Harga</button>
+                            <button @click="activeSort = 'newest'" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all" :class="activeSort === 'newest' ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100 bg-white border border-slate-200'">Terbaru</button>
+                            <button @click="activeSort = 'popular'" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all" :class="activeSort === 'popular' ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100 bg-white border border-slate-200'">Populer</button>
+                            <button @click="activeSort = 'price'" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all" :class="activeSort === 'price' ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100 bg-white border border-slate-200'">Harga</button>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                        <Link v-for="t in templates.slice(0, 9)" :key="t.id" :href="'/template/' + t.id" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
+                        <Link v-for="t in sortedTemplates.slice(0, 9)" :key="t.id" :href="'/template/' + t.id" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
                             <!-- Thumbnail -->
                             <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
                                 <div v-if="t.imageUrl" class="w-full h-full">

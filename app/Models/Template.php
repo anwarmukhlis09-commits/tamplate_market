@@ -35,4 +35,8 @@ class Template extends Model
         'sold_count' => 'integer',
         'rating' => 'decimal:1',
     ];
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
 }
