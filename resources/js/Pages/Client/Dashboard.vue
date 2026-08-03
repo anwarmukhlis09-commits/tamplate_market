@@ -13,7 +13,7 @@ function formatPrice(p) {
 </script>
 
 <template>
-    <Head title="Dashboard — MarketTemplate" />
+    <Head title="Dashboard — Template Hotspot" />
     <ClientLayout>
         <div class="mb-8">
             <h1 class="text-2xl font-extrabold text-slate-900">Dashboard</h1>

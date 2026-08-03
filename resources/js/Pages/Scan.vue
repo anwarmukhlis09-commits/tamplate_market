@@ -202,6 +202,6 @@ function handleManualCancel() {
             </div>
         </div>
         
-        <p class="text-[10px] text-slate-600 mt-6 select-none">Powered by MarketTemplate secure SSL redirection.</p>
+        <p class="text-[10px] text-slate-600 mt-6 select-none">Powered by Template Hotspot secure SSL redirection.</p>
     </div>
 </template>

@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halaman Tidak Ditemukan — MarketTemplate</title>
+    <title>Halaman Tidak Ditemukan — Template Hotspot</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -16,7 +16,7 @@
 
         <!-- Logo -->
         <div class="flex justify-center mb-6">
-            <img src="/images/logo.png" alt="MarketTemplate" class="h-14 w-auto" />
+            <img src="/images/logo.png" alt="Template Hotspot" class="h-14 w-auto" />
         </div>
 
         <!-- 404 illustration -->

@@ -52,7 +52,7 @@ const settingsMenu = [
                     <span class="text-white font-extrabold text-sm">MT</span>
                 </div>
                 <div>
-                    <h1 class="text-sm font-bold text-white">MarketTemplate</h1>
+                    <h1 class="text-sm font-bold text-white">Template Hotspot</h1>
                     <p class="text-[10px] text-slate-500 uppercase tracking-widest">Admin Panel</p>
                 </div>
             </div>

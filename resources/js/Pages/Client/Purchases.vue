@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import ClientLayout from '@/Layouts/ClientLayout.vue';
 </script>
 <template>
-    <Head title="Riwayat Pembelian — MarketTemplate" />
+    <Head title="Riwayat Pembelian — Template Hotspot" />
     <ClientLayout>
         <h1 class="text-2xl font-extrabold text-slate-900 mb-4">Riwayat Pembelian</h1>
         <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center">

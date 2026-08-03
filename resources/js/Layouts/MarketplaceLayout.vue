@@ -23,11 +23,7 @@ function isActive(path) {
                 <!-- Left: Logo + Menu -->
                 <div class="flex items-center gap-8 min-w-0">
                     <Link href="/" class="flex items-center gap-2.5 shrink-0 group">
-                        <img src="/images/logo.png" alt="MarketTemplate" class="h-9 w-auto group-hover:scale-105 transition-transform" />
-                        <div class="flex flex-col leading-none text-[#3448ae] font-black tracking-tight select-none">
-                            <span class="text-sm tracking-widest uppercase">MARKET</span>
-                            <span class="text-sm tracking-widest uppercase">TEMPLATE</span>
-                        </div>
+                        <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto group-hover:scale-105 transition-transform" />
                     </Link>
 
                     <nav class="hidden md:flex items-center gap-1">

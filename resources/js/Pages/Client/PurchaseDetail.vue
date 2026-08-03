@@ -17,11 +17,7 @@ const formatPrice = (p) => 'Rp ' + Number(p).toLocaleString('id-ID');
     <header class="bg-white border-b border-slate-200">
         <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link href="/" class="flex items-center gap-2.5">
-                <img src="/images/logo.png" alt="MarketTemplate" class="h-9 w-auto" />
-                <div class="flex flex-col leading-none text-[#3448ae] font-black tracking-tight select-none">
-                    <span class="text-sm tracking-widest uppercase">MARKET</span>
-                    <span class="text-sm tracking-widest uppercase">TEMPLATE</span>
-                </div>
+                <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto" />
             </Link>
             <Link href="/dashboard/purchases" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">← Kembali ke Riwayat</Link>
         </div>

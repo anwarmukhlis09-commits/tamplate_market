@@ -218,6 +218,12 @@ Route::get('/scan', function () {
     return Inertia::render('Scan');
 })->name('scan');
 
+Route::get('/bantuan', function (\Illuminate\Http\Request $request) {
+    return Inertia::render('Bantuan', [
+        'initialTab' => $request->query('tab', 'cara-order')
+    ]);
+})->name('bantuan');
+
 // ── Fullscreen Preview (no iframe chrome, ESC to exit) ─────
 Route::get('/template/{id}/fullscreen', function ($id) {
     $t = \App\Models\Template::findOrFail($id);
@@ -295,7 +301,7 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
         '{{BG_COLOR1}}' => '#4F46E5',
         '{{BG_COLOR2}}' => '#7C3AED',
         '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
-        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{FOOTER_TEXT}}' => 'Powered by Template Hotspot',
         '{{WHATSAPP}}' => '0812-3456-7890',
         '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
         '{{SHOW_VOUCHER}}' => 'block',
@@ -672,7 +678,7 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         '{{BG_COLOR1}}' => '#4F46E5',
         '{{BG_COLOR2}}' => '#7C3AED',
         '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
-        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{FOOTER_TEXT}}' => 'Powered by Template Hotspot',
         '{{WHATSAPP}}' => '0812-3456-7890',
         '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
         '{{SHOW_VOUCHER}}' => 'block',
@@ -837,7 +843,7 @@ Route::get('/template/{id}/preview-frame', function ($id) {
         '{{BG_COLOR1}}' => '#4F46E5',
         '{{BG_COLOR2}}' => '#7C3AED',
         '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
-        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{FOOTER_TEXT}}' => 'Powered by Template Hotspot',
         '{{WHATSAPP}}' => '0812-3456-7890',
         '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
         '{{SHOW_VOUCHER}}' => 'block',

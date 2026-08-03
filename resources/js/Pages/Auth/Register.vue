@@ -20,7 +20,7 @@ const submit = () => {
 </script>
 
 <template>
-<Head title="Daftar — MarketTemplate" />
+<Head title="Daftar — Template Hotspot" />
 
 <div class="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#312E81] to-[#6D28D9] flex items-center justify-center p-6">
 

@@ -157,7 +157,7 @@ function getGradient(seed) {
 
 <template>
 
-<Head title="MarketTemplate — Marketplace Template Hotspot MikroTik #1 di Indonesia" />
+<Head title="Template Hotspot — Marketplace Template Hotspot MikroTik #1 di Indonesia" />
 
 <MarketplaceLayout>
     <div class="min-h-screen bg-white text-slate-900 antialiased" style="font-family: 'Inter', 'Poppins', ui-sans-serif, system-ui, sans-serif;">
@@ -413,7 +413,7 @@ function getGradient(seed) {
                                     <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-1 group-hover:text-indigo-600 transition-colors">{{ t.name }}</h3>
                                     <span class="text-sm font-extrabold text-indigo-600 shrink-0">{{ formatPrice(t.discountPrice || t.price) }}</span>
                                 </div>
-                                <p class="text-xs text-slate-500 mb-3">oleh <span class="font-medium text-slate-700">MarketTemplate Studio</span></p>
+                                <p class="text-xs text-slate-500 mb-3">oleh <span class="font-medium text-slate-700">Template Hotspot Studio</span></p>
                                 <div class="flex items-center justify-between text-xs">
                                     <div class="flex items-center gap-1 text-amber-500">
                                         <svg class="w-3.5 h-3.5 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
@@ -608,7 +608,7 @@ function getGradient(seed) {
                             <div class="w-3 h-3 rounded-full bg-rose-500"></div>
                             <div class="w-3 h-3 rounded-full bg-amber-500"></div>
                             <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-                            <div class="ml-2 text-xs font-medium text-slate-500 flex-1 text-center pr-10">MarketTemplate Visual Editor</div>
+                            <div class="ml-2 text-xs font-medium text-slate-500 flex-1 text-center pr-10">Template Hotspot Visual Editor</div>
                         </div>
                         <!-- Editor Mockup UI -->
                         <div class="flex h-[400px]">
@@ -703,11 +703,7 @@ function getGradient(seed) {
                 <!-- Newsletter -->
                 <div>
                     <div class="flex items-center gap-2.5 mb-4">
-                        <img src="/images/logo.png" alt="MarketTemplate" class="h-9 w-auto brightness-0 invert" />
-                        <div class="flex flex-col leading-none text-white font-black tracking-tight select-none">
-                            <span class="text-sm tracking-widest uppercase">MARKET</span>
-                            <span class="text-sm tracking-widest uppercase">TEMPLATE</span>
-                        </div>
+                        <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto brightness-0 invert" />
                     </div>
                     <h3 class="text-white font-bold text-xl mb-2">Dapatkan update & promo</h3>
                     <p class="text-slate-400 text-sm mb-4 max-w-md">Template baru, diskon eksklusif, dan tips MikroTik langsung ke email Anda.</p>
@@ -741,7 +737,7 @@ function getGradient(seed) {
             </div>
 
             <div class="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
-                <p class="text-slate-500">© 2026 MarketTemplate.id — Semua hak dilindungi.</p>
+                <p class="text-slate-500">© 2026 Template Hotspot.id — Semua hak dilindungi.</p>
                 <div class="flex items-center gap-4 text-slate-500">
                     <a href="#" class="hover:text-white transition-colors">Twitter</a>
                     <a href="#" class="hover:text-white transition-colors">Instagram</a>

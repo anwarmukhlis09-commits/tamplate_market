@@ -230,7 +230,7 @@ onMounted(() => {
 
 <template>
 
-    <Head title="Template Hotspot MikroTik — MarketTemplate" />
+    <Head title="Template Hotspot MikroTik — Template Hotspot" />
 
     <MarketplaceLayout>
         <div class="min-h-screen bg-slate-50 antialiased"

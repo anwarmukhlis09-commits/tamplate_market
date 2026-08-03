@@ -66,7 +66,7 @@ const isNewRelease = computed(() => !showRating.value && !showSold.value);
 
 function shareTemplate() {
     if (navigator.share) {
-        navigator.share({ title: t.value?.name + ' — MarketTemplate', url: window.location.href });
+        navigator.share({ title: t.value?.name + ' — Template Hotspot', url: window.location.href });
     } else {
         navigator.clipboard.writeText(window.location.href);
         alert('Link berhasil disalin!');
@@ -167,7 +167,7 @@ function onIframeLoad(e) {
 </script>
 
 <template>
-<Head :title="t ? t.name + ' — MarketTemplate' : 'Template Tidak Ditemukan'" />
+<Head :title="t ? t.name + ' — Template Hotspot' : 'Template Tidak Ditemukan'" />
 
 <MarketplaceLayout>
 <div class="min-h-screen bg-slate-50 antialiased" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;">
@@ -546,7 +546,7 @@ function onIframeLoad(e) {
                             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
                                 <span class="text-white font-extrabold text-sm">MT</span>
                             </div>
-                            <span class="font-bold text-white">MarketTemplate</span>
+                            <span class="font-bold text-white">Template Hotspot</span>
                         </div>
                         <p class="text-sm text-slate-400 leading-relaxed">Marketplace template hotspot MikroTik premium #1 di Indonesia.</p>
                     </div>
@@ -561,12 +561,12 @@ function onIframeLoad(e) {
                         <h4 class="font-bold text-white text-sm mb-3">Bantuan</h4>
                         <ul class="space-y-2 text-sm">
                             <li><a href="https://wa.me/6281234567890" class="hover:text-white transition-colors">WhatsApp Support</a></li>
-                            <li><a href="mailto:support@markettemplate.id" class="hover:text-white transition-colors">Email Support</a></li>
+                            <li><a href="mailto:support@templatehotspot.id" class="hover:text-white transition-colors">Email Support</a></li>
                         </ul>
                     </div>
                 </div>
                 <div class="mt-8 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
-                    © 2026 MarketTemplate.id — Semua hak dilindungi.
+                    © 2026 Template Hotspot.id — Semua hak dilindungi.
                 </div>
             </div>
         </footer>

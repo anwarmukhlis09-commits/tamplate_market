@@ -705,7 +705,7 @@ async function save(opts = {}) {
 </script>
 
 <template>
-<Head :title="`Edit ${template?.name || 'Template'} — MarketTemplate`" />
+<Head :title="`Edit ${template?.name || 'Template'} — Template Hotspot`" />
 
 <div class="h-screen bg-slate-50 flex flex-col overflow-hidden" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #0F172A;">
 

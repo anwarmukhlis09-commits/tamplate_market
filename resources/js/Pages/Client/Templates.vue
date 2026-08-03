@@ -21,7 +21,7 @@ function formatPrice(p) { return p === 0 ? 'Gratis' : 'Rp ' + Number(p).toLocale
 </script>
 
 <template>
-    <Head title="Template Saya — MarketTemplate" />
+    <Head title="Template Saya — Template Hotspot" />
     <ClientLayout>
         <div class="flex items-center justify-between mb-6">
             <div>
