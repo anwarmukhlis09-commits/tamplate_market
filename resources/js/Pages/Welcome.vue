@@ -1881,31 +1881,31 @@ function getGradient(seed) {
                                 </h4>
                                 <ul class="space-y-2 text-sm">
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=cara-order"
                                             class="hover:text-white transition-colors"
-                                            >Cara Order</a
+                                            >Cara Order</Link
                                         >
                                     </li>
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=instalasi"
                                             class="hover:text-white transition-colors"
-                                            >Instalasi</a
+                                            >Instalasi</Link
                                         >
                                     </li>
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=faq"
                                             class="hover:text-white transition-colors"
-                                            >FAQ</a
+                                            >FAQ</Link
                                         >
                                     </li>
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=kontak"
                                             class="hover:text-white transition-colors"
-                                            >Kontak Support</a
+                                            >Kontak Support</Link
                                         >
                                     </li>
                                 </ul>
@@ -1918,31 +1918,31 @@ function getGradient(seed) {
                                 </h4>
                                 <ul class="space-y-2 text-sm">
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=syarat-ketentuan"
                                             class="hover:text-white transition-colors"
-                                            >Syarat &amp; Ketentuan</a
+                                            >Syarat &amp; Ketentuan</Link
                                         >
                                     </li>
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=kebijakan-privasi"
                                             class="hover:text-white transition-colors"
-                                            >Kebijakan Privasi</a
+                                            >Kebijakan Privasi</Link
                                         >
                                     </li>
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=kebijakan-refund"
                                             class="hover:text-white transition-colors"
-                                            >Kebijakan Refund</a
+                                            >Kebijakan Refund</Link
                                         >
                                     </li>
                                     <li>
-                                        <a
-                                            href="#"
+                                        <Link
+                                            href="/bantuan?tab=lisensi"
                                             class="hover:text-white transition-colors"
-                                            >Lisensi</a
+                                            >Lisensi</Link
                                         >
                                     </li>
                                 </ul>
