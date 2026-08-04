@@ -548,7 +548,7 @@ function onIframeLoad(e) {
                             </div>
                             <span class="font-bold text-white">Template Hotspot</span>
                         </div>
-                        <p class="text-sm text-slate-400 leading-relaxed">Marketplace template hotspot MikroTik premium #1 di Indonesia.</p>
+                        <p class="text-sm text-slate-400 leading-relaxed">Marketplace template hotspot MikroTik premium terbaik dan siap pakai.</p>
                     </div>
                     <div>
                         <h4 class="font-bold text-white text-sm mb-3">Marketplace</h4>

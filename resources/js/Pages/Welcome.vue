@@ -78,14 +78,14 @@ onUnmounted(() => {
 
 // ── Category pills
 const defaultCategories = [
-    { name: 'Minimalis', icon: 'M4 6h16M4 12h10M4 18h7', count: 24 },
-    { name: 'Modern', icon: 'M13 10V3L4 14h7v7l9-11h-7z', count: 38 },
-    { name: 'Gaming', icon: 'M15 7h2a4 4 0 014 4v2a4 4 0 01-4 4h-2v-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V7zM9 7H7a4 4 0 00-4 4v2a4 4 0 004 4h2v-2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2V7z', count: 18 },
-    { name: 'Hotel', icon: 'M3 21h18M3 7v14M21 7v14M6 21V11h12v10M9 7V3h6v4M9 11h.01M15 11h.01M9 15h.01M15 15h.01', count: 22 },
-    { name: 'Sekolah', icon: 'M12 14l9-5-9-5-9 5 9 5zM12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', count: 12 },
-    { name: 'Voucher', icon: 'M2 9V7a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4zM9 9h6', count: 31 },
-    { name: 'Cafe', icon: 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3', count: 15 },
-    { name: 'ISP', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0', count: 9 },
+    { name: 'Minimalis', icon: 'M4 6h16M4 12h10M4 18h7', count: 24, color: 'from-slate-400 to-slate-500' },
+    { name: 'Modern', icon: 'M13 10V3L4 14h7v7l9-11h-7z', count: 38, color: 'from-indigo-500 to-violet-500' },
+    { name: 'Gaming', icon: 'M15 7h2a4 4 0 014 4v2a4 4 0 01-4 4h-2v-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V7zM9 7H7a4 4 0 00-4 4v2a4 4 0 004 4h2v-2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2V7z', count: 18, color: 'from-fuchsia-500 to-pink-500' },
+    { name: 'Hotel', icon: 'M3 21h18M3 7v14M21 7v14M6 21V11h12v10M9 7V3h6v4M9 11h.01M15 11h.01M9 15h.01M15 15h.01', count: 22, color: 'from-amber-400 to-orange-500' },
+    { name: 'Sekolah', icon: 'M12 14l9-5-9-5-9 5 9 5zM12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', count: 12, color: 'from-cyan-400 to-blue-500' },
+    { name: 'Voucher', icon: 'M2 9V7a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4zM9 9h6', count: 31, color: 'from-emerald-400 to-teal-500' },
+    { name: 'Cafe', icon: 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3', count: 15, color: 'from-rose-400 to-pink-500' },
+    { name: 'ISP', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0', count: 9, color: 'from-blue-500 to-indigo-600' },
 ];
 const categories = computed(() => props.categories?.length ? props.categories : defaultCategories);
 
@@ -157,13 +157,13 @@ function getGradient(seed) {
 
 <template>
 
-<Head title="Template Hotspot — Marketplace Template Hotspot MikroTik #1 di Indonesia" />
+<Head title="Template Hotspot — Marketplace Template Hotspot MikroTik Terbaik & Siap Pakai" />
 
 <MarketplaceLayout>
     <div class="min-h-screen bg-white text-slate-900 antialiased" style="font-family: 'Inter', 'Poppins', ui-sans-serif, system-ui, sans-serif;">
 
     <!-- ═══════════════ HERO SECTION ═══════════════ -->
-    <section class="relative pt-32 pb-20 sm:pt-40 sm:pb-28 overflow-hidden">
+    <section class="relative pt-20 pb-16 sm:pt-24 sm:pb-20 overflow-hidden">
 
         <!-- Background decoration -->
         <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
@@ -183,7 +183,7 @@ function getGradient(seed) {
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                         </span>
-                        Marketplace Template #1 di Indonesia
+                        Template Hotspot MikroTik Siap Pakai
                     </div>
 
                     <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.08] mb-6">
@@ -350,11 +350,20 @@ function getGradient(seed) {
                 </Link>
             </div>
 
-            <div class="flex flex-wrap gap-2.5">
-                <Link v-for="cat in categories" :key="cat.name" :href="`/katalog?category=${cat.name.toLowerCase()}`" class="group inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-all shadow-sm">
-                    <svg class="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="cat.icon"/></svg>
-                    {{ cat.name }}
-                    <span class="text-xs text-slate-400 group-hover:text-indigo-500">({{ cat.count }})</span>
+            <div class="flex flex-wrap gap-3">
+                <Link v-for="cat in categories" :key="cat.name" :href="`/katalog?category=${cat.name.toLowerCase()}`" 
+                    class="group inline-flex items-center gap-3 pl-2.5 pr-4 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/80 hover:border-indigo-300 rounded-full text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5">
+                    <!-- Icon Container with Gradient -->
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br text-white shadow-sm transition-transform duration-300 group-hover:scale-110" 
+                         :class="cat.color || 'from-indigo-500 to-violet-500'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="cat.icon"/>
+                        </svg>
+                    </div>
+                    <span class="flex items-center gap-1.5">
+                        {{ cat.name }}
+                        <span class="text-xs text-slate-400 group-hover:text-indigo-500 font-medium">({{ cat.count }})</span>
+                    </span>
                 </Link>
             </div>
         </div>

@@ -8,7 +8,7 @@ const toast = useToast();
 
 const settings = ref({
     siteName: 'Template Hotspot',
-    siteTagline: 'Marketplace Template Hotspot MikroTik #1 di Indonesia',
+    siteTagline: 'Marketplace Template Hotspot MikroTik Terbaik & Siap Pakai',
     contactEmail: 'support@templatehotspot.id',
     contactWhatsapp: '0812-3456-7890',
     currency: 'IDR',
