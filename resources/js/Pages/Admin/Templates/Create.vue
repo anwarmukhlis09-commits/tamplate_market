@@ -13,7 +13,21 @@ const form = useForm({
 });
 
 const featureInput = ref('');
-function addFeature() { if (featureInput.value.trim()) { form.features.push(featureInput.value.trim()); featureInput.value = ''; } }
+function addFeature() {
+    if (featureInput.value.trim()) {
+        const newFeatures = featureInput.value
+            .split(/[,;\n]+/)
+            .map(f => f.trim())
+            .filter(f => f.length > 0);
+        
+        newFeatures.forEach(f => {
+            if (!form.features.includes(f)) {
+                form.features.push(f);
+            }
+        });
+        featureInput.value = '';
+    }
+}
 function removeFeature(i) { form.features.splice(i, 1); }
 
 // ── Preview image ────────────────────
@@ -469,7 +483,7 @@ function submit() {
                                 f }}<button @click="removeFeature(i)"
                                 class="ml-1 hover:text-red-500">&times;</button></span></div>
                     <div class="flex gap-2"><input v-model="featureInput" @keyup.enter="addFeature" type="text"
-                            placeholder="Tambah fitur..."
+                            placeholder="Tambah fitur (pisahkan dengan koma)..."
                             class="flex-1 px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl"><button
                             type="button" @click="addFeature"
                             class="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-xl">Tambah</button>

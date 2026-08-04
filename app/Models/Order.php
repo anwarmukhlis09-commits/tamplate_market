@@ -88,4 +88,13 @@ class Order extends Model
         }
         return (int) now()->diffInSeconds($this->expired_at, false);
     }
+
+    protected static function booted()
+    {
+        static::updated(function ($order) {
+            if ($order->wasChanged('status') && $order->status === 'completed') {
+                $order->template()->increment('sold_count');
+            }
+        });
+    }
 }

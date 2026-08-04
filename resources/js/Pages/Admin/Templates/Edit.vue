@@ -58,7 +58,16 @@ function onFolderChange(e) {
 const featureInput = ref('');
 function addFeature() {
     if (featureInput.value.trim()) {
-        form.features.push(featureInput.value.trim());
+        const newFeatures = featureInput.value
+            .split(/[,;\n]+/)
+            .map(f => f.trim())
+            .filter(f => f.length > 0);
+        
+        newFeatures.forEach(f => {
+            if (!form.features.includes(f)) {
+                form.features.push(f);
+            }
+        });
         featureInput.value = '';
     }
 }
@@ -206,7 +215,7 @@ function formatPrice(p) { return 'Rp ' + p.toLocaleString('id-ID'); }
                         </span>
                     </div>
                     <div class="flex gap-2">
-                        <input v-model="featureInput" @keyup.enter="addFeature" type="text" placeholder="Tambah fitur..." class="flex-1 px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+                        <input v-model="featureInput" @keyup.enter="addFeature" type="text" placeholder="Tambah fitur (pisahkan dengan koma)..." class="flex-1 px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                         <button type="button" @click="addFeature" class="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors">Tambah</button>
                     </div>
                 </div>

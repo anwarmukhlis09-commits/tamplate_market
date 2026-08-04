@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terjadi Kesalahan — MarketTemplate</title>
+    <title>Terjadi Kesalahan — Template Hotspot</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -18,7 +18,11 @@
     <div class="w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl p-10 sm:p-14 text-center">
 
         <div class="flex justify-center mb-6">
+<<<<<<< HEAD
             <img src="/images/logo.png?v=2" alt="MarketTemplate" class="h-14 w-auto" />
+=======
+            <img src="/images/logo.png" alt="Template Hotspot" class="h-14 w-auto" />
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
         </div>
 
         <div class="relative w-32 h-32 mx-auto mb-6">

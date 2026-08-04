@@ -101,7 +101,7 @@ const filteredTemplates = computed(() => {
         });
     }
 
-    result = result.filter(t => t.price >= priceMin.value && t.price <= priceMax.value);
+    // result = result.filter(t => t.price >= priceMin.value && t.price <= priceMax.value);
 
     switch (sortBy.value) {
         case 'popular': result.sort((a, b) => b.sold - a.sold); break;
@@ -124,8 +124,8 @@ const totalResults = computed(() => filteredTemplates.value.length);
 const activeFilterCount = computed(() => {
     let n = 0;
     if (selectedCategory.value !== 'all') n++;
-    if (selectedFeatures.value.length > 0) n++;
-    if (priceMin.value > 0 || priceMax.value < 100000) n++;
+    // if (selectedFeatures.value.length > 0) n++;
+    // if (priceMin.value > 0 || priceMax.value < 100000) n++;
     if (searchQuery.value.trim()) n++;
     return n;
 });
@@ -230,7 +230,7 @@ onMounted(() => {
 
 <template>
 
-    <Head title="Template Hotspot MikroTik — MarketTemplate" />
+    <Head title="Template Hotspot MikroTik — Template Hotspot" />
 
     <MarketplaceLayout>
         <div class="min-h-screen bg-slate-50 antialiased"
@@ -280,7 +280,7 @@ onMounted(() => {
                                 </div>
 
                                 <!-- Price Filter -->
-                                <div class="bg-white border border-slate-200 rounded-2xl p-5">
+                                <div v-if="false" class="bg-white border border-slate-200 rounded-2xl p-5">
                                     <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Price
                                         Range</h4>
                                     <div class="space-y-3">
@@ -310,7 +310,7 @@ onMounted(() => {
                                 </div>
 
                                 <!-- Features -->
-                                <div class="bg-white border border-slate-200 rounded-2xl p-5">
+                                <div v-if="false" class="bg-white border border-slate-200 rounded-2xl p-5">
                                     <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Features
                                     </h4>
                                     <div class="space-y-2">
@@ -427,9 +427,6 @@ onMounted(() => {
                                     <div v-if="tpl.price === 0"
                                         class="absolute top-3 right-3 px-2.5 py-1 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-md">
                                         Free</div>
-                                    <div v-else
-                                        class="absolute top-3 right-3 px-2.5 py-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-md">
-                                        Premium</div>
                                     <!-- Custom badge from DB (Best Seller, Baru, Populer, dll) -->
                                     <div v-if="tpl.badge"
                                         class="absolute bottom-3 left-3 px-2 py-0.5 bg-white/95 backdrop-blur text-slate-800 text-[10px] font-bold rounded-md shadow-md">
@@ -653,7 +650,7 @@ onMounted(() => {
                                 </div>
 
                                 <!-- Price Filter -->
-                                <div>
+                                <div v-if="false">
                                     <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Harga
                                     </h4>
                                     <div class="space-y-3">
@@ -683,7 +680,7 @@ onMounted(() => {
                                 </div>
 
                                 <!-- Features -->
-                                <div>
+                                <div v-if="false">
                                     <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Fitur
                                     </h4>
                                     <div class="space-y-2">

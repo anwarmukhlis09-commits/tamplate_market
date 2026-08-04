@@ -71,6 +71,7 @@ function isActive(path) {
                         </nav>
                     </div>
 
+<<<<<<< HEAD
                     <!-- Right: Auth buttons / User menu -->
                     <div class="flex items-center gap-2.5 shrink-0">
                         <!-- Guest: Login + Daftar -->
@@ -87,6 +88,13 @@ function isActive(path) {
                                 >Daftar</Link
                             >
                         </template>
+=======
+                <!-- Left: Logo + Menu -->
+                <div class="flex items-center gap-8 min-w-0">
+                    <Link href="/" class="flex items-center gap-2.5 shrink-0 group">
+                        <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto group-hover:scale-105 transition-transform" />
+                    </Link>
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
 
                         <!-- Logged in: avatar + Dashboard -->
                         <template v-else>

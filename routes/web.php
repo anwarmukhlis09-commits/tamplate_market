@@ -17,11 +17,52 @@ use Inertia\Inertia;
 */
 
 Route::get('/', function () {
+    $totalTemplates = \App\Models\Template::where('status', 'published')->count();
+    $totalUsers = \App\Models\User::where('is_admin', false)->count();
+    $avgRating = round(\App\Models\Template::where('status', 'published')->where('rating', '>', 0)->avg('rating') ?: 4.8, 1);
+    
+    $stats = [
+        ['value' => $totalTemplates . '+', 'label' => 'Template'],
+        ['value' => ($totalUsers > 0 ? $totalUsers : 12) . '+', 'label' => 'Pelanggan'],
+        ['value' => $avgRating . '/5', 'label' => 'Rating'],
+        ['value' => '24/7', 'label' => 'Support'],
+    ];
+
+    $categoryMeta = [
+        'minimalis' => ['name' => 'Minimalis', 'icon' => 'M4 6h16M4 12h10M4 18h7', 'color' => 'from-slate-400 to-slate-500'],
+        'modern' => ['name' => 'Modern', 'icon' => 'M13 10V3L4 14h7v7l9-11h-7z', 'color' => 'from-indigo-500 to-violet-500'],
+        'gaming' => ['name' => 'Gaming', 'icon' => 'M15 7h2a4 4 0 014 4v2a4 4 0 01-4 4h-2v-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V7zM9 7H7a4 4 0 00-4 4v2a4 4 0 004 4h2v-2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2V7z', 'color' => 'from-fuchsia-500 to-pink-500'],
+        'hotel' => ['name' => 'Hotel', 'icon' => 'M3 21h18M3 7v14M21 7v14M6 21V11h12v10M9 7V3h6v4M9 11h.01M15 11h.01M9 15h.01M15 15h.01', 'color' => 'from-amber-400 to-orange-500'],
+        'sekolah' => ['name' => 'Sekolah', 'icon' => 'M12 14l9-5-9-5-9 5 9 5zM12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', 'color' => 'from-cyan-400 to-blue-500'],
+        'voucher' => ['name' => 'Voucher', 'icon' => 'M2 9V7a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4zM9 9h6', 'color' => 'from-emerald-400 to-teal-500'],
+        'cafe' => ['name' => 'Cafe', 'icon' => 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3', 'color' => 'from-rose-400 to-pink-500'],
+        'isp' => ['name' => 'ISP', 'icon' => 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0', 'color' => 'from-blue-500 to-indigo-600'],
+    ];
+
+    $categoryCounts = \App\Models\Template::where('status', 'published')
+        ->select('category', \DB::raw('count(*) as count'))
+        ->groupBy('category')
+        ->pluck('count', 'category')
+        ->toArray();
+
+    $categories = [];
+    foreach ($categoryMeta as $slug => $meta) {
+        $categories[] = [
+            'name' => $meta['name'],
+            'icon' => $meta['icon'],
+            'color' => $meta['color'],
+            'count' => $categoryCounts[$slug] ?? 0,
+        ];
+    }
+    usort($categories, fn($a, $b) => $b['count'] <=> $a['count']);
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => app()->version(),
         'phpVersion' => PHP_VERSION,
+        'stats' => $stats,
+        'categories' => $categories,
         'templates' => \App\Models\Template::where('status', 'published')
             ->orderBy('sold_count', 'desc')
             ->take(6)
@@ -90,7 +131,7 @@ Route::get('/template/{id}/download', [\App\Http\Controllers\TemplateController:
     ->middleware('auth')
     ->name('template.download');
 
-Route::get('/template/{id}', function ($id) {
+Route::get('/template/{id}', function (\Illuminate\Http\Request $request, $id) {
     $t = \App\Models\Template::findOrFail($id);
 
     // Template serupa: 3 published templates dari category sama (exclude current)
@@ -116,6 +157,31 @@ Route::get('/template/{id}', function ($id) {
         'showcaseImageUrl' => $rt->showcase_image ? asset('storage/' . $rt->showcase_image) : null,
     ])->all();
 
+    $reviews = \App\Models\Review::where('template_id', $t->id)
+        ->with('user:id,name')
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(fn($r) => [
+            'id' => $r->id,
+            'user_name' => $r->user->name,
+            'rating' => $r->rating,
+            'comment' => $r->comment,
+            'date' => $r->created_at->format('Y-m-d'),
+        ])->all();
+
+    $userReview = null;
+    if ($request->user()) {
+        $ur = \App\Models\Review::where('template_id', $t->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+        if ($ur) {
+            $userReview = [
+                'rating' => $ur->rating,
+                'comment' => $ur->comment,
+            ];
+        }
+    }
+
     return Inertia::render('TemplateDetail', [
         'template' => [
             'id' => $t->id,
@@ -138,9 +204,25 @@ Route::get('/template/{id}', function ($id) {
             'allowEdit' => $t->allow_edit_before_checkout,
         ],
         'relatedTemplates' => $relatedMapped,
+        'reviews' => $reviews,
+        'userReview' => $userReview,
         'canLogin' => Route::has('login'),
     ]);
 });
+
+Route::post('/template/{id}/review', [\App\Http\Controllers\ReviewController::class, 'store'])
+    ->middleware('auth')
+    ->name('template.review');
+
+Route::get('/scan', function () {
+    return Inertia::render('Scan');
+})->name('scan');
+
+Route::get('/bantuan', function (\Illuminate\Http\Request $request) {
+    return Inertia::render('Bantuan', [
+        'initialTab' => $request->query('tab', 'cara-order')
+    ]);
+})->name('bantuan');
 
 // ── Fullscreen Preview (no iframe chrome, ESC to exit) ─────
 Route::get('/template/{id}/fullscreen', function ($id) {
@@ -219,7 +301,7 @@ Route::get('/preview/{slug}/{file?}', function ($slug, $file = 'login.html') {
         '{{BG_COLOR1}}' => '#4F46E5',
         '{{BG_COLOR2}}' => '#7C3AED',
         '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
-        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{FOOTER_TEXT}}' => 'Powered by Template Hotspot',
         '{{WHATSAPP}}' => '0812-3456-7890',
         '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
         '{{SHOW_VOUCHER}}' => 'block',
@@ -596,7 +678,7 @@ Route::get('/templates/{id}/preview/{file?}', function ($id, $file = 'login.html
         '{{BG_COLOR1}}' => '#4F46E5',
         '{{BG_COLOR2}}' => '#7C3AED',
         '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
-        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{FOOTER_TEXT}}' => 'Powered by Template Hotspot',
         '{{WHATSAPP}}' => '0812-3456-7890',
         '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
         '{{SHOW_VOUCHER}}' => 'block',
@@ -761,7 +843,7 @@ Route::get('/template/{id}/preview-frame', function ($id) {
         '{{BG_COLOR1}}' => '#4F46E5',
         '{{BG_COLOR2}}' => '#7C3AED',
         '{{LOGIN_BTN_TEXT}}' => 'Login Hotspot',
-        '{{FOOTER_TEXT}}' => 'Powered by MarketTemplate',
+        '{{FOOTER_TEXT}}' => 'Powered by Template Hotspot',
         '{{WHATSAPP}}' => '0812-3456-7890',
         '{{LOGO_URL}}' => $t->preview_image ? asset('storage/' . $t->preview_image) : 'logo.png',
         '{{SHOW_VOUCHER}}' => 'block',

@@ -48,6 +48,7 @@ const formatPrice = (p) => "Rp " + Number(p).toLocaleString("id-ID");
             </div>
         </header>
 
+<<<<<<< HEAD
         <main class="max-w-4xl mx-auto px-4 py-10">
             <div class="mb-8">
                 <p class="text-sm text-emerald-600 font-semibold mb-2">
@@ -69,6 +70,38 @@ const formatPrice = (p) => "Rp " + Number(p).toLocaleString("id-ID");
                         purchase.orderId
                     }}</span>
                 </p>
+=======
+    <header class="bg-white border-b border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" class="flex items-center gap-2.5">
+                <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto" />
+            </Link>
+            <Link href="/dashboard/purchases" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">← Kembali ke Riwayat</Link>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-10">
+        <div class="mb-8">
+            <p class="text-sm text-emerald-600 font-semibold mb-2">✓ {{ purchase.status === 'completed' ? 'Pembelian Selesai' : 'Sedang Diproses' }}</p>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Detail Pembelian</h1>
+            <p class="text-slate-500 mt-1">Order ID: <span class="font-mono text-sm font-semibold">{{ purchase.orderId }}</span></p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h2 class="text-sm font-bold text-slate-900 mb-4">Template</h2>
+            <div class="flex items-center gap-4 pb-5 border-b border-slate-100">
+                <div class="w-20 h-20 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white shrink-0">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-slate-900">{{ template.name }}</h3>
+                    <p class="text-sm text-slate-500 capitalize">{{ template.category }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-extrabold text-indigo-600">{{ formatPrice(template.price) }}</p>
+                    <p class="text-xs text-slate-500">{{ purchase.date }}</p>
+                </div>
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
             </div>
 
             <div

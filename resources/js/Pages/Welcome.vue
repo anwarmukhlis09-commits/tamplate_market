@@ -9,6 +9,8 @@ const props = defineProps({
     laravelVersion: String,
     phpVersion: String,
     templates: { type: Array, default: () => [] },
+    categories: { type: Array, default: () => [] },
+    stats: { type: Array, default: () => [] },
 });
 
 // ── Showcase mockup: auto-rotate state ──
@@ -43,6 +45,21 @@ const activeTemplate = computed(
     () => props.templates?.[activeIndex.value] || null,
 );
 
+const activeSort = ref('newest'); // 'newest' | 'popular' | 'price'
+
+const sortedTemplates = computed(() => {
+    if (!props.templates || !props.templates.length) return [];
+    let result = [...props.templates];
+    if (activeSort.value === 'newest') {
+        result.sort((a, b) => b.id - a.id);
+    } else if (activeSort.value === 'popular') {
+        result.sort((a, b) => (b.sold || 0) - (a.sold || 0));
+    } else if (activeSort.value === 'price') {
+        result.sort((a, b) => (a.price || 0) - (b.price || 0));
+    }
+    return result;
+});
+
 // Floating cards: 4 next templates setelah main (no overlap dengan main kalau length >= 5)
 const floatingTemplates = computed(() => {
     if (!props.templates?.length) return [];
@@ -69,6 +86,7 @@ onUnmounted(() => {
 });
 
 // ── Category pills
+<<<<<<< HEAD
 const categories = [
     { name: "Minimalis", icon: "M4 6h16M4 12h10M4 18h7", count: 24 },
     { name: "Modern", icon: "M13 10V3L4 14h7v7l9-11h-7z", count: 38 },
@@ -102,7 +120,19 @@ const categories = [
         icon: "M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0",
         count: 9,
     },
+=======
+const defaultCategories = [
+    { name: 'Minimalis', icon: 'M4 6h16M4 12h10M4 18h7', count: 24, color: 'from-slate-400 to-slate-500' },
+    { name: 'Modern', icon: 'M13 10V3L4 14h7v7l9-11h-7z', count: 38, color: 'from-indigo-500 to-violet-500' },
+    { name: 'Gaming', icon: 'M15 7h2a4 4 0 014 4v2a4 4 0 01-4 4h-2v-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V7zM9 7H7a4 4 0 00-4 4v2a4 4 0 004 4h2v-2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2V7z', count: 18, color: 'from-fuchsia-500 to-pink-500' },
+    { name: 'Hotel', icon: 'M3 21h18M3 7v14M21 7v14M6 21V11h12v10M9 7V3h6v4M9 11h.01M15 11h.01M9 15h.01M15 15h.01', count: 22, color: 'from-amber-400 to-orange-500' },
+    { name: 'Sekolah', icon: 'M12 14l9-5-9-5-9 5 9 5zM12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', count: 12, color: 'from-cyan-400 to-blue-500' },
+    { name: 'Voucher', icon: 'M2 9V7a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4zM9 9h6', count: 31, color: 'from-emerald-400 to-teal-500' },
+    { name: 'Cafe', icon: 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3', count: 15, color: 'from-rose-400 to-pink-500' },
+    { name: 'ISP', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0', count: 9, color: 'from-blue-500 to-indigo-600' },
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
 ];
+const categories = computed(() => props.categories?.length ? props.categories : defaultCategories);
 
 // ── Top creators
 const topCreators = [
@@ -171,12 +201,21 @@ const advantages = [
 ];
 
 // ── Stats
+<<<<<<< HEAD
 const stats = [
     { value: "500+", label: "Template" },
     { value: "12K+", label: "Pelanggan" },
     { value: "4.9/5", label: "Rating" },
     { value: "24/7", label: "Support" },
+=======
+const defaultStats = [
+    { value: '500+', label: 'Template' },
+    { value: '12K+', label: 'Pelanggan' },
+    { value: '4.9/5', label: 'Rating' },
+    { value: '24/7', label: 'Support' },
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
 ];
+const stats = computed(() => props.stats?.length ? props.stats : defaultStats);
 
 // ── Cara Kerja steps
 const steps = [
@@ -250,6 +289,7 @@ function getGradient(seed) {
         title="MarketTemplate — Marketplace Template Hotspot MikroTik #1 di Indonesia"
     />
 
+<<<<<<< HEAD
     <MarketplaceLayout>
         <div
             class="min-h-screen bg-white text-slate-900 antialiased"
@@ -277,6 +317,91 @@ function getGradient(seed) {
                     <div
                         class="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-30"
                     ></div>
+=======
+<Head title="Template Hotspot — Marketplace Template Hotspot MikroTik Terbaik & Siap Pakai" />
+
+<MarketplaceLayout>
+    <div class="min-h-screen bg-white text-slate-900 antialiased" style="font-family: 'Inter', 'Poppins', ui-sans-serif, system-ui, sans-serif;">
+
+    <!-- ═══════════════ HERO SECTION ═══════════════ -->
+    <section class="relative pt-20 pb-16 sm:pt-24 sm:pb-20 overflow-hidden">
+
+        <!-- Background decoration -->
+        <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
+            <div class="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-indigo-200 via-indigo-50 to-transparent opacity-60 blur-3xl"></div>
+            <div class="absolute -bottom-20 -left-40 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-violet-200 via-purple-50 to-transparent opacity-50 blur-3xl"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-30"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+
+                <!-- LEFT: TEXT -->
+                <div class="text-center lg:text-left">
+
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm font-medium text-indigo-700 mb-7">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        Template Hotspot MikroTik Siap Pakai
+                    </div>
+
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.08] mb-6">
+                        Template Hotspot <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">MikroTik</span> Premium untuk Bisnis Anda
+                    </h1>
+
+                    <p class="text-lg sm:text-xl text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-9">
+                        Siap pakai untuk ISP, hotel, kafe, sekolah, dan hotspot voucher. Tinggal upload ke MikroTik tanpa perlu coding.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row items-center lg:items-start gap-3 mb-12">
+                        <Link href="/katalog" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl hover:from-indigo-700 hover:to-violet-700 shadow-xl shadow-indigo-200 transition-all hover:shadow-2xl hover:shadow-indigo-300 hover:-translate-y-0.5">
+                            Lihat Template
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                        </Link>
+                        <Link :href="templates && templates.length ? `/template/${templates[0].id}` : '/katalog'" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Preview Demo
+                        </Link>
+                    </div>
+
+                    <!-- Trust indicators -->
+                    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-12">
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span class="font-medium">Siap Upload ke MikroTik</span>
+                        </li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span class="font-medium">Responsive di Mobile &amp; Desktop</span>
+                        </li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span class="font-medium">Mudah Dikustomisasi</span>
+                        </li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-600">
+                            <span class="shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span class="font-medium">Update &amp; Support Berkala</span>
+                        </li>
+                    </ul>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 border-t border-slate-200/80">
+                        <div v-for="s in stats" :key="s.label" class="text-center lg:text-left">
+                            <div class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ s.value }}</div>
+                            <div class="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide">{{ s.label }}</div>
+                        </div>
+                    </div>
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
                 </div>
 
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -371,6 +496,7 @@ function getGradient(seed) {
                                 </Link>
                             </div>
 
+<<<<<<< HEAD
                             <!-- Trust indicators -->
                             <ul
                                 class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-12"
@@ -394,6 +520,84 @@ function getGradient(seed) {
                                                 d="M5 13l4 4L19 7"
                                             />
                                         </svg>
+=======
+    <!-- ═══════════════ CATEGORIES ═══════════════ -->
+    <section id="kategori" class="py-12 sm:py-16 bg-slate-50/50 border-y border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-end justify-between mb-8">
+                <div>
+                    <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Kategori Populer</p>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">Jelajahi berdasarkan kebutuhan</h2>
+                </div>
+                <Link href="/katalog" class="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                    Lihat semua
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </Link>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <Link v-for="cat in categories" :key="cat.name" :href="`/katalog?category=${cat.name.toLowerCase()}`" 
+                    class="group inline-flex items-center gap-3 pl-2.5 pr-4 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/80 hover:border-indigo-300 rounded-full text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5">
+                    <!-- Icon Container with Gradient -->
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br text-white shadow-sm transition-transform duration-300 group-hover:scale-110" 
+                         :class="cat.color || 'from-indigo-500 to-violet-500'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="cat.icon"/>
+                        </svg>
+                    </div>
+                    <span class="flex items-center gap-1.5">
+                        {{ cat.name }}
+                        <span class="text-xs text-slate-400 group-hover:text-indigo-500 font-medium">({{ cat.count }})</span>
+                    </span>
+                </Link>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ TEMPLATE GRID + SIDEBAR ═══════════════ -->
+    <section id="templates" class="py-16 sm:py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10">
+
+                <!-- LEFT: TEMPLATE GRID -->
+                <div>
+                    <div class="flex items-end justify-between mb-6">
+                        <div>
+                            <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Template Terbaru</p>
+                            <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">Pilihan terbaik minggu ini</h2>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-2">
+                            <button @click="activeSort = 'newest'" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all" :class="activeSort === 'newest' ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100 bg-white border border-slate-200'">Terbaru</button>
+                            <button @click="activeSort = 'popular'" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all" :class="activeSort === 'popular' ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100 bg-white border border-slate-200'">Populer</button>
+                            <button @click="activeSort = 'price'" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all" :class="activeSort === 'price' ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100 bg-white border border-slate-200'">Harga</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                        <Link v-for="t in sortedTemplates.slice(0, 9)" :key="t.id" :href="'/template/' + t.id" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
+                            <!-- Thumbnail -->
+                            <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                                <div v-if="t.imageUrl" class="w-full h-full">
+                                    <img :src="t.imageUrl" :alt="t.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                </div>
+                                <div v-else class="w-full h-full bg-gradient-to-br" :class="getGradient(t.name)">
+                                    <div class="w-full h-full flex flex-col items-center justify-center text-white p-4">
+                                        <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-2">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0"/></svg>
+                                        </div>
+                                        <p class="text-sm font-bold text-center">{{ t.name }}</p>
+                                    </div>
+                                </div>
+                                <!-- Badge -->
+                                <div v-if="t.badge" class="absolute top-3 left-3">
+                                    <span class="inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border" :class="getBadgeClass(t.badge)">{{ t.badge }}</span>
+                                </div>
+                                <!-- Quick preview on hover -->
+                                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-white/20 backdrop-blur-md rounded-lg">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        Preview
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
                                     </span>
                                     <span class="font-medium"
                                         >Siap Upload ke MikroTik</span
@@ -508,6 +712,7 @@ function getGradient(seed) {
                                 ></div>
                             </div>
 
+<<<<<<< HEAD
                             <!-- Center main mockup (dynamic template via activeIndex, cross-fade on rotate) -->
                             <div
                                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 sm:w-72 z-20"
@@ -649,6 +854,20 @@ function getGradient(seed) {
                                                 </div>
                                             </div>
                                         </div>
+=======
+                            <!-- Content -->
+                            <div class="p-4">
+                                <div class="flex items-start justify-between gap-2 mb-1.5">
+                                    <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-1 group-hover:text-indigo-600 transition-colors">{{ t.name }}</h3>
+                                    <span class="text-sm font-extrabold text-indigo-600 shrink-0">{{ formatPrice(t.discountPrice || t.price) }}</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-3">oleh <span class="font-medium text-slate-700">Template Hotspot Studio</span></p>
+                                <div class="flex items-center justify-between text-xs">
+                                    <div class="flex items-center gap-1 text-amber-500">
+                                        <svg class="w-3.5 h-3.5 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                        <span class="font-semibold text-slate-700">{{ t.rating || '4.8' }}</span>
+                                        <span class="text-slate-400">({{ t.sold || 0 }})</span>
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
                                     </div>
                                 </Transition>
                             </div>
@@ -1569,6 +1788,7 @@ function getGradient(seed) {
 
                         <!-- Image / Mockup -->
                         <div class="relative">
+<<<<<<< HEAD
                             <div
                                 class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-2xl transform rotate-3 scale-105 opacity-20 blur-xl"
                             ></div>
@@ -1592,6 +1812,188 @@ function getGradient(seed) {
                                         class="ml-2 text-xs font-medium text-slate-500 flex-1 text-center pr-10"
                                     >
                                         MarketTemplate Visual Editor
+=======
+                            <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            </div>
+                            <h3 class="font-bold text-lg mb-1">Butuh Bantuan?</h3>
+                            <p class="text-sm text-white/80 mb-4">Tim support kami siap membantu Anda 24/7 via WhatsApp.</p>
+                            <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                                Chat WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- FAQ -->
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+                        <h3 class="font-bold text-slate-900 text-sm mb-4">FAQ Singkat</h3>
+                        <ul class="space-y-3 text-sm">
+                            <li>
+                                <p class="font-semibold text-slate-800">Cara install?</p>
+                                <p class="text-slate-500 text-xs mt-0.5">Upload file ke MikroTik via Winbox Files menu.</p>
+                            </li>
+                            <li>
+                                <p class="font-semibold text-slate-800">Support RouterOS v6/v7?</p>
+                                <p class="text-slate-500 text-xs mt-0.5">Ya, semua template support kedua versi.</p>
+                            </li>
+                            <li>
+                                <p class="font-semibold text-slate-800">Bisa request custom?</p>
+                                <p class="text-slate-500 text-xs mt-0.5">Bisa! Hubungi kami via WhatsApp untuk diskusi.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Trust -->
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+                        <h3 class="font-bold text-slate-900 text-sm mb-4">Lisensi &amp; Kebijakan</h3>
+                        <ul class="space-y-2.5 text-xs">
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Update gratis 1 tahun</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Lisensi untuk 1 bisnis</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Garansi uang kembali 7 hari</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-slate-600">
+                                <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span>Support instalasi via WhatsApp</span>
+                            </li>
+                        </ul>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ CARA KERJA ═══════════════ -->
+    <section id="cara-kerja" class="py-16 sm:py-24 bg-white relative overflow-hidden">
+        <!-- Decorative bg -->
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoOTksIDEwMiwgMjQxLCAwLjA3KSIvPjwvc3ZnPg==')] [mask-image:linear-gradient(to_bottom,white,transparent)] -z-10"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-16 sm:mb-20 relative">
+                <div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 mb-6">
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        Cara Kerja
+                    </span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
+                    Dari Pilih Template hingga <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-pink-500">Hotspot Live</span><br class="hidden sm:block"/> dalam 6 Langkah
+                </h2>
+                <p class="text-slate-500 text-lg md:text-xl leading-relaxed">
+                    Pilih template, edit sesuai kebutuhan tanpa coding, lalu deploy ke MikroTik hanya dalam beberapa menit.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 relative">
+                <!-- Connector lines -->
+                <div class="hidden lg:block absolute top-[44px] left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-indigo-200 via-pink-200 to-indigo-200 -z-0 opacity-70"></div>
+                
+                <div v-for="(step, i) in steps" :key="step.title" class="relative bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-8 hover:border-indigo-300 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group z-10 hover:-translate-y-1">
+                    <div class="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-400 text-sm shadow-sm group-hover:text-indigo-600 group-hover:border-indigo-200 transition-colors">
+                        {{ i + 1 }}
+                    </div>
+                    
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:from-indigo-600 group-hover:to-violet-600 group-hover:border-transparent transition-all duration-300 shadow-sm group-hover:shadow-indigo-200">
+                        <svg class="w-8 h-8 text-indigo-600 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" :d="step.icon"/></svg>
+                    </div>
+                    
+                    <h3 class="font-bold text-slate-900 text-xl mb-3 group-hover:text-indigo-700 transition-colors">{{ step.title }}</h3>
+                    <p class="text-base text-slate-500 leading-relaxed">{{ step.desc }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ SHOWCASE VISUAL EDITOR ═══════════════ -->
+    <section id="visual-editor" class="py-24 bg-slate-900 relative overflow-hidden">
+        <!-- Abstract glowing orbs for dark theme -->
+        <div class="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 rounded-full bg-indigo-600 opacity-20 blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 -ml-40 -mb-40 w-96 h-96 rounded-full bg-pink-600 opacity-20 blur-[100px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                
+                <!-- Text Content -->
+                <div>
+                    <div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-6">
+                        <span class="text-xs font-bold text-indigo-300 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            Fitur Unggulan
+                        </span>
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+                        Kustomisasi Template <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">Semudah Drag & Drop</span>
+                    </h2>
+                    <p class="text-slate-400 text-lg md:text-xl leading-relaxed mb-8">
+                        Lupakan mengedit kode HTML yang rumit. Visual Editor eksklusif kami memungkinkan Anda mendesain halaman login yang sempurna dalam hitungan menit.
+                    </p>
+                    
+                    <ul class="space-y-6">
+                        <li class="flex gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg mb-1">Ubah Gambar & Logo</h4>
+                                <p class="text-slate-400 text-sm">Ganti background, banner promo, dan logo bisnis Anda hanya dengan sekali klik.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0 border border-pink-500/20">
+                                <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg mb-1">Sesuaikan Warna & Teks</h4>
+                                <p class="text-slate-400 text-sm">Pilih palet warna yang sesuai branding Anda dan edit setiap teks promosi secara real-time.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0 border border-violet-500/20">
+                                <svg class="w-6 h-6 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg mb-1">Live Preview 2 Layar</h4>
+                                <p class="text-slate-400 text-sm">Lihat langsung bagaimana tampilan login page Anda di HP maupun Desktop secara simultan.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Image / Mockup -->
+                <div class="relative">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-2xl transform rotate-3 scale-105 opacity-20 blur-xl"></div>
+                    <div class="relative rounded-2xl bg-slate-800 border border-slate-700/50 shadow-2xl overflow-hidden">
+                        <!-- Mac window header -->
+                        <div class="px-4 py-3 bg-slate-800/80 border-b border-slate-700/50 flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <div class="ml-2 text-xs font-medium text-slate-500 flex-1 text-center pr-10">Template Hotspot Visual Editor</div>
+                        </div>
+                        <!-- Editor Mockup UI -->
+                        <div class="flex h-[400px]">
+                            <!-- Sidebar -->
+                            <div class="w-1/3 bg-slate-900 border-r border-slate-800 p-4 space-y-4">
+                                <div class="h-6 w-1/2 bg-slate-800 rounded"></div>
+                                <div class="space-y-3 pt-2">
+                                    <div class="flex gap-2">
+                                        <div class="w-8 h-8 rounded bg-indigo-500/20 border border-indigo-500/30"></div>
+                                        <div class="w-8 h-8 rounded bg-rose-500/20 border border-rose-500/30"></div>
+                                        <div class="w-8 h-8 rounded bg-emerald-500/20 border border-emerald-500/30"></div>
+                                    </div>
+                                    <div class="h-4 w-full bg-slate-800 rounded"></div>
+                                    <div class="h-4 w-3/4 bg-slate-800 rounded"></div>
+                                    <div class="h-10 w-full bg-slate-800 rounded mt-4 border border-slate-700 border-dashed flex items-center justify-center">
+                                        <span class="text-[10px] text-slate-500">Upload Image</span>
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
                                     </div>
                                 </div>
                                 <!-- Editor Mockup UI -->
@@ -1772,6 +2174,7 @@ function getGradient(seed) {
                         </p>
                     </div>
 
+<<<<<<< HEAD
                     <div
                         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
                     >
@@ -1806,6 +2209,16 @@ function getGradient(seed) {
                                 {{ a.desc }}
                             </p>
                         </div>
+=======
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer id="bantuan" class="bg-slate-900 text-slate-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
+                <!-- Newsletter -->
+                <div>
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto brightness-0 invert" />
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
                     </div>
                 </div>
             </section>
@@ -1961,7 +2374,20 @@ function getGradient(seed) {
                         </div>
                     </div>
                 </div>
+<<<<<<< HEAD
             </footer>
+=======
+            </div>
+
+            <div class="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
+                <p class="text-slate-500">© 2026 Template Hotspot.id — Semua hak dilindungi.</p>
+                <div class="flex items-center gap-4 text-slate-500">
+                    <a href="#" class="hover:text-white transition-colors">Twitter</a>
+                    <a href="#" class="hover:text-white transition-colors">Instagram</a>
+                    <a href="#" class="hover:text-white transition-colors">GitHub</a>
+                </div>
+            </div>
+>>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
         </div>
     </MarketplaceLayout>
 </template>

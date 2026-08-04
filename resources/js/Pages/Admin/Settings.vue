@@ -7,9 +7,9 @@ import { useToast } from '@/Composables/useToast.js';
 const toast = useToast();
 
 const settings = ref({
-    siteName: 'MarketTemplate',
-    siteTagline: 'Marketplace Template Hotspot MikroTik #1 di Indonesia',
-    contactEmail: 'support@markettemplate.id',
+    siteName: 'Template Hotspot',
+    siteTagline: 'Marketplace Template Hotspot MikroTik Terbaik & Siap Pakai',
+    contactEmail: 'support@templatehotspot.id',
     contactWhatsapp: '0812-3456-7890',
     currency: 'IDR',
     taxRate: 11,
@@ -25,7 +25,7 @@ const integrations = ref({
     midtransProduction: false,
     smtpHost: 'smtp.mailtrap.io',
     smtpPort: 587,
-    smtpUser: 'admin@markettemplate.id',
+    smtpUser: 'admin@templatehotspot.id',
 });
 
 function saveSettings() {

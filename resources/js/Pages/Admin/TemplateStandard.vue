@@ -120,7 +120,7 @@ const prohibitions = [
 </script>
 
 <template>
-<Head title="Standar Template Editor — MarketTemplate" />
+<Head title="Standar Template Editor — Template Hotspot" />
 
 <AdminLayout>
     <template #title>Standar Template Editor</template>

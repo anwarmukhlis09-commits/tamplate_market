@@ -15,7 +15,7 @@ const steps = [
 </script>
 
 <template>
-    <Head title="Admin Dashboard — MarketTemplate" />
+    <Head title="Admin Dashboard — Template Hotspot" />
 
     <AdminLayout>
         <template #title>Dashboard</template>

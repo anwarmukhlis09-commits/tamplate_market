@@ -1,11 +1,13 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout.vue';
 
 const props = defineProps({
     template: { type: Object, default: null },
     relatedTemplates: { type: Array, default: () => [] },
+    reviews: { type: Array, default: () => [] },
+    userReview: { type: Object, default: null },
     canLogin: Boolean,
 });
 
@@ -64,7 +66,7 @@ const isNewRelease = computed(() => !showRating.value && !showSold.value);
 
 function shareTemplate() {
     if (navigator.share) {
-        navigator.share({ title: t.value?.name + ' — MarketTemplate', url: window.location.href });
+        navigator.share({ title: t.value?.name + ' — Template Hotspot', url: window.location.href });
     } else {
         navigator.clipboard.writeText(window.location.href);
         alert('Link berhasil disalin!');
@@ -95,6 +97,32 @@ const licenseItems = [
 
 // "Baru Dirilis" fallback badges
 const newReleaseBadges = ['Baru Dirilis', 'Template Premium', 'Siap Digunakan'];
+
+// Review/rating form state
+const showReviewForm = ref(false);
+const reviewRating = ref(props.userReview ? props.userReview.rating : 5);
+const reviewComment = ref(props.userReview ? props.userReview.comment : '');
+const reviewError = ref(null);
+const submittingReview = ref(false);
+
+function submitReview() {
+    submittingReview.value = true;
+    reviewError.value = null;
+    
+    router.post(`/template/${t.value.id}/review`, {
+        rating: reviewRating.value,
+        comment: reviewComment.value,
+    }, {
+        onSuccess: () => {
+            submittingReview.value = false;
+            showReviewForm.value = false;
+        },
+        onError: (errors) => {
+            submittingReview.value = false;
+            reviewError.value = errors.error || 'Terjadi kesalahan saat menyimpan ulasan.';
+        }
+    });
+}
 
 function onIframeLoad(e) {
     try {
@@ -139,7 +167,7 @@ function onIframeLoad(e) {
 </script>
 
 <template>
-<Head :title="t ? t.name + ' — MarketTemplate' : 'Template Tidak Ditemukan'" />
+<Head :title="t ? t.name + ' — Template Hotspot' : 'Template Tidak Ditemukan'" />
 
 <MarketplaceLayout>
 <div class="min-h-screen bg-slate-50 antialiased" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;">
@@ -287,10 +315,14 @@ function onIframeLoad(e) {
 
                     <!-- Stats (hide 0) -->
                     <div class="flex items-center gap-3 text-sm py-3 border-y border-slate-100">
-                        <div v-if="showRating" class="flex items-center gap-1 text-amber-500">
-                            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                            <span class="font-extrabold text-slate-900">{{ t.rating }}</span>
-                            <span class="text-slate-400 text-xs ml-0.5">/5</span>
+                        <div v-if="showRating" class="flex items-center gap-0.5 text-amber-500">
+                            <div class="flex items-center gap-0.5">
+                                <svg v-for="star in 5" :key="star" class="w-3.5 h-3.5" :class="star <= Math.round(t.rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </div>
+                            <span class="font-extrabold text-slate-900 ml-1.5">{{ t.rating }}</span>
+                            <span class="text-slate-400 text-xs">/5</span>
                         </div>
                         <div v-if="showSold" class="flex items-center gap-1 text-slate-500">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -402,6 +434,74 @@ function onIframeLoad(e) {
             </div>
         </section>
 
+        <!-- ═══════════ ULASAN & RATING ═══════════ -->
+        <section class="py-12 bg-slate-50 border-b border-slate-200">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                    <div>
+                        <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Ulasan Pembeli</p>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Apa Kata Mereka?</h2>
+                    </div>
+                    
+                    <!-- Tombol beri rating hanya jika user sudah login -->
+                    <button v-if="$page.props.auth.user" @click="showReviewForm = !showReviewForm" class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-sm shadow-indigo-100 self-start sm:self-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        {{ userReview ? 'Edit Ulasan Anda' : 'Tulis Ulasan' }}
+                    </button>
+                </div>
+
+                <!-- Form Ulasan (jika showReviewForm === true) -->
+                <div v-if="showReviewForm" class="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm mb-8 transition-all">
+                    <h3 class="font-bold text-slate-900 text-base mb-4">{{ userReview ? 'Perbarui Ulasan Anda' : 'Berikan Ulasan & Rating Anda' }}</h3>
+                    <form @submit.prevent="submitReview" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Rating Bintang</label>
+                            <div class="flex items-center gap-1.5">
+                                <button v-for="star in 5" :key="star" type="button" @click="reviewRating = star" class="text-2xl transition-colors" :class="star <= reviewRating ? 'text-amber-400' : 'text-slate-200'">
+                                    ★
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Komentar / Ulasan</label>
+                            <textarea v-model="reviewComment" rows="3" placeholder="Bagikan pengalaman Anda menggunakan template ini..." class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"></textarea>
+                        </div>
+                        <p v-if="reviewError" class="text-xs text-rose-600 font-semibold">{{ reviewError }}</p>
+                        <div class="flex gap-2">
+                            <button type="submit" :disabled="submittingReview" class="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">
+                                {{ submittingReview ? 'Menyimpan...' : 'Kirim Ulasan' }}
+                            </button>
+                            <button type="button" @click="showReviewForm = false" class="px-5 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Daftar Ulasan -->
+                <div class="space-y-4" v-if="reviews && reviews.length > 0">
+                    <div v-for="review in reviews" :key="review.id" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-sm">{{ review.user_name }}</h4>
+                                <span class="text-[10px] text-slate-400">{{ review.date }}</span>
+                            </div>
+                            <div class="flex items-center gap-0.5 text-amber-400">
+                                <span v-for="star in 5" :key="star" class="text-sm">
+                                    {{ star <= review.rating ? '★' : '☆' }}
+                                </span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{{ review.comment || 'Memberikan rating bintang saja.' }}</p>
+                    </div>
+                </div>
+                
+                <div v-else class="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <p class="text-slate-400 text-sm">Belum ada ulasan untuk template ini.</p>
+                </div>
+            </div>
+        </section>
+
         <!-- ═══════════ TEMPLATE SERUPA ═══════════ -->
         <section v-if="relatedTemplates.length > 0" class="py-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -446,9 +546,9 @@ function onIframeLoad(e) {
                             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
                                 <span class="text-white font-extrabold text-sm">MT</span>
                             </div>
-                            <span class="font-bold text-white">MarketTemplate</span>
+                            <span class="font-bold text-white">Template Hotspot</span>
                         </div>
-                        <p class="text-sm text-slate-400 leading-relaxed">Marketplace template hotspot MikroTik premium #1 di Indonesia.</p>
+                        <p class="text-sm text-slate-400 leading-relaxed">Marketplace template hotspot MikroTik premium terbaik dan siap pakai.</p>
                     </div>
                     <div>
                         <h4 class="font-bold text-white text-sm mb-3">Marketplace</h4>
@@ -461,12 +561,12 @@ function onIframeLoad(e) {
                         <h4 class="font-bold text-white text-sm mb-3">Bantuan</h4>
                         <ul class="space-y-2 text-sm">
                             <li><a href="https://wa.me/6281234567890" class="hover:text-white transition-colors">WhatsApp Support</a></li>
-                            <li><a href="mailto:support@markettemplate.id" class="hover:text-white transition-colors">Email Support</a></li>
+                            <li><a href="mailto:support@templatehotspot.id" class="hover:text-white transition-colors">Email Support</a></li>
                         </ul>
                     </div>
                 </div>
                 <div class="mt-8 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
-                    © 2026 MarketTemplate.id — Semua hak dilindungi.
+                    © 2026 Template Hotspot.id — Semua hak dilindungi.
                 </div>
             </div>
         </footer>
