@@ -125,16 +125,6 @@ onMounted(() => {
         <div class="min-h-screen bg-[#F8FAFC] text-[#0F172A] antialiased pt-28 pb-20 animate-fade-in">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 
-                <!-- Page Title -->
-                <div class="mb-12 text-center sm:text-left border-b border-slate-200/50 pb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-                    <div class="space-y-2">
-                        <span class="text-xs font-bold text-[#4F46E5] uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full">Help Center</span>
-                        <h1 class="text-4xl font-extrabold tracking-tight text-[#0F172A] sm:text-5xl mt-2 font-inter">Pusat Bantuan &amp; Informasi</h1>
-                        <p class="text-[#64748B] text-base leading-[1.7] max-w-2xl font-inter">
-                            Temukan panduan langkah-demi-langkah, instruksi instalasi hotspot MikroTik, dan kebijakan lisensi produk di satu tempat.
-                        </p>
-                    </div>
-                </div>
 
                 <!-- Main Layout Container -->
                 <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-10 items-start">
