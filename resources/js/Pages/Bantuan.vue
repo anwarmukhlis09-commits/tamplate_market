@@ -189,7 +189,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Left Sidebar (Desktop only) -->
-                    <aside class="hidden lg:block bg-white border border-[#EEF2F7] rounded-3xl p-6 shadow-sm space-y-6 sticky top-24 self-start">
+                    <aside class="hidden lg:block bg-white border border-[#EEF2F7] rounded-3xl p-6 shadow-sm space-y-6 sticky top-28 self-start z-30">
                         <!-- Search Bar -->
                         <div class="relative">
                             <input v-model="searchQuery" type="text" placeholder="Cari panduan..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-[#E5E7EB] rounded-xl text-sm placeholder:text-[#64748B] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/10 outline-none transition-all" />
