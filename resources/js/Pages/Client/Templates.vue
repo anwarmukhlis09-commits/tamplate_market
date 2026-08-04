@@ -20,7 +20,7 @@ function formatPrice(p) { return p === 0 ? 'Gratis' : 'Rp ' + Number(p).toLocale
                 <h1 class="text-2xl font-extrabold text-slate-900">Template Saya</h1>
                 <p class="text-sm text-slate-500 mt-1">{{ allMyTemplates.length }} template yang sudah Anda beli</p>
             </div>
-            <Link href="/katalog" class="hidden sm:inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-sm transition-colors">
+            <Link v-if="allMyTemplates.length > 0" href="/katalog" class="hidden sm:inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-sm transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                 Beli Lagi
             </Link>
