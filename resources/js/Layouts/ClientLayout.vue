@@ -46,8 +46,14 @@ const menuItems = [
 
                     <!-- Right: User -->
                     <div class="flex items-center gap-4">
-                        <Link href="/" class="text-sm text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block">Beranda</Link>
-                        <Link href="/katalog" class="text-sm text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block">← Katalog</Link>
+                        <Link href="/" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-all shadow-sm hidden sm:inline-flex">
+                            <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            Beranda
+                        </Link>
+                        <Link href="/katalog" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-all shadow-sm hidden sm:inline-flex">
+                            <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                            Katalog
+                        </Link>
                         <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
                             <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                                 {{ $page.props.auth?.user?.name?.charAt(0) || 'U' }}
