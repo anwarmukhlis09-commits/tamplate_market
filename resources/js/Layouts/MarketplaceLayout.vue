@@ -28,25 +28,8 @@ function isActive(path) {
                 <div class="flex items-center justify-between gap-6 h-16">
                     <!-- Left: Logo + Menu -->
                     <div class="flex items-center gap-8 min-w-0">
-                        <Link
-                            href="/"
-                            class="flex items-center gap-2.5 shrink-0 group"
-                        >
-                            <img
-                                src="/images/logo.png?v=2"
-                                alt="MarketTemplate"
-                                class="h-9 w-auto group-hover:scale-105 transition-transform"
-                            />
-                            <div
-                                class="flex flex-col leading-none text-[#3448ae] font-black tracking-tight select-none"
-                            >
-                                <span class="text-sm tracking-widest uppercase"
-                                    >MARKET</span
-                                >
-                                <span class="text-sm tracking-widest uppercase"
-                                    >TEMPLATE</span
-                                >
-                            </div>
+                        <Link href="/" class="flex items-center gap-2.5 shrink-0 group">
+                            <img src="/images/logo.png?v=2" alt="Template Hotspot" class="h-[70px] w-auto group-hover:scale-105 transition-transform" />
                         </Link>
 
                         <nav class="hidden md:flex items-center gap-1">
@@ -71,7 +54,6 @@ function isActive(path) {
                         </nav>
                     </div>
 
-<<<<<<< HEAD
                     <!-- Right: Auth buttons / User menu -->
                     <div class="flex items-center gap-2.5 shrink-0">
                         <!-- Guest: Login + Daftar -->
@@ -88,13 +70,6 @@ function isActive(path) {
                                 >Daftar</Link
                             >
                         </template>
-=======
-                <!-- Left: Logo + Menu -->
-                <div class="flex items-center gap-8 min-w-0">
-                    <Link href="/" class="flex items-center gap-2.5 shrink-0 group">
-                        <img src="/images/logo.png" alt="Template Hotspot" class="h-[70px] w-auto group-hover:scale-105 transition-transform" />
-                    </Link>
->>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
 
                         <!-- Logged in: avatar + Dashboard -->
                         <template v-else>

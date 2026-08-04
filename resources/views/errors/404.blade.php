@@ -19,11 +19,7 @@
 
         <!-- Logo -->
         <div class="flex justify-center mb-6">
-<<<<<<< HEAD
-            <img src="/images/logo.png?v=2" alt="MarketTemplate" class="h-14 w-auto" />
-=======
-            <img src="/images/logo.png" alt="Template Hotspot" class="h-14 w-auto" />
->>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
+            <img src="/images/logo.png?v=2" alt="Template Hotspot" class="h-14 w-auto" />
         </div>
 
         <!-- 404 illustration -->

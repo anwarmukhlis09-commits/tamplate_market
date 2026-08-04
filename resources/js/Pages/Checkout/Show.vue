@@ -30,67 +30,20 @@ function submit() {
 <template>
     <Head :title="`Checkout — ${template.name}`" />
 
-<<<<<<< HEAD
-    <div
-        class="min-h-screen bg-slate-50"
-        style="
-            font-family:
-                &quot;Inter&quot;, ui-sans-serif, system-ui, sans-serif;
-        "
-    >
+    <div class="min-h-screen bg-slate-50" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;">
         <!-- Navbar -->
-        <header
-            class="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-sm"
-        >
-            <div
-                class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16"
-            >
+        <header class="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
                 <Link href="/" class="flex items-center gap-2.5">
-                    <img
-                        src="/images/logo.png?v=2"
-                        alt="MarketTemplate"
-                        class="h-9 w-auto"
-                    />
-                    <div
-                        class="flex flex-col leading-none text-[#3448ae] font-black tracking-tight select-none"
-                    >
-                        <span class="text-sm tracking-widest uppercase"
-                            >MARKET</span
-                        >
-                        <span class="text-sm tracking-widest uppercase"
-                            >TEMPLATE</span
-                        >
-                    </div>
+                    <img src="/images/logo.png?v=2" alt="MarketTemplate" class="h-[70px] w-auto" />
                 </Link>
                 <div class="text-sm text-slate-500">
-                    <Link href="/katalog" class="hover:text-indigo-600"
-                        >Katalog</Link
-                    >
+                    <Link href="/katalog" class="hover:text-indigo-600">Katalog</Link>
                     <span class="mx-2">/</span>
-                    <Link
-                        :href="`/template/${template.id}`"
-                        class="hover:text-indigo-600"
-                        >{{ template.name }}</Link
-                    >
+                    <Link :href="`/template/${template.id}`" class="hover:text-indigo-600">{{ template.name }}</Link>
                     <span class="mx-2">/</span>
                     <span class="text-slate-900 font-semibold">Checkout</span>
                 </div>
-=======
-<div class="min-h-screen bg-slate-50" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;">
-
-    <!-- Navbar -->
-    <header class="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-            <Link href="/" class="flex items-center gap-2.5">
-                <img src="/images/logo.png" alt="MarketTemplate" class="h-[70px] w-auto" />
-            </Link>
-            <div class="text-sm text-slate-500">
-                <Link href="/katalog" class="hover:text-indigo-600">Katalog</Link>
-                <span class="mx-2">/</span>
-                <Link :href="`/template/${template.id}`" class="hover:text-indigo-600">{{ template.name }}</Link>
-                <span class="mx-2">/</span>
-                <span class="text-slate-900 font-semibold">Checkout</span>
->>>>>>> 49a6ab95debc2a31219ec64b920f3a07a53cdc9a
             </div>
         </header>
 
