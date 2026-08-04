@@ -7,15 +7,7 @@ const props = defineProps({
     myTemplates: { type: Array, default: () => [] },
 });
 
-// Sample data — daftar template yang sudah dibeli user
-// Setiap entry scope ke template.id spesifik
-const sampleMyTemplates = ref([
-    { id: 1, name: 'Hotspot Premium', category: 'modern', price: 49000, purchasedAt: '2026-06-05', lastUpdated: '2026-06-08' },
-    { id: 4, name: 'Hotspot Minimalis', category: 'minimalis', price: 29000, purchasedAt: '2026-06-01', lastUpdated: '2026-06-07' },
-    { id: 19, name: 'Hospot Sekolah', category: 'modern', price: 0, purchasedAt: '2026-05-28', lastUpdated: '2026-06-04' },
-]);
-
-const allMyTemplates = computed(() => props.myTemplates?.length ? props.myTemplates : sampleMyTemplates.value);
+const allMyTemplates = computed(() => props.myTemplates || []);
 
 function formatPrice(p) { return p === 0 ? 'Gratis' : 'Rp ' + Number(p).toLocaleString('id-ID'); }
 </script>

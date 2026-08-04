@@ -1806,12 +1806,64 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
-    Route::get('/dashboard/templates', function () {
-        return Inertia::render('Client/Templates');
+    Route::get('/dashboard/templates', function (\Illuminate\Http\Request $request) {
+        $user = $request->user();
+        
+        $myTemplates = \App\Models\Order::with('template')
+            ->where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->orderBy('paid_at', 'desc')
+            ->get()
+            ->map(function ($order) {
+                $template = $order->template;
+                if (!$template) return null;
+                return [
+                    'id' => $template->id,
+                    'name' => $template->name,
+                    'category' => $template->category,
+                    'price' => (float) $template->price,
+                    'purchasedAt' => $order->paid_at ? $order->paid_at->format('Y-m-d') : $order->created_at->format('Y-m-d'),
+                    'lastUpdated' => $template->updated_at->format('Y-m-d'),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return Inertia::render('Client/Templates', [
+            'myTemplates' => $myTemplates,
+        ]);
     })->name('dashboard.templates');
 
-    Route::get('/dashboard/purchases', function () {
-        return Inertia::render('Client/Purchases');
+    Route::get('/dashboard/purchases', function (\Illuminate\Http\Request $request) {
+        $user = $request->user();
+
+        $purchases = \App\Models\Order::with('template:id,name,category,price')
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_id' => $order->order_id,
+                    'amount' => (float) $order->amount,
+                    'status' => $order->status,
+                    'payment_method' => $order->payment_method,
+                    'created_at' => $order->created_at->format('Y-m-d H:i'),
+                    'paid_at' => $order->paid_at ? $order->paid_at->format('Y-m-d H:i') : null,
+                    'template' => $order->template ? [
+                        'id' => $order->template->id,
+                        'name' => $order->template->name,
+                        'category' => $order->template->category,
+                        'price' => (float) $order->template->price,
+                    ] : null,
+                ];
+            })
+            ->all();
+
+        return Inertia::render('Client/Purchases', [
+            'purchases' => $purchases,
+        ]);
     })->name('dashboard.purchases');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
