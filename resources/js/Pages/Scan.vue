@@ -16,15 +16,15 @@ function getQueryParam(name) {
 const returnUrl = ref(getQueryParam('return_url') || null);
 
 onMounted(() => {
-    // Load script dynamically from unpkg CDN
+    // Load script locally from our server assets to avoid CDN block on hotspot walled-garden
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/html5-qrcode';
+    script.src = '/js/html5-qrcode.min.js';
     script.async = true;
     script.onload = () => {
         initializeScanner();
     };
     script.onerror = () => {
-        scannerError.value = 'Gagal memuat library pemindai QR Code. Pastikan Anda memiliki koneksi internet.';
+        scannerError.value = 'Gagal memuat library pemindai QR Code lokal. Hubungi administrator.';
     };
     document.head.appendChild(script);
 });
