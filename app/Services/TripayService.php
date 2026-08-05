@@ -145,4 +145,27 @@ class TripayService
             'simulated_at' => now()->toIso8601String(),
         ]);
     }
+
+    /**
+     * Get transaction detail from Tripay API
+     */
+    public function getTransactionDetail(string $reference): ?array
+    {
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->get($this->apiUrl . '/transaction/detail', [
+                    'reference' => $reference
+                ]);
+
+            if ($response->successful()) {
+                return $response->json('data');
+            }
+
+            Log::error('Tripay getTransactionDetail error: ' . $response->body());
+        } catch (\Exception $e) {
+            Log::error('Tripay getTransactionDetail exception: ' . $e->getMessage());
+        }
+
+        return null;
+    }
 }

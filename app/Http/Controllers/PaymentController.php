@@ -188,6 +188,14 @@ class PaymentController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
+        // Self-healing check: Tarik status langsung dari Tripay API jika order masih pending
+        if ($orderModel->status === 'pending' && $orderModel->tripay_reference) {
+            $detail = $this->tripayService->getTransactionDetail($orderModel->tripay_reference);
+            if ($detail && isset($detail['status'])) {
+                $this->tripayService->applyStatusToOrder($orderModel, $detail['status'], $detail);
+            }
+        }
+
         // Shortcut: kalau sudah terminal, langsung redirect
         if ($orderModel->status === 'completed') {
             return redirect()->route('payment.success', ['order' => $order]);
@@ -222,6 +230,14 @@ class PaymentController extends Controller
         $orderModel = Order::where('order_id', $order)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
+
+        // Self-healing check: Tarik status langsung dari Tripay API jika order masih pending
+        if ($orderModel->status === 'pending' && $orderModel->tripay_reference) {
+            $detail = $this->tripayService->getTransactionDetail($orderModel->tripay_reference);
+            if ($detail && isset($detail['status'])) {
+                $this->tripayService->applyStatusToOrder($orderModel, $detail['status'], $detail);
+            }
+        }
 
         return response()->json([
             'status' => $orderModel->status,
