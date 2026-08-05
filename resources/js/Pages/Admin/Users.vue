@@ -261,7 +261,7 @@ onUnmounted(() => {
                 <select
                     v-model="roleFilter"
                     @change="applyFilters"
-                    class="text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer"
+                    class="text-sm border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer"
                 >
                     <option value="all">Semua Role</option>
                     <option value="admin">Admin</option>
@@ -271,7 +271,7 @@ onUnmounted(() => {
                 <select
                     v-model="statusFilter"
                     @change="applyFilters"
-                    class="text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer"
+                    class="text-sm border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer"
                 >
                     <option value="all">Semua Status</option>
                     <option value="active">Aktif</option>

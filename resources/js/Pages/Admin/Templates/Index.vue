@@ -61,7 +61,7 @@ function confirmDelete() {
 
         <div class="flex flex-col sm:flex-row gap-3 mb-6">
             <input v-model="search" @keyup.enter="applyFilter" type="text" placeholder="Cari template..." class="flex-1 px-3.5 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
-            <select v-model="statusFilter" @change="applyFilter" class="px-3.5 py-2 text-sm border border-slate-200 rounded-xl">
+            <select v-model="statusFilter" @change="applyFilter" class="pl-3.5 pr-10 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer">
                 <option value="">Semua Status</option><option value="published">Published</option><option value="draft">Draft</option>
             </select>
             <button @click="applyFilter" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700">Filter</button>

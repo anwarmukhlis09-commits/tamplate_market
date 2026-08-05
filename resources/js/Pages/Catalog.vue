@@ -373,7 +373,7 @@ onMounted(() => {
                                     class="w-full pl-11 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400" />
                             </div>
                             <select v-model="sortBy"
-                                class="text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer text-slate-700 font-medium">
+                                class="text-sm border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer text-slate-700 font-medium">
                                 <option value="popular">Terpopuler</option>
                                 <option value="newest">Terbaru</option>
                                 <option value="price-low">Termurah</option>
