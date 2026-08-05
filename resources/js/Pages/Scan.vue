@@ -108,8 +108,15 @@ function initializeScanner() {
 function handleManualCancel() {
     if (returnUrl.value) {
         window.location.href = returnUrl.value;
+    } else if (document.referrer && document.referrer.startsWith('http') && !document.referrer.includes(window.location.host)) {
+        window.location.href = document.referrer;
     } else {
-        window.location.href = '/';
+        try {
+            // Coba kembali ke halaman sebelumnya
+            window.history.back();
+        } catch (e) {
+            alert("Silakan buka kembali halaman login Wi-Fi Anda.");
+        }
     }
 }
 </script>
@@ -202,6 +209,6 @@ function handleManualCancel() {
             </div>
         </div>
         
-        <p class="text-[10px] text-slate-600 mt-6 select-none">Powered by Template Hotspot secure SSL redirection.</p>
+        <p class="text-[10px] text-slate-600 mt-6 select-none">Powered by Secure SSL Redirection.</p>
     </div>
 </template>
