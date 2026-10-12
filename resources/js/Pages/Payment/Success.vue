@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
+import MikrotikInstallGuide from '@/Components/MikrotikInstallGuide.vue';
 
 const props = defineProps({
     orderId: { type: String, required: true },
@@ -10,6 +11,13 @@ const props = defineProps({
 
 const downloadState = ref('idle'); // 'idle' | 'downloading' | 'done' | 'error'
 const downloadError = ref(null);
+
+function scrollToGuide() {
+    const el = document.getElementById('guide-section');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+    }
+}
 
 // Auto-trigger download ZIP saat halaman load (1.5 detik delay untuk
 // user lihat "Pembayaran Berhasil" animation dulu).
@@ -61,9 +69,10 @@ function triggerDownload() {
 <template>
 <Head :title="`Pembayaran Berhasil — ${orderId}`" />
 
-<div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-indigo-50 flex items-center justify-center p-6" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-100 flex flex-col items-center justify-start py-10 px-4 sm:px-6" style="font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;">
 
-    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 text-center">
+    <!-- ═══ SUCCESS STATUS CARD ═══ -->
+    <div class="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 text-center">
         <!-- Success icon -->
         <div class="relative w-20 h-20 mx-auto mb-5">
             <div class="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-50"></div>
@@ -73,9 +82,9 @@ function triggerDownload() {
         </div>
 
         <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">Pembayaran Berhasil!</h1>
-        <p class="text-sm text-slate-500 mb-6">Template siap di-download</p>
+        <p class="text-sm text-slate-500 mb-6">File template siap di-download dan dipasang ke router MikroTik Anda.</p>
 
-        <div class="bg-slate-50 rounded-2xl p-4 mb-6 text-left space-y-1.5 text-sm">
+        <div class="bg-slate-50 rounded-2xl p-4 mb-6 text-left space-y-1.5 text-sm border border-slate-100">
             <div class="flex justify-between gap-3">
                 <span class="text-slate-500 shrink-0">Order ID</span>
                 <span class="font-mono text-xs font-semibold text-slate-800 truncate">{{ orderId }}</span>
@@ -87,7 +96,7 @@ function triggerDownload() {
         </div>
 
         <!-- ═══ Primary action: Download ═══ -->
-        <div class="space-y-2.5">
+        <div class="space-y-3">
             <!-- Auto-download trigger button — reactive state -->
             <button v-if="template.id" @click="triggerDownload" :disabled="downloadState === 'downloading' || downloadState === 'done'" class="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-bold text-white rounded-xl shadow-md transition-colors disabled:cursor-not-allowed" :class="downloadState === 'done' ? 'bg-emerald-600 shadow-emerald-200' : downloadState === 'error' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'">
                 <!-- Downloading -->
@@ -107,8 +116,34 @@ function triggerDownload() {
 
             <p v-if="downloadError" class="text-xs text-rose-600 text-center">{{ downloadError }}</p>
 
+            <!-- ═══ PROMINENT CTA BANNER: PANDUAN MIKROTIK ═══ -->
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-indigo-500/10 border border-indigo-200 text-left">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-base shadow-md shadow-indigo-200">
+                        📖
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-extrabold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Bingung Cara Pasang ke MikroTik?</span>
+                            <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 text-[9px] rounded font-bold">Pemula-Friendly</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-1 leading-snug">
+                            Ikuti 4 langkah mudah upload template ke Winbox &amp; setting HTML Directory di Hotspot Server Profile.
+                        </p>
+                        <button 
+                            type="button" 
+                            @click="scrollToGuide" 
+                            class="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm"
+                        >
+                            <span>Lihat Panduan Bergambar di Bawah</span>
+                            <svg class="w-3.5 h-3.5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ═══ Secondary shortcuts ═══ -->
-            <div v-if="template.id" class="grid grid-cols-2 gap-2.5">
+            <div v-if="template.id" class="grid grid-cols-2 gap-2.5 pt-2">
                 <!-- Lihat detail template -->
                 <Link :href="`/template/${template.id}`" class="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -137,6 +172,14 @@ function triggerDownload() {
                 Kembali ke Beranda
             </Link>
         </div>
+    </div>
+
+    <!-- ═══ EMBEDDED PANDUAN MIKROTIK (BERGAMBAR) ═══ -->
+    <div id="guide-section" class="w-full max-w-4xl mt-10 mb-8">
+        <MikrotikInstallGuide 
+            :templateName="template.name || 'template-hotspot'" 
+            :showSupportButton="true" 
+        />
     </div>
 </div>
 </template>

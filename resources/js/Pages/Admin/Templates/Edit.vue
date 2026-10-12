@@ -152,9 +152,15 @@ function formatPrice(p) { return 'Rp ' + p.toLocaleString('id-ID'); }
                             <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Kategori *</label>
                             <select v-model="form.category" required class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                                 <option value="modern">Modern</option>
-                                <option value="classic">Classic</option>
                                 <option value="minimalis">Minimalis</option>
+                                <option value="classic">Classic</option>
                                 <option value="pro">Professional</option>
+                                <option value="gaming">Gaming</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="cafe">Cafe & Restaurant</option>
+                                <option value="sekolah">Sekolah</option>
+                                <option value="isp">ISP</option>
+                                <option value="other">Lainnya</option>
                             </select>
                         </div>
                         <div>

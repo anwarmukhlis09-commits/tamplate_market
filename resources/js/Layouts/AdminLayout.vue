@@ -1,10 +1,30 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useToast } from '@/Composables/useToast.js';
+import axios from 'axios';
 
 const page = usePage();
 const currentPath = computed(() => page.url);
+const unreadChatCount = ref(0);
+
+async function checkUnreadChats() {
+    try {
+        const res = await axios.get('/admin/chats/api/unread');
+        if (res.data && typeof res.data.count === 'number') {
+            unreadChatCount.value = res.data.count;
+        }
+    } catch (e) {}
+}
+
+let chatPollInterval = null;
+onMounted(() => {
+    checkUnreadChats();
+    chatPollInterval = setInterval(checkUnreadChats, 12000);
+});
+onUnmounted(() => {
+    if (chatPollInterval) clearInterval(chatPollInterval);
+});
 
 function isActive(path) {
     if (path === '/admin') return currentPath.value === '/admin';
@@ -14,11 +34,6 @@ function isActive(path) {
 // ── Toast System (shared, persists across layout remounts) ──
 const { toasts, dismiss } = useToast();
 
-// Watch for flash messages from backend.
-// `immediate: true` is critical: when the layout mounts on the redirect
-// target page (e.g. /admin/templates after a successful Create submit),
-// `page.props.flash.success` is ALREADY set — a plain `watch` would never
-// fire because no change has happened yet.
 watch(() => page.props.flash?.success, (msg) => {
     if (msg) useToast().success('Berhasil', msg);
 }, { immediate: true });
@@ -32,6 +47,7 @@ const mainMenu = [
     { label: 'Kelola Template', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z', href: '/admin/templates' },
     { label: 'Standar Template', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', href: '/admin/standard' },
     { label: 'Transaksi', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', href: '/admin/transactions' },
+    { label: 'Live Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', href: '/admin/chats', badge: 'chat' },
     { label: 'User', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', href: '/admin/users' },
 ];
 
@@ -71,10 +87,15 @@ const settingsMenu = [
                 <!-- Main Menu -->
                 <p class="px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-2">Menu</p>
                 <Link v-for="item in mainMenu" :key="item.href" :href="item.href"
-                    class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all group"
+                    class="flex items-center justify-between gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all group"
                     :class="isActive(item.href) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
-                    <svg class="w-5 h-5 shrink-0" :class="isActive(item.href) ? '' : 'text-slate-500 group-hover:text-white'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="item.icon"/></svg>
-                    {{ item.label }}
+                    <div class="flex items-center gap-3 min-w-0">
+                        <svg class="w-5 h-5 shrink-0" :class="isActive(item.href) ? '' : 'text-slate-500 group-hover:text-white'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="item.icon"/></svg>
+                        <span class="truncate">{{ item.label }}</span>
+                    </div>
+                    <span v-if="item.badge === 'chat' && unreadChatCount > 0" class="px-2 py-0.5 text-[10px] font-extrabold bg-rose-500 text-white rounded-full animate-pulse shadow-sm">
+                        {{ unreadChatCount > 99 ? '99+' : unreadChatCount }}
+                    </span>
                 </Link>
 
                 <!-- Settings -->
@@ -111,7 +132,9 @@ const settingsMenu = [
                 <div class="flex items-center justify-between w-full">
                     <h2 class="text-lg font-bold text-slate-900"><slot name="title">Dashboard</slot></h2>
                     <div class="flex items-center gap-3">
-                        <Link href="/admin/templates/create" class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-sm transition-all">+ Tambah Template</Link>
+                        <slot name="actions">
+                            <Link href="/admin/templates/create" class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-sm transition-all">+ Tambah Template</Link>
+                        </slot>
                     </div>
                 </div>
             </header>

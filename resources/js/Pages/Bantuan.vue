@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, watch, onMounted, computed } from 'vue';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout.vue';
+import MikrotikInstallGuide from '@/Components/MikrotikInstallGuide.vue';
 
 const props = defineProps({
     initialTab: { type: String, default: 'cara-order' }
@@ -293,65 +294,8 @@ onMounted(() => {
                             </div>
 
                             <!-- TAB: INSTALASI -->
-                            <div v-if="activeTab === 'instalasi'" class="space-y-8 animate-fade-in">
-                                <p class="text-[#64748B] text-base leading-[1.8] font-inter">Setelah mengunduh file ZIP template, ikuti panduan berikut untuk memasangnya di router MikroTik Anda:</p>
-                                
-                                <div class="relative pl-6 space-y-10">
-                                    <!-- Vertical connecting line -->
-                                    <div class="absolute left-[15px] top-6 bottom-6 w-0.5 bg-indigo-100"></div>
-
-                                    <!-- Step 1 -->
-                                    <div class="relative pl-10">
-                                        <div class="absolute left-0 top-0.5 w-8 h-8 rounded-full bg-indigo-50 border border-[#4F46E5] flex items-center justify-center text-[#4F46E5] font-bold text-sm shadow-xs ring-4 ring-white">
-                                            1
-                                        </div>
-                                        <div class="space-y-2">
-                                            <h3 class="text-xl font-bold text-[#0F172A] font-inter">Ekstrak File ZIP</h3>
-                                            <p class="text-[#64748B] text-sm leading-[1.8] font-inter">
-                                                Ekstrak file ZIP template di komputer Anda. Anda akan mendapatkan sebuah folder berisi file <code>login.html</code>, <code>status.html</code>, dan file pendukung lainnya.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 2 -->
-                                    <div class="relative pl-10">
-                                        <div class="absolute left-0 top-0.5 w-8 h-8 rounded-full bg-indigo-50 border border-[#4F46E5] flex items-center justify-center text-[#4F46E5] font-bold text-sm shadow-xs ring-4 ring-white">
-                                            2
-                                        </div>
-                                        <div class="space-y-2">
-                                            <h3 class="text-xl font-bold text-[#0F172A] font-inter">Hubungkan ke Winbox</h3>
-                                            <p class="text-[#64748B] text-sm leading-[1.8] font-inter">
-                                                Buka aplikasi <strong>Winbox</strong> dan hubungkan ke router MikroTik Anda.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 3 -->
-                                    <div class="relative pl-10">
-                                        <div class="absolute left-0 top-0.5 w-8 h-8 rounded-full bg-indigo-50 border border-[#4F46E5] flex items-center justify-center text-[#4F46E5] font-bold text-sm shadow-xs ring-4 ring-white">
-                                            3
-                                        </div>
-                                        <div class="space-y-2">
-                                            <h3 class="text-xl font-bold text-[#0F172A] font-inter">Upload File ke Files</h3>
-                                            <p class="text-[#64748B] text-sm leading-[1.8] font-inter">
-                                                Masuk ke menu <strong>Files</strong> di Winbox. Drag (seret) folder template yang sudah diekstrak tadi dari komputer Anda, lalu drop (lepaskan) ke dalam daftar file di Winbox.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 4 -->
-                                    <div class="relative pl-10">
-                                        <div class="absolute left-0 top-0.5 w-8 h-8 rounded-full bg-indigo-50 border border-[#4F46E5] flex items-center justify-center text-[#4F46E5] font-bold text-sm shadow-xs ring-4 ring-white">
-                                            4
-                                        </div>
-                                        <div class="space-y-2">
-                                            <h3 class="text-xl font-bold text-[#0F172A] font-inter">Aktifkan di Server Profile</h3>
-                                            <p class="text-[#64748B] text-sm leading-[1.8] font-inter">
-                                                Buka menu <strong>IP</strong> -&gt; <strong>Hotspot</strong> -&gt; tab <strong>Server Profiles</strong>. Klik dua kali profil hotspot aktif Anda. Pada bagian <strong>HTML Directory</strong>, pilih nama folder template yang barusan Anda upload. Klik <strong>Apply</strong> dan <strong>OK</strong>.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div v-if="activeTab === 'instalasi'" class="animate-fade-in">
+                                <MikrotikInstallGuide :templateName="'Template Hotspot'" :showSupportButton="true" />
                             </div>
 
                             <!-- TAB: FAQ -->

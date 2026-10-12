@@ -1,6 +1,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import LiveChatWidget from '@/Components/LiveChatWidget.vue';
 
 const page = usePage();
 const currentPath = computed(() => page.url);
@@ -29,9 +30,9 @@ const menuItems = [
                     <div class="flex items-center gap-8">
                         <Link href="/" class="flex items-center gap-2.5 shrink-0">
                             <div class="w-9 h-9 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200">
-                                <span class="text-white font-extrabold text-sm">MT</span>
+                                <span class="text-white font-extrabold text-sm">TH</span>
                             </div>
-                            <span class="font-bold text-lg text-slate-900 hidden sm:inline">Market<span class="text-indigo-600">Template</span></span>
+                            <span class="font-bold text-lg text-slate-900 hidden sm:inline">Template<span class="text-indigo-600">Hotspot</span></span>
                         </Link>
 
                         <nav class="hidden md:flex items-center gap-1">
@@ -73,5 +74,8 @@ const menuItems = [
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <slot />
         </main>
+
+        <!-- ═══ FLOATING LIVE CHAT WIDGET ═══ -->
+        <LiveChatWidget />
     </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup>
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
+import LiveChatWidget from "@/Components/LiveChatWidget.vue";
 
 const page = usePage();
 const currentPath = computed(() => page.url);
@@ -104,5 +105,8 @@ function isActive(path) {
         <main>
             <slot />
         </main>
+
+        <!-- ═══ FLOATING LIVE CHAT WIDGET ═══ -->
+        <LiveChatWidget />
     </div>
 </template>

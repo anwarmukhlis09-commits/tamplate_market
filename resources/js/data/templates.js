@@ -125,7 +125,7 @@ export const templates = [
         sold: 123,
         features: ['Corporate Style', 'GDPR Ready', 'White Label', 'Login SSO', 'Audit Log'],
         shortDesc: 'Desain corporate profesional untuk kantor dan gedung perkantoran.',
-        longDesc: 'Hotspot Corporate adalah template enterprise-grade dengan desain profesional yang mencerminkan branding perusahaan. Fitur white label memungkinkan Anda menghapus semua merk MarketTemplate, ditambah dukungan SSO, GDPR compliance, dan audit log.',
+        longDesc: 'Hotspot Corporate adalah template enterprise-grade dengan desain profesional yang mencerminkan branding perusahaan. Fitur white label memungkinkan Anda menghapus semua merk Template Hotspot, ditambah dukungan SSO, GDPR compliance, dan audit log.',
         previews: ['bg-gradient-to-br from-blue-900 to-indigo-700', 'bg-gradient-to-br from-slate-800 to-blue-900', 'bg-gradient-to-br from-indigo-800 to-blue-800'],
         whatsIncluded: ['File HTML/CSS/JS lengkap', 'White label license', 'GDPR compliance docs', 'SSO module', 'Audit log system', 'Priority support'],
         updatedAt: '2026-05-18',

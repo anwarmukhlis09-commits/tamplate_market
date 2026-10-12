@@ -8,10 +8,12 @@ const props = defineProps({
     relatedTemplates: { type: Array, default: () => [] },
     reviews: { type: Array, default: () => [] },
     userReview: { type: Object, default: null },
+    hasEditedDraft: Boolean,
     canLogin: Boolean,
 });
 
 const t = computed(() => props.template);
+const userHasEdited = computed(() => !!(props.hasEditedDraft || props.template?.hasEditedDraft));
 const previewMode = ref('desktop'); // 'desktop' | 'mobile'
 
 const previewContainerRef = ref(null);
@@ -371,12 +373,33 @@ function onIframeLoad(e) {
                                     Download Asli
                                 </a>
                             </div>
-                            <!-- Tombol kedua: download versi edit user (kalau pernah edit).
-                                 Link kecil di bawah, pakai ?source=edited untuk trigger
-                                 overlay. Server akan return ZIP berisi master + login.html
-                                 versi edit user. -->
-                            <a :href="`/template/${t.id}/download?source=edited`" class="block w-full text-center py-2 text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors">
-                                Download versi edit saya (login.html) →
+                            <!-- Tombol Download Versi Edit User (Tampil HANYA jika user pernah melakukan pengeditan) -->
+                            <a
+                                v-if="userHasEdited"
+                                :href="`/template/${t.id}/download?source=edited`"
+                                class="w-full mt-2 p-3 bg-gradient-to-r from-indigo-50/90 via-purple-50/80 to-pink-50/90 border border-indigo-200/80 rounded-2xl hover:border-indigo-400 hover:shadow-md hover:shadow-indigo-100/60 transition-all flex items-center justify-between group"
+                            >
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                        </svg>
+                                    </div>
+                                    <div class="text-left">
+                                        <div class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5 leading-none">
+                                            Download Versi Edit
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-indigo-600 text-white rounded-md">Custom</span>
+                                        </div>
+                                        <div class="text-[10px] font-medium text-indigo-700/80 mt-1">
+                                            Termasuk login.html ter-custom
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="w-6 h-6 rounded-lg bg-white text-indigo-600 flex items-center justify-center border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                    <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                                    </svg>
+                                </div>
                             </a>
                         </template>
 

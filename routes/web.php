@@ -31,10 +31,11 @@ Route::get('/', function () {
     $categoryMeta = [
         'minimalis' => ['name' => 'Minimalis', 'icon' => 'M4 6h16M4 12h10M4 18h7', 'color' => 'from-slate-400 to-slate-500'],
         'modern' => ['name' => 'Modern', 'icon' => 'M13 10V3L4 14h7v7l9-11h-7z', 'color' => 'from-indigo-500 to-violet-500'],
+        'classic' => ['name' => 'Classic', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', 'color' => 'from-emerald-400 to-teal-500'],
+        'pro' => ['name' => 'Professional', 'icon' => 'M9 12l2 2 4-4', 'color' => 'from-purple-500 to-pink-500'],
         'gaming' => ['name' => 'Gaming', 'icon' => 'M15 7h2a4 4 0 014 4v2a4 4 0 01-4 4h-2v-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V7zM9 7H7a4 4 0 00-4 4v2a4 4 0 004 4h2v-2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2V7z', 'color' => 'from-fuchsia-500 to-pink-500'],
         'hotel' => ['name' => 'Hotel', 'icon' => 'M3 21h18M3 7v14M21 7v14M6 21V11h12v10M9 7V3h6v4M9 11h.01M15 11h.01M9 15h.01M15 15h.01', 'color' => 'from-amber-400 to-orange-500'],
         'sekolah' => ['name' => 'Sekolah', 'icon' => 'M12 14l9-5-9-5-9 5 9 5zM12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', 'color' => 'from-cyan-400 to-blue-500'],
-        'voucher' => ['name' => 'Voucher', 'icon' => 'M2 9V7a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4zM9 9h6', 'color' => 'from-emerald-400 to-teal-500'],
         'cafe' => ['name' => 'Cafe', 'icon' => 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3', 'color' => 'from-rose-400 to-pink-500'],
         'isp' => ['name' => 'ISP', 'icon' => 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M2 8.82a15 15 0 0120 0M5 12.859a10 10 0 0114 0M8.5 16.429a5 5 0 017 0', 'color' => 'from-blue-500 to-indigo-600'],
     ];
@@ -182,7 +183,12 @@ Route::get('/template/{id}', function (\Illuminate\Http\Request $request, $id) {
         }
     }
 
+    $userId = $request->user()?->id ?? 'guest';
+    $editedLoginFile = "templates/orders/{$userId}/{$t->id}/login.html";
+    $hasEditedDraft = \Storage::disk('public')->exists($editedLoginFile) && \Storage::disk('public')->size($editedLoginFile) > 10;
+
     return Inertia::render('TemplateDetail', [
+        'hasEditedDraft' => $hasEditedDraft,
         'template' => [
             'id' => $t->id,
             'name' => $t->name,
@@ -202,6 +208,7 @@ Route::get('/template/{id}', function (\Illuminate\Http\Request $request, $id) {
             'sold' => $t->sold_count,
             'updatedAt' => $t->updated_at->format('Y-m-d'),
             'allowEdit' => $t->allow_edit_before_checkout,
+            'hasEditedDraft' => $hasEditedDraft,
         ],
         'relatedTemplates' => $relatedMapped,
         'reviews' => $reviews,
@@ -997,52 +1004,43 @@ Route::get('/template/{id}/edit', function ($id) {
 })->name('template.editor');
 
 // ── Editor: baca field editable dari login.html (data-edit attributes) ─────
+// ── Editor: baca field editable dari login.html (data-edit attributes) ─────
 Route::get('/template/{id}/editor/fields', function ($id) {
     $t = \App\Models\Template::findOrFail($id);
     $folder = $t->zip_file;
     if (!$folder) {
-        return response()->json(['fields' => [], 'html' => '', 'has_data_edit' => false]);
+        return response()->json(['fields' => [], 'master_defaults' => (object)[], 'html' => '', 'has_data_edit' => false]);
     }
 
-    // PERSISTENSI EDIT PER USER:
-    // 1) Prioritas: draft edited user di `orders/{user_id}/{id}/login.html`
-    //    (hasil edit terakhir — user lanjut edit dari kondisi terakhir, bukan master default)
-    // 2) Fallback: master template (untuk user baru / template yang belum pernah di-edit)
-    //
-    // Source-of-truth: `data-edit` attributes di HTML (master sama edited punya
-    // atribut yang sama, hanya inner text yang berubah). Kalau edited draft ada,
-    // struktur field list identik dengan master — yang berubah hanya default value.
-    $loginPath = null;
-    $userId = auth()->id() ?? 'guest';
-    $editedLoginFile = "templates/orders/{$userId}/{$id}/login.html";
-
-    if (\Storage::disk('public')->exists($editedLoginFile)) {
-        // User pernah edit — pakai draft
-        $loginPath = $editedLoginFile;
+    $masterLoginPath = null;
+    $masterLoginFile = $folder . '/login.html';
+    if (\Storage::disk('public')->exists($masterLoginFile)) {
+        $masterLoginPath = $masterLoginFile;
     } else {
-        // Belum pernah edit — load master untuk derive field schema
-        $masterLoginFile = $folder . '/login.html';
-        if (\Storage::disk('public')->exists($masterLoginFile)) {
-            $loginPath = $masterLoginFile;
-        } else {
-            // Scan subfolder master
-            foreach (\Storage::disk('public')->allFiles($folder) as $candidate) {
-                if (basename($candidate) === 'login.html') {
-                    $loginPath = $candidate;
-                    break;
-                }
+        foreach (\Storage::disk('public')->allFiles($folder) as $candidate) {
+            if (basename($candidate) === 'login.html') {
+                $masterLoginPath = $candidate;
+                break;
             }
         }
     }
 
+    $userId = auth()->id() ?? 'guest';
+    $editedLoginFile = "templates/orders/{$userId}/{$id}/login.html";
+    $hasEditedDraft = \Storage::disk('public')->exists($editedLoginFile) && \Storage::disk('public')->size($editedLoginFile) > 10;
+
+    if (\Storage::disk('public')->exists($editedLoginFile) && !$hasEditedDraft) {
+        \Storage::disk('public')->deleteDirectory("templates/orders/{$userId}/{$id}");
+    }
+
+    $loginPath = $hasEditedDraft ? $editedLoginFile : $masterLoginPath;
+
     if (!$loginPath) {
-        return response()->json(['fields' => [], 'html' => '', 'has_data_edit' => false]);
+        return response()->json(['fields' => [], 'master_defaults' => (object)[], 'html' => '', 'has_data_edit' => false]);
     }
 
     $html = \Storage::disk('public')->get($loginPath);
-    $fields = [];
 
-    // Helper inline: extract attribute value dari tag string
     $extractAttr = function ($tag, $attr) {
         if (preg_match('/\b' . $attr . '="([^"]*)"/i', $tag, $m)) {
             return $m[1];
@@ -1050,19 +1048,16 @@ Route::get('/template/{id}/editor/fields', function ($id) {
         return '';
     };
 
-    // Helper inline: extract label dari data-label attribute, fallback ke name
     $extractLabel = function ($tag, $name) {
         if (preg_match('/\bdata-label="([^"]*)"/i', $tag, $m) && $m[1] !== '') {
             return $m[1];
         }
-        // Capitalize & prettify name: "brand_name" → "Brand Name"
         return ucwords(str_replace(['_', '-'], ' ', $name));
     };
 
-    // Helper inline: extract inner text dari tag (non-greedy)
-    $extractInner = function ($html, $name) use ($extractAttr) {
+    $extractInner = function ($htmlStr, $name) {
         $pattern = '/<(\w+)([^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*>(.*?)<\/\1>/is';
-        if (preg_match($pattern, $html, $m)) {
+        if (preg_match($pattern, $htmlStr, $m)) {
             $inner = trim($m[3]);
             if (preg_match('/<svg\b[^>]*>.*?<\/svg>/is', $inner)) {
                 $cleaned = trim(preg_replace('/<svg\b[^>]*>.*?<\/svg>/is', '', $inner));
@@ -1073,135 +1068,388 @@ Route::get('/template/{id}/editor/fields', function ($id) {
         return '';
     };
 
-    // Parse data-edit (text)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
-        $seen = [];
-        foreach ($matches as $m) {
-            $name = $m[3];
-            if (isset($seen[$name])) continue; // skip duplikat
-            $seen[$name] = true;
-            $tag = '<' . $m[1] . $m[2] . '>';
-            $fields[] = [
-                'name' => $name,
-                'type' => 'text',
-                'label' => $extractLabel($tag, $name),
-                'default' => $extractInner($html, $name),
-            ];
+    $parseFieldsFromHtml = function ($htmlStr) use ($extractAttr, $extractLabel, $extractInner) {
+        $fields = [];
+        $defaults = [];
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $val = $extractInner($htmlStr, $name);
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'text',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-image="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $tagName = strtolower($m[1]);
+                $attrs = $m[2];
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $attrs . '>';
+                $val = '';
+                if ($tagName === 'img') {
+                    $val = $extractAttr($tag, 'src');
+                } else {
+                    if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                        if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
+                            $val = $bm[1];
+                        }
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'image',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                    'tag' => $tagName,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<a([^>]*\bdata-edit-(?:link|href)="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[2];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<a' . $m[1] . '>';
+                $val = $extractAttr($tag, 'href');
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'link',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-color="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $label = '';
+                if (preg_match('/\bdata-label-color="([^"]*)"/i', $tag, $lm) && $lm[1] !== '') {
+                    $label = $lm[1];
+                } else {
+                    $label = $extractLabel($tag, $name);
+                }
+                $val = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bcolor\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                        $val = trim($cm[1]);
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'color',
+                    'label' => $label,
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg-color="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $label = '';
+                if (preg_match('/\bdata-label-bg="([^"]*)"/i', $tag, $lm) && $lm[1] !== '') {
+                    $label = $lm[1];
+                } else {
+                    $label = $extractLabel($tag, $name);
+                }
+                $val = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bbackground-color\s*:\s*([^;"]+)/i', $sm[1], $bm)) {
+                        $val = trim($bm[1]);
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'color',
+                    'label' => $label,
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $tagName = strtolower($m[1]);
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $val = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
+                        $val = $bm[1];
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'image',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                    'tag' => $tagName,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-visible="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $val = true;
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bdisplay\s*:\s*none/i', $sm[1])) {
+                        $val = false;
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'boolean',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-width="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $val = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bwidth\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                        $val = trim($cm[1]);
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'text',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        if (preg_match_all('/<(\w+)([^>]*\bdata-edit-height="([^"]+)"[^>]*)>/i', $htmlStr, $matches, PREG_SET_ORDER)) {
+            $seen = [];
+            foreach ($matches as $m) {
+                $name = $m[3];
+                if (isset($seen[$name])) continue;
+                $seen[$name] = true;
+                $tag = '<' . $m[1] . $m[2] . '>';
+                $val = '';
+                if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
+                    if (preg_match('/\bheight\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
+                        $val = trim($cm[1]);
+                    }
+                }
+                $fields[] = [
+                    'name' => $name,
+                    'type' => 'text',
+                    'label' => $extractLabel($tag, $name),
+                    'default' => $val,
+                ];
+                $defaults[$name] = $val;
+            }
+        }
+
+        return ['fields' => $fields, 'defaults' => $defaults];
+    };
+
+    $currentParsed = $parseFieldsFromHtml($html);
+    $masterDefaults = [];
+
+    if ($hasEditedDraft && $masterLoginPath && \Storage::disk('public')->exists($masterLoginPath)) {
+        $masterHtml = \Storage::disk('public')->get($masterLoginPath);
+        $masterParsed = $parseFieldsFromHtml($masterHtml);
+        $masterDefaults = $masterParsed['defaults'];
+    } else {
+        $masterDefaults = $currentParsed['defaults'];
+    }
+
+    return response()->json([
+        'fields' => $currentParsed['fields'],
+        'master_defaults' => $masterDefaults,
+        'html' => $html,
+        'has_data_edit' => count($currentParsed['fields']) > 0,
+        'has_edited_draft' => $hasEditedDraft,
+    ]);
+})->name('template.editor.fields');
+
+// ── Editor: reset semua perubahan user ke master default pabrik ─────
+Route::post('/template/{id}/editor/reset', function (\Illuminate\Http\Request $request, $id) {
+    $t = \App\Models\Template::findOrFail($id);
+    $folder = $t->zip_file;
+    if (!$folder) {
+        return response()->json(['ok' => false, 'error' => 'Template belum punya file upload.'], 400);
+    }
+
+    $userId = auth()->id() ?? 'guest';
+    $userOrderDir = "templates/orders/{$userId}/{$id}";
+
+    // Hapus seluruh folder draft edit milik user jika ada
+    if (\Storage::disk('public')->exists($userOrderDir)) {
+        \Storage::disk('public')->deleteDirectory($userOrderDir);
+    }
+
+    // Cari file login.html master
+    $masterLoginPath = null;
+    $masterLoginFile = $folder . '/login.html';
+    if (\Storage::disk('public')->exists($masterLoginFile)) {
+        $masterLoginPath = $masterLoginFile;
+    } else {
+        foreach (\Storage::disk('public')->allFiles($folder) as $candidate) {
+            if (basename($candidate) === 'login.html') {
+                $masterLoginPath = $candidate;
+                break;
+            }
         }
     }
 
-    // Parse data-edit-image (image — bisa di tag apapun: <img>, <section>, <div>, dll)
-    // Untuk <img>: replace src. Untuk non-<img>: replace background-image di inline style
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-image="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (!$masterLoginPath) {
+        return response()->json(['ok' => false, 'error' => 'File login.html master tidak ditemukan.'], 404);
+    }
+
+    $masterHtml = \Storage::disk('public')->get($masterLoginPath);
+
+    $extractAttr = function ($tag, $attr) {
+        if (preg_match('/\b' . $attr . '="([^"]*)"/i', $tag, $m)) return $m[1];
+        return '';
+    };
+    $extractLabel = function ($tag, $name) {
+        if (preg_match('/\bdata-label="([^"]*)"/i', $tag, $m) && $m[1] !== '') return $m[1];
+        return ucwords(str_replace(['_', '-'], ' ', $name));
+    };
+    $extractInner = function ($htmlStr, $name) {
+        $pattern = '/<(\w+)([^>]*\bdata-edit="' . preg_quote($name, '/') . '")[^>]*>(.*?)<\/\1>/is';
+        if (preg_match($pattern, $htmlStr, $m)) {
+            $inner = trim($m[3]);
+            if (preg_match('/<svg\b[^>]*>.*?<\/svg>/is', $inner)) {
+                $cleaned = trim(preg_replace('/<svg\b[^>]*>.*?<\/svg>/is', '', $inner));
+                if (!empty($cleaned)) return $cleaned;
+            }
+            return $inner;
+        }
+        return '';
+    };
+
+    $fields = [];
+    $masterDefaults = [];
+
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
-            $tagName = strtolower($m[1]);
-            $attrs = $m[2];
             $name = $m[3];
             if (isset($seen[$name])) continue;
             $seen[$name] = true;
-            $tag = '<' . $m[1] . $attrs . '>';
-
-            // Default value: src untuk <img>, background-image URL untuk non-<img>
-            $default = '';
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $val = $extractInner($masterHtml, $name);
+            $fields[] = ['name' => $name, 'type' => 'text', 'label' => $extractLabel($tag, $name), 'default' => $val];
+            $masterDefaults[$name] = $val;
+        }
+    }
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-image="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
+        $seen = [];
+        foreach ($matches as $m) {
+            $tagName = strtolower($m[1]);
+            $name = $m[3];
+            if (isset($seen[$name])) continue;
+            $seen[$name] = true;
+            $tag = '<' . $m[1] . $m[2] . '>';
+            $val = '';
             if ($tagName === 'img') {
-                $default = $extractAttr($tag, 'src');
+                $val = $extractAttr($tag, 'src');
             } else {
-                // Extract background-image URL dari style attribute
                 if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
                     if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
-                        $default = $bm[1];
+                        $val = $bm[1];
                     }
                 }
             }
-
-            $fields[] = [
-                'name' => $name,
-                'type' => 'image',
-                'label' => $extractLabel($tag, $name),
-                'default' => $default,
-                'tag' => $tagName, // info tambahan untuk frontend (render img preview vs background)
-            ];
+            $fields[] = ['name' => $name, 'type' => 'image', 'label' => $extractLabel($tag, $name), 'default' => $val, 'tag' => $tagName];
+            $masterDefaults[$name] = $val;
         }
     }
-
-    // Parse data-edit-link (link href)
-    if (preg_match_all('/<a([^>]*\bdata-edit-(?:link|href)="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (preg_match_all('/<a([^>]*\bdata-edit-(?:link|href)="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
             $name = $m[2];
             if (isset($seen[$name])) continue;
             $seen[$name] = true;
             $tag = '<a' . $m[1] . '>';
-            $fields[] = [
-                'name' => $name,
-                'type' => 'link',
-                'label' => $extractLabel($tag, $name),
-                'default' => $extractAttr($tag, 'href'),
-            ];
+            $val = $extractAttr($tag, 'href');
+            $fields[] = ['name' => $name, 'type' => 'link', 'label' => $extractLabel($tag, $name), 'default' => $val];
+            $masterDefaults[$name] = $val;
         }
     }
-
-    // Parse data-edit-color (color)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-color="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-color="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
             $name = $m[3];
             if (isset($seen[$name])) continue;
             $seen[$name] = true;
             $tag = '<' . $m[1] . $m[2] . '>';
-            $label = '';
-            if (preg_match('/\bdata-label-color="([^"]*)"/i', $tag, $lm) && $lm[1] !== '') {
-                $label = $lm[1];
-            } else {
-                $label = $extractLabel($tag, $name);
-            }
-            $default = '';
+            $val = '';
             if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
-                if (preg_match('/\bcolor\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
-                    $default = trim($cm[1]);
-                }
+                if (preg_match('/\bcolor\s*:\s*([^;"]+)/i', $sm[1], $cm)) $val = trim($cm[1]);
             }
-            $fields[] = [
-                'name' => $name,
-                'type' => 'color',
-                'label' => $label,
-                'default' => $default,
-            ];
+            $fields[] = ['name' => $name, 'type' => 'color', 'label' => $extractLabel($tag, $name), 'default' => $val];
+            $masterDefaults[$name] = $val;
         }
     }
-
-    // Parse data-edit-bg-color (background color)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg-color="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg-color="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
             $name = $m[3];
             if (isset($seen[$name])) continue;
             $seen[$name] = true;
             $tag = '<' . $m[1] . $m[2] . '>';
-            $label = '';
-            if (preg_match('/\bdata-label-bg="([^"]*)"/i', $tag, $lm) && $lm[1] !== '') {
-                $label = $lm[1];
-            } else {
-                $label = $extractLabel($tag, $name);
-            }
-            $default = '';
+            $val = '';
             if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
-                if (preg_match('/\bbackground-color\s*:\s*([^;"]+)/i', $sm[1], $bm)) {
-                    $default = trim($bm[1]);
-                }
+                if (preg_match('/\bbackground-color\s*:\s*([^;"]+)/i', $sm[1], $bm)) $val = trim($bm[1]);
             }
-            $fields[] = [
-                'name' => $name,
-                'type' => 'color',
-                'label' => $label,
-                'default' => $default,
-            ];
+            $fields[] = ['name' => $name, 'type' => 'color', 'label' => $extractLabel($tag, $name), 'default' => $val];
+            $masterDefaults[$name] = $val;
         }
     }
-
-    // Parse data-edit-bg (image background)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-bg="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
             $tagName = strtolower($m[1]);
@@ -1209,97 +1457,37 @@ Route::get('/template/{id}/editor/fields', function ($id) {
             if (isset($seen[$name])) continue;
             $seen[$name] = true;
             $tag = '<' . $m[1] . $m[2] . '>';
-            $default = '';
+            $val = '';
             if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
-                if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) {
-                    $default = $bm[1];
-                }
+                if (preg_match('/background-image\s*:\s*url\(["\']?([^"\')\s]*)["\']?\)/i', $sm[1], $bm)) $val = $bm[1];
             }
-            $fields[] = [
-                'name' => $name,
-                'type' => 'image',
-                'label' => $extractLabel($tag, $name),
-                'default' => $default,
-                'tag' => $tagName,
-            ];
+            $fields[] = ['name' => $name, 'type' => 'image', 'label' => $extractLabel($tag, $name), 'default' => $val, 'tag' => $tagName];
+            $masterDefaults[$name] = $val;
         }
     }
-
-    // Parse data-edit-visible (boolean)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-visible="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
+    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-visible="([^"]+)"[^>]*)>/i', $masterHtml, $matches, PREG_SET_ORDER)) {
         $seen = [];
         foreach ($matches as $m) {
             $name = $m[3];
             if (isset($seen[$name])) continue;
             $seen[$name] = true;
             $tag = '<' . $m[1] . $m[2] . '>';
-            $default = true;
+            $val = true;
             if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
-                if (preg_match('/\bdisplay\s*:\s*none/i', $sm[1])) {
-                    $default = false;
-                }
+                if (preg_match('/\bdisplay\s*:\s*none/i', $sm[1])) $val = false;
             }
-            $fields[] = [
-                'name' => $name,
-                'type' => 'boolean',
-                'label' => $extractLabel($tag, $name),
-                'default' => $default,
-            ];
-        }
-    }
-
-    // Parse data-edit-width (width)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-width="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
-        $seen = [];
-        foreach ($matches as $m) {
-            $name = $m[3];
-            if (isset($seen[$name])) continue;
-            $seen[$name] = true;
-            $tag = '<' . $m[1] . $m[2] . '>';
-            $default = '';
-            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
-                if (preg_match('/\bwidth\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
-                    $default = trim($cm[1]);
-                }
-            }
-            $fields[] = [
-                'name' => $name,
-                'type' => 'text',
-                'label' => $extractLabel($tag, $name),
-                'default' => $default,
-            ];
-        }
-    }
-
-    // Parse data-edit-height (height)
-    if (preg_match_all('/<(\w+)([^>]*\bdata-edit-height="([^"]+)"[^>]*)>/i', $html, $matches, PREG_SET_ORDER)) {
-        $seen = [];
-        foreach ($matches as $m) {
-            $name = $m[3];
-            if (isset($seen[$name])) continue;
-            $seen[$name] = true;
-            $tag = '<' . $m[1] . $m[2] . '>';
-            $default = '';
-            if (preg_match('/\bstyle\s*=\s*"([^"]*)"/i', $tag, $sm)) {
-                if (preg_match('/\bheight\s*:\s*([^;"]+)/i', $sm[1], $cm)) {
-                    $default = trim($cm[1]);
-                }
-            }
-            $fields[] = [
-                'name' => $name,
-                'type' => 'text',
-                'label' => $extractLabel($tag, $name),
-                'default' => $default,
-            ];
+            $fields[] = ['name' => $name, 'type' => 'boolean', 'label' => $extractLabel($tag, $name), 'default' => $val];
+            $masterDefaults[$name] = $val;
         }
     }
 
     return response()->json([
+        'ok' => true,
+        'message' => 'Template berhasil di-reset ke nilai default pabrik.',
         'fields' => $fields,
-        'html' => $html,
-        'has_data_edit' => count($fields) > 0,
+        'master_defaults' => $masterDefaults,
     ]);
-})->name('template.editor.fields');
+})->name('template.editor.reset');
 
 // ── Editor: save ke salinan orders/{user_id}/{template_id}/ (master TIDAK diubah) ─────
 Route::post('/template/{id}/editor/save', function (\Illuminate\Http\Request $request, $id) {
@@ -1900,12 +2088,30 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/users/{user}/toggle-active', [\App\Http\Controllers\AdminUserController::class, 'toggleActive'])->name('users.toggle-active');
     Route::delete('/users/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('users.destroy');
 
-    Route::get('/categories', fn() => Inertia::render('Admin/Categories'))->name('categories');
+    // Category management
+    Route::get('/categories', [\App\Http\Controllers\AdminCategoryController::class, 'index'])->name('categories');
+    Route::post('/categories', [\App\Http\Controllers\AdminCategoryController::class, 'store'])->name('categories.store');
+    Route::put('/categories/{category}', [\App\Http\Controllers\AdminCategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categories/{category}', [\App\Http\Controllers\AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+
     Route::get('/settings', fn() => Inertia::render('Admin/Settings'))->name('settings');
 
     // Panduan Standar Template Editor (untuk creator)
     Route::get('/standard', fn() => Inertia::render('Admin/TemplateStandard'))->name('standard');
+
+    // Live Chat management
+    Route::get('/chats', [\App\Http\Controllers\AdminChatController::class, 'index'])->name('chats');
+    Route::get('/chats/api/sessions', [\App\Http\Controllers\AdminChatController::class, 'getSessions'])->name('chats.sessions');
+    Route::get('/chats/api/unread', [\App\Http\Controllers\AdminChatController::class, 'unreadCount'])->name('chats.unread');
+    Route::get('/chats/api/{id}/messages', [\App\Http\Controllers\AdminChatController::class, 'getMessages'])->name('chats.messages');
+    Route::post('/chats/api/{id}/send', [\App\Http\Controllers\AdminChatController::class, 'sendMessage'])->name('chats.send');
+    Route::post('/chats/api/{id}/toggle-status', [\App\Http\Controllers\AdminChatController::class, 'toggleStatus'])->name('chats.toggle-status');
 });
+
+// ── Public Live Chat API for Widget ───────────────────
+Route::post('/api/chat/init', [\App\Http\Controllers\ChatController::class, 'init'])->name('chat.init');
+Route::get('/api/chat/messages', [\App\Http\Controllers\ChatController::class, 'getMessages'])->name('chat.messages');
+Route::post('/api/chat/send', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('chat.send');
 
 // ── Buyer Actions (scoped by {id} — setiap proses mengacu ke ID spesifik) ──
 Route::middleware(['auth'])->group(function () {

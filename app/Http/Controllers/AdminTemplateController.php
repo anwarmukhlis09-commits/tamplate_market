@@ -336,7 +336,7 @@ class AdminTemplateController extends Controller
     {
         return [
             'name' => 'required|string|max:255',
-            'category' => 'required|string|in:modern,classic,minimalis,pro',
+            'category' => 'required|string|in:modern,classic,minimalis,pro,gaming,hotel,cafe,sekolah,isp,other',
             'price' => 'required|integer|min:0',
             'status' => 'required|in:draft,published',
             'allow_edit_before_checkout' => 'boolean',
@@ -391,7 +391,7 @@ class AdminTemplateController extends Controller
             'name.max'             => 'Nama template maksimal 255 karakter.',
 
             'category.required'    => 'Kategori wajib dipilih.',
-            'category.in'          => 'Kategori tidak valid. Pilih: Modern, Classic, Minimalis, atau Professional.',
+            'category.in'          => 'Kategori tidak valid. Silakan pilih kategori yang tersedia.',
 
             'price.required'       => 'Harga wajib diisi.',
             'price.integer'        => 'Harga harus berupa angka bulat (tanpa titik/koma).',

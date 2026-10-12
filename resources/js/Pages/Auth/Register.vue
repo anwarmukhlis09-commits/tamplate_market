@@ -29,9 +29,9 @@ const submit = () => {
         <!-- ═══ LEFT: FORM ═══ -->
         <div class="flex flex-col justify-center px-8 py-12 md:px-20">
             <div class="text-center mb-10">
-                <div class="mx-auto mb-4 w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5B4CF0] to-[#8B5CF6] flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/30">
-                    MT
-                </div>
+                <Link href="/" class="inline-block">
+                    <img src="/images/logo.webp" alt="Template Hotspot" width="105" height="70" class="mx-auto mb-4 h-[70px] w-[105px] object-contain" />
+                </Link>
                 <h1 class="text-3xl font-bold text-slate-900 mb-3">Buat Akun Baru</h1>
                 <p class="text-sm text-slate-500">Daftar untuk mulai menjual template hotspot Anda</p>
             </div>
@@ -155,7 +155,7 @@ const submit = () => {
         </div>
 
         <!-- ═══ RIGHT: PROMO PANEL ═══ -->
-        <div class="hidden md:block relative rounded-[26px] overflow-hidden min-h-[600px] bg-cover bg-center" style="background-image: url('/images/register-illustration.jpg');">
+        <div class="hidden md:block relative rounded-[26px] overflow-hidden min-h-[600px] bg-cover bg-center" style="background-image: url('/images/register-illustration.webp');">
             <div class="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/40"></div>
             <div class="absolute bottom-10 left-10 right-10 text-white">
                 <p class="text-3xl font-bold leading-tight">Mulai Jual Template Hotspot Anda</p>

@@ -428,9 +428,15 @@ function submit() {
                             <select v-model="form.category" required
                                 class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl">
                                 <option value="modern">Modern</option>
-                                <option value="classic">Classic</option>
                                 <option value="minimalis">Minimalis</option>
+                                <option value="classic">Classic</option>
                                 <option value="pro">Professional</option>
+                                <option value="gaming">Gaming</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="cafe">Cafe & Restaurant</option>
+                                <option value="sekolah">Sekolah</option>
+                                <option value="isp">ISP</option>
+                                <option value="other">Lainnya</option>
                             </select>
                         </div>
                         <div>

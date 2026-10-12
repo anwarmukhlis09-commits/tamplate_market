@@ -36,9 +36,10 @@ watch(activePage, (newPage) => {
 });
 const appliedValues = reactive({}); // snapshot values yang sudah di-save ke server
 const iframeRef = ref(null);   // ref ke <iframe> element — untuk contentDocument access
-const defaults = ref({});      // default values dari master (untuk reset DOM)
 const showSessionExpiredModal = ref(false); // Modal popup sesi habis
+const showResetConfirmModal = ref(false);  // Modal popup konfirmasi reset
 const showSuccessToast = ref(false);        // Popup toast berhasil menyimpan
+const showResetSuccessToast = ref(false);   // Popup toast berhasil reset
 let successToastTimer = null;
 
 function reloadSession() {
@@ -398,6 +399,16 @@ onMounted(async () => {
             values[f.name] = def;
             defaultValues.value[f.name] = def;
         }
+        if (data.master_defaults) {
+            for (const k in data.master_defaults) {
+                let masterVal = data.master_defaults[k];
+                const f = fields.value.find(field => field.name === k);
+                if (f && f.type === 'boolean') {
+                    masterVal = (masterVal === '1' || masterVal === true || masterVal === 'true');
+                }
+                defaultValues.value[k] = masterVal;
+            }
+        }
         // Init appliedValues = values (preview sama dengan form awal)
         for (const key in values) {
             appliedValues[key] = values[key];
@@ -509,20 +520,62 @@ function onIframeLoad() {
     }
 }
 
-// ── Reset perubahan ke nilai default ──────────
-async function resetChanges() {
+// ── Reset perubahan ke nilai default (Modal Trigger) ──────────
+function resetChanges() {
     if (resetting.value) return;
-    if (!confirm('Reset semua perubahan ke nilai default? Tindakan ini tidak dapat dibatalkan.')) return;
+    showResetConfirmModal.value = true;
+}
+
+async function confirmReset() {
+    showResetConfirmModal.value = false;
     resetting.value = true;
+    errorMsg.value = null;
     try {
-        // Reset values → watch real-time akan auto-update DOM iframe
-        for (const key in values) {
-            values[key] = defaultValues.value[key] || '';
+        const csrfToken = getCsrfToken();
+        const r = await fetch(`/template/${props.template.id}/editor/reset`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) {
+            throw new Error(data.error || 'Gagal mereset template');
         }
-        // Save ke server supaya draft konsisten dengan reset
-        await save({ silent: true });
+
+        // Apply master defaults
+        const masterDefs = data.master_defaults || {};
+        for (const f of data.fields || []) {
+            let def = masterDefs[f.name] !== undefined ? masterDefs[f.name] : (f.default || '');
+            if (f.type === 'boolean') def = (def === '1' || def === true || def === 'true');
+            values[f.name] = def;
+            defaultValues.value[f.name] = def;
+            appliedValues[f.name] = def;
+        }
+
         lastSaved.value = null;
         lastSavedPath.value = null;
+
+        // Reset history stack
+        history.value = [JSON.stringify(values)];
+        historyIndex.value = 0;
+
+        // Force iframe reload & sync
+        previewSrc.value = `/templates/${props.template.id}/preview/${activePage.value}.html?source=edited&v=${Date.now()}`;
+        previewKey.value++;
+
+        nextTick(() => {
+            postValuesToIframe();
+        });
+
+        // Show toast
+        showResetSuccessToast.value = true;
+        setTimeout(() => { showResetSuccessToast.value = false; }, 3500);
+    } catch (e) {
+        errorMsg.value = 'Gagal reset: ' + e.message;
     } finally {
         resetting.value = false;
     }
@@ -1012,6 +1065,78 @@ async function save(opts = {}) {
                 </div>
                 <span>Perubahan berhasil disimpan!</span>
                 <button @click="showSuccessToast = false" class="ml-3 text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- ═══════════ MODAL POPUP: KONFIRMASI RESET (CENTERED) ═══════════ -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0 scale-95"
+            enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
+        >
+            <div v-if="showResetConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center border border-slate-100 relative">
+                    <!-- Close Icon -->
+                    <button @click="showResetConfirmModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors p-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+
+                    <!-- Icon Badge -->
+                    <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-5 shadow-inner">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </div>
+
+                    <!-- Title & Description -->
+                    <h3 class="text-xl font-extrabold text-slate-900 mb-2">Reset Semua Perubahan?</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed mb-6">
+                        Tindakan ini akan mengembalikan semua isi template ke desain awal pabrik. Semua teks, gambar, dan warna yang telah Anda ubah akan dihapus secara permanen.
+                    </p>
+
+                    <!-- Buttons -->
+                    <div class="flex items-center gap-3">
+                        <button @click="showResetConfirmModal = false" :disabled="resetting" class="flex-1 py-3 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-50">
+                            Batal
+                        </button>
+                        <button @click="confirmReset" :disabled="resetting" class="flex-1 py-3 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-lg shadow-rose-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                            <svg v-if="resetting" class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>{{ resetting ? 'Mereset...' : 'Ya, Reset Default' }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- ═══════════ TOAST NOTIFIKASI: BERHASIL RESET ═══════════ -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0 -translate-y-4 scale-95"
+            enter-to-class="opacity-100 translate-y-0 scale-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100 translate-y-0 scale-100"
+            leave-to-class="opacity-0 -translate-y-4 scale-95"
+        >
+            <div v-if="showResetSuccessToast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3.5 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700/60 font-semibold text-sm">
+                <div class="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0 font-bold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </div>
+                <span>Template berhasil di-reset ke nilai default pabrik!</span>
+                <button @click="showResetSuccessToast = false" class="ml-3 text-slate-400 hover:text-white transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>

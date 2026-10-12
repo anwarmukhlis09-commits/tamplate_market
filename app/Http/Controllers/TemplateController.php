@@ -156,6 +156,9 @@ class TemplateController extends Controller
                 throw new \RuntimeException('Folder ZIP tidak memiliki login.html (tidak ada di master maupun hasil edit).');
             }
 
+            // ── 6b) Sisipkan file panduan instalasi otomatis ke root ZIP ─────────
+            $this->injectInstallGuide($tempDir, $template);
+
             // ── 7) Build ZIP dari temp ─────────
             if (! class_exists('ZipArchive')) {
                 throw new \RuntimeException('PHP zip extension belum aktif.');
@@ -549,5 +552,60 @@ class TemplateController extends Controller
 
         // Fallback ke master root
         return $realMaster;
+    }
+
+    /**
+     * Sisipkan file panduan pemasangan MikroTik ke root ZIP
+     */
+    private function injectInstallGuide(string $tempDir, Template $template): void
+    {
+        $domain = request()->getSchemeAndHttpHost();
+        $guideContent = <<<TXT
+======================================================================
+  PANDUAN PEMASANGAN TEMPLATE KE ROUTER MIKROTIK
+======================================================================
+Nama Template : {$template->name}
+Katalog Web   : {$domain}
+
+IKUTI 4 LANGKAH MUDAH BERIKUT:
+
+1. EKSTRAK FILE ZIP
+   Ekstrak file ZIP ini di komputer Anda sampai menjadi folder biasa.
+   PERHATIAN: Jangan upload file .zip ke MikroTik! Yang di-upload 
+   adalah FOLDER hasil ekstraknya.
+
+2. UPLOAD FOLDER KE WINBOX
+   - Buka aplikasi Winbox di PC Anda dan login ke MikroTik.
+   - Buka menu "Files" di panel sebelah kiri Winbox.
+   - Drag & Drop (tarik dan lepaskan) folder template ini ke dalam 
+     daftar Files di Winbox.
+   - Letakkan di baris kosong paling atas agar folder berada di 
+     root directory router.
+
+3. AKTIFKAN DI HOTSPOT SERVER PROFILE (KUNCI SUKSES!)
+   - Buka menu Winbox: IP -> Hotspot.
+   - Masuk ke tab "Server Profiles".
+   - Dobel klik nama profil hotspot Anda (biasanya: hsprof1).
+   - Pada kolom "HTML Directory", pilih nama folder template ini.
+   - Klik tombol "Apply" lalu klik "OK". Selesai!
+
+4. UJI COBA DI SMARTPHONE / LAPTOP
+   - Hubungkan HP Anda ke sinyal Wi-Fi Hotspot.
+   - Jika tampilan login belum berubah (masih template lama):
+     * Buka browser di HP dan ketik: http://192.168.88.1/logout
+     * Atau pilih "Lupakan Jaringan" (Forget Wi-Fi) di HP, lalu sambungkan lagi.
+     (Hal ini wajar karena browser HP menyimpan cache halaman login lama).
+
+----------------------------------------------------------------------
+PANDUAN LENGKAP BERGAMBAR:
+Buka di browser: {$domain}/bantuan?tab=instalasi
+
+BUTUH BANTUAN TEKNIS?
+Hubungi WhatsApp Admin untuk dipandu langsung:
+WhatsApp: 0812-3456-7890
+======================================================================
+TXT;
+
+        @file_put_contents($tempDir . DIRECTORY_SEPARATOR . '1_BACA_CARA_PASANG_MIKROTIK.txt', $guideContent);
     }
 }

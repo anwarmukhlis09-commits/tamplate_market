@@ -1060,7 +1060,7 @@ function getGradient(seed) {
                                             oleh
                                             <span
                                                 class="font-medium text-slate-700"
-                                                >MarketTemplate Studio</span
+                                                >Template Hotspot Studio</span
                                             >
                                         </p>
                                         <div
@@ -1605,7 +1605,7 @@ function getGradient(seed) {
                                     <div
                                         class="ml-2 text-xs font-medium text-slate-500 flex-1 text-center pr-10"
                                     >
-                                        MarketTemplate Visual Editor
+                                        Template Hotspot Visual Editor
                                     </div>
                                 </div>
                                 <!-- Editor Mockup UI -->
@@ -1833,7 +1833,7 @@ function getGradient(seed) {
                             <div class="flex items-center gap-2.5 mb-4">
                                 <img
                                     src="/images/logo.png?v=2"
-                                    alt="MarketTemplate"
+                                    alt="Template Hotspot"
                                     class="h-9 w-auto brightness-0 invert"
                                 />
                                 <div
@@ -1841,11 +1841,11 @@ function getGradient(seed) {
                                 >
                                     <span
                                         class="text-sm tracking-widest uppercase"
-                                        >MARKET</span
+                                        >TEMPLATE</span
                                     >
                                     <span
                                         class="text-sm tracking-widest uppercase"
-                                        >TEMPLATE</span
+                                        >HOTSPOT</span
                                     >
                                 </div>
                             </div>
@@ -1954,7 +1954,7 @@ function getGradient(seed) {
                         class="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
                     >
                         <p class="text-slate-500">
-                            © 2026 MarketTemplate.id — Semua hak dilindungi.
+                            © 2026 TemplateHotspot.com — Semua hak dilindungi.
                         </p>
                         <div class="flex items-center gap-4 text-slate-500">
                             <a
