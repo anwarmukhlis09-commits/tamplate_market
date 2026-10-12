@@ -1,0 +1,1 @@
+import{_ as o}from"./_plugin-vue_export-helper-c27b6911.js";import{o as t,c as e}from"./app-5d890662.js";const c={},s={src:"/images/logo.webp",alt:"Template Hotspot",width:"612",height:"408",class:"object-contain"};function n(r,a){return t(),e("img",s)}const p=o(c,[["render",n]]);export{p as A};
